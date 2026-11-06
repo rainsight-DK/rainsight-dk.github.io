@@ -962,5 +962,43 @@
       renderVerdictAndForm();
       renderList();
     </script>
-  </body>
+  
+<script>
+(function(){
+  var KEY = "what-deserves-my-time.tasks.v1";
+  function ready(fn){ if(document.readyState!=="loading") fn(); else document.addEventListener("DOMContentLoaded", fn); }
+  ready(function(){
+    var box = document.createElement("div");
+    box.style.cssText = "max-width:680px;margin:24px auto 40px;padding:16px;background:#fff;border:1px solid #e7ded2;border-radius:16px;font-family:inherit";
+    box.innerHTML = '<b style="font-family:Georgia,serif">Backup</b>' +
+      '<p style="color:#7a7264;font-size:.86rem;margin:8px 0 12px">Your tasks are saved only in this browser, on this device. Export a backup file and keep it somewhere safe (for example Google Drive or your PC) — import it on another device or browser to move your tasks there.</p>' +
+      '<button id="wt-exp" style="background:#fff;border:1.5px solid #2f4f43;color:#2f4f43;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;margin-right:8px">Export backup</button>' +
+      '<button id="wt-imp" style="background:#fff;border:1.5px solid #2f4f43;color:#2f4f43;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer">Import backup</button>' +
+      '<input type="file" id="wt-file" accept=".json,application/json" style="display:none">';
+    document.body.appendChild(box);
+    box.querySelector("#wt-exp").addEventListener("click", function(){
+      var tasks = []; try { tasks = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch(e){}
+      var payload = JSON.stringify({ app:"WhatDeservesMyTime", version:1, exportedAt:new Date().toISOString(), tasks:tasks }, null, 1);
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([payload], { type:"application/json" }));
+      a.download = "what-deserves-my-time-backup-" + new Date().toISOString().slice(0,10) + ".json";
+      a.click(); URL.revokeObjectURL(a.href);
+    });
+    var file = box.querySelector("#wt-file");
+    box.querySelector("#wt-imp").addEventListener("click", function(){ file.click(); });
+    file.addEventListener("change", function(){
+      var f = file.files && file.files[0]; if(!f) return;
+      f.text().then(function(t){
+        try { var data = JSON.parse(t); var tasks = data.tasks || data;
+          if(!Array.isArray(tasks)) throw new Error("shape");
+          if(!confirm("Replace the tasks on this device with the backup (" + tasks.length + " tasks)?")) return;
+          localStorage.setItem(KEY, JSON.stringify(tasks));
+          alert("Backup imported — reloading."); location.reload();
+        } catch(e){ alert("That file doesn't look like a backup of this app."); }
+      });
+    });
+  });
+})();
+</script>
+</body>
 </html>
