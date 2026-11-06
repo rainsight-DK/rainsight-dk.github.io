@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#faf8f5">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>BookBound — Reading Log</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+<style>
+  :root{ --bg:#faf8f5; --card:#fff; --ink:#2e2620; --muted:#8a7d6d; --brown:#3a2e28; --rust:#c25e2e;
+    --line:#e7ded2; --soft:#f3ece1; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
+  .wrap{max-width:760px; margin:0 auto; padding:14px 16px 48px;}
+  header{display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding-bottom:12px; border-bottom:1px solid var(--line);}
+  .wordmark{font-family:Georgia,"Playfair Display",serif; font-weight:700; font-size:1.25rem; cursor:pointer; margin-right:2px;}
+  .wordmark small{display:block; font-family:inherit; font-size:.58rem; letter-spacing:.28em; color:var(--muted); font-weight:400;}
+  nav{display:flex; gap:4px; margin-left:auto;}
+  nav button{background:none; border:0; font-size:.86rem; padding:7px 10px; border-radius:999px; color:var(--muted); cursor:pointer;}
+  nav button.on{background:var(--soft); color:var(--ink); font-weight:700;}
+  .addbtn{background:var(--brown); color:#fff; border:0; border-radius:999px; padding:9px 15px; font-size:.88rem; font-weight:600; cursor:pointer;}
+  .eyebrow{font-size:.72rem; letter-spacing:.22em; color:var(--rust); font-weight:700; text-transform:uppercase; margin-top:18px;}
+  h1{font-family:Georgia,"Playfair Display",serif; font-size:2rem; line-height:1.15; margin:.25em 0 .3em;}
+  h2{font-family:Georgia,serif; font-size:1.3rem; margin:24px 0 8px;}
+  .muted{color:var(--muted);} .small{font-size:.86rem;}
+  .btn{display:inline-block; background:var(--brown); color:#fff; border:0; border-radius:999px; padding:12px 20px; font-size:.95rem; font-weight:600; cursor:pointer; text-align:center;}
+  .btn:disabled{opacity:.4;} .btn.ghost{background:#fff; color:var(--brown); border:1.5px solid var(--brown);}
+  .btn.danger{background:#fff; color:#a33327; border:1.5px solid #a33327;}
+  .btnrow{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin:12px 0;}
+  .empty{border:1.5px dashed #cfc2b0; border-radius:16px; padding:28px 18px; text-align:center; background:#fffdf9;}
+  .bookrow{display:flex; gap:14px; background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; margin:10px 0; cursor:pointer; align-items:flex-start;}
+  .cover{width:58px; height:86px; object-fit:cover; border-radius:4px; flex:none; }
+  .coverph{width:58px; height:86px; border-radius:4px; flex:none; background:linear-gradient(150deg,#efe6d4,#d9c9a8); display:flex; align-items:center; justify-content:center; font-size:1.4rem;}
+  .bookrow b{font-family:Georgia,serif; font-size:1.05rem;}
+  .stars{color:var(--rust); letter-spacing:2px; font-size:.95rem;}
+  .stars .off{color:#ddd2c0;}
+  label{display:block; font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:700; margin:16px 0 6px;}
+  input[type=text], input[type=date], input[type=search], textarea, select{width:100%; padding:12px 13px; font-size:1rem; border:1.5px solid var(--line); border-radius:10px; background:#fff; font-family:inherit;}
+  textarea{min-height:90px; resize:vertical;}
+  .pills{display:flex; gap:8px; flex-wrap:wrap;}
+  .pillbtn{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:9px 14px; font-size:.9rem; cursor:pointer;}
+  .pillbtn.on{background:var(--brown); color:#fff; border-color:var(--brown);}
+  .starbtn{background:none; border:0; font-size:1.9rem; cursor:pointer; color:#ddd2c0; padding:2px;}
+  .starbtn.on{color:var(--rust);}
+  .genre{color:var(--rust); font-size:.7rem; letter-spacing:.14em; font-weight:700; text-transform:uppercase;}
+  .chipbtn{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:9px 13px; font-size:.86rem; cursor:pointer; font-style:italic; font-family:Georgia,serif;}
+  .coverbig{width:110px; height:164px; object-fit:cover; border-radius:6px; background:#e8dcc8;}
+  .coverbigph{width:110px; height:164px; border-radius:6px; background:linear-gradient(150deg,#efe6d4,#d9c9a8); display:flex; align-items:center; justify-content:center; font-size:2.2rem; flex:none;}
+  .flex{display:flex; gap:16px; align-items:flex-start;}
+  .intro{font-family:Georgia,serif; font-style:italic; font-size:1.08rem;}
+  footer{color:var(--muted); font-size:.78rem; text-align:center; margin-top:32px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="wordmark" onclick="go('history')">Marginalia<small>READING LOG</small></div>
+    <nav>
+      <button data-nav="history" onclick="go('history')">Reading history</button>
+      <button data-nav="toread" onclick="go('toread')">To read</button>
+      <button data-nav="suggest" onclick="go('suggest')">Suggestions</button>
+    </nav>
+    <button class="addbtn" onclick="go('add')">+ Add book</button>
+  </header>
+  <main id="app"></main>
+  <footer>BookBound — the books that stayed. Your library lives on this device only.</footer>
+</div>
+<script>
+"use strict";
+const KEY = "bookBoundV1";
+let B = JSON.parse(localStorage.getItem(KEY) || "null") || { books: [] };
+function save(){ localStorage.setItem(KEY, JSON.stringify(B)); }
+const esc = s => { const d=document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; };
+const app = document.getElementById("app");
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const starsHTML = r => { let s = ""; for(let i=1;i<=5;i++) s += `<span class="${i<=(r||0)?"":"off"}">★</span>`; return `<span class="stars">${s}</span>`; };
+const fmtDate = iso => iso ? new Date(iso+"T12:00:00").toLocaleDateString(undefined,{month:"short", day:"numeric", year:"numeric"}) : "";
+function go(view, arg){ window._view = view; window._arg = arg; render(); window.scrollTo(0,0); }
+function setNav(){ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on", b.dataset.nav===window._view)); }
+function coverHTML(b, big){
+  const cls = big ? "coverbig" : "cover", ph = big ? "coverbigph" : "coverph";
+  return b.cover ? `<img class="${cls}" src="${esc(b.cover)}" alt="" onerror="this.outerHTML='<div class=&quot;${ph}&quot;>📖</div>'">` : `<div class="${ph}">📖</div>`;
+}
+function render(){ setNav(); const v = window._view || "history";
+  if(v==="history"){ viewHistory(); app.insertAdjacentHTML("beforeend", backupCard()); return; }
+  if(v==="toread") return viewToRead();
+  if(v==="suggest") return viewSuggest();
+  if(v==="add") return viewAdd(window._arg);
+  if(v==="detail") return viewDetail(window._arg);
+}
+function bookRow(b){
+  const meta = [b.author, b.format].filter(Boolean).join(" · ");
+  const when = b.status==="finished" ? (b.finished ? "Finished " + fmtDate(b.finished) : "") : b.status==="reading" ? (b.started ? "Started " + fmtDate(b.started) : "Reading now") : "Want to read";
+  return `<div class="bookrow" onclick="go('detail','${b.id}')">${coverHTML(b)}
+    <div style="min-width:0"><b>${esc(b.title)}</b>
+    ${meta ? `<div class="small muted">${esc(meta)}</div>` : ""}
+    ${b.status==="finished" && b.rating ? `<div>${starsHTML(b.rating)}</div>` : ""}
+    ${when ? `<div class="small muted">${esc(when)}</div>` : ""}
+    </div></div>`;
+}
+let HISTQ = "", HISTSORT = "newest";
+function viewHistory(){
+  const finished = B.books.filter(b=>b.status==="finished");
+  const reading = B.books.filter(b=>b.status==="reading");
+  const match = b => !HISTQ || (b.title + " " + (b.author||"")).toLowerCase().includes(HISTQ.toLowerCase());
+  const sorter = { newest:(a,b)=>(b.finished||b.addedAt||"").localeCompare(a.finished||a.addedAt||""),
+    oldest:(a,b)=>(a.finished||a.addedAt||"").localeCompare(b.finished||b.addedAt||""),
+    title:(a,b)=>a.title.localeCompare(b.title), rating:(a,b)=>(b.rating||0)-(a.rating||0) };
+  const finShown = finished.filter(match).sort(sorter[HISTSORT]);
+  const thisYear = finished.filter(b=>b.finished && new Date(b.finished+"T12:00:00").getFullYear()===new Date().getFullYear());
+  app.innerHTML = `<div class="eyebrow">Reading history</div>
+    <h1>The books that stayed.</h1>
+    <p class="muted" style="margin:0">${finished.length} finished${reading.length ? " · " + reading.length + " in progress" : ""}</p>
+    ${B.books.length===0 ? `<div class="empty" style="margin-top:18px"><div style="font-size:2rem">📖</div>
+      <h2 style="margin:8px 0 4px">Your shelf is empty</h2>
+      <p class="muted" style="margin:0 auto 16px; max-width:420px">Log the first book you have finished — or the one you are reading now — and it will live here.</p>
+      <div class="btnrow" style="justify-content:center"><button class="btn" onclick="go('add')">+ Add a book</button>
+      <button class="btn ghost" onclick="go('suggest')">Ask for ideas</button></div></div>`
+    : `<div style="display:flex; gap:8px; margin-top:16px">
+        <input type="search" placeholder="Find a title or author…" value="${esc(HISTQ)}" oninput="HISTQ=this.value; viewHistoryKeep()">
+        <select style="width:auto" onchange="HISTSORT=this.value; render()">
+          <option value="newest" ${HISTSORT==="newest"?"selected":""}>Newest first</option>
+          <option value="oldest" ${HISTSORT==="oldest"?"selected":""}>Oldest first</option>
+          <option value="title" ${HISTSORT==="title"?"selected":""}>Title A–Z</option>
+          <option value="rating" ${HISTSORT==="rating"?"selected":""}>Highest rated</option></select></div>
+      ${reading.length ? `<h2>Reading now</h2>${reading.filter(match).map(bookRow).join("")}` : ""}
+      <h2>Finished this year <span class="muted" style="font-size:.9rem">(${thisYear.length})</span></h2>
+      ${finShown.length ? finShown.map(bookRow).join("") : `<p class="muted">No finished books match.</p>`}`}`;
+}
+function viewHistoryKeep(){ const v = document.querySelector("input[type=search]"); const pos = v ? v.selectionStart : 0; render();
+  const n = document.querySelector("input[type=search]"); if(n){ n.focus(); n.setSelectionRange(pos,pos); } }
+function viewToRead(){
+  const list = B.books.filter(b=>b.status==="want");
+  app.innerHTML = `<div class="eyebrow">To read</div><h1>The books waiting for you.</h1>
+    <p class="muted" style="margin:0">${list.length} book${list.length===1?"":"s"}</p>
+    ${list.length ? list.map(bookRow).join("") : `<div class="empty" style="margin-top:18px"><div style="font-size:2rem">📚</div>
+      <h2 style="margin:8px 0 4px">Nothing queued yet</h2>
+      <p class="muted" style="margin:0 auto 16px; max-width:420px">Books you want to read will wait here — quiet, patient, ready when you are.</p>
+      <button class="btn" onclick="go('add')">+ Add a book</button></div>`}`;
+}
+function viewDetail(id){
+  const b = B.books.find(x=>x.id===id); if(!b) return go("history");
+  app.innerHTML = `<p><span style="cursor:pointer; color:var(--rust); font-weight:600" onclick="go('${b.status==="want"?"toread":"history"}')">← Back</span></p>
+    <div class="flex">${coverHTML(b,true)}<div>
+      <b style="font-family:Georgia,serif; font-size:1.4rem">${esc(b.title)}</b>
+      ${b.author ? `<div class="muted">${esc(b.author)}</div>` : ""}
+      ${b.publisher ? `<div class="small muted">${esc(b.publisher)}</div>` : ""}
+      <div style="margin-top:8px">${b.status==="finished" ? starsHTML(b.rating) : ""}</div>
+      <div class="small" style="margin-top:6px">${b.format} · ${b.status==="want" ? "Want to read" : b.status==="reading" ? "Reading now" + (b.started ? " · started " + fmtDate(b.started) : "") : "Finished" + (b.finished ? " " + fmtDate(b.finished) : "") + (b.started ? " · started " + fmtDate(b.started) : "")}</div>
+    </div></div>
+    ${b.review ? `<div class="card"><div class="eyebrow" style="margin:0">Your review</div><p style="margin:8px 0 0">${esc(b.review)}</p></div>` : ""}
+    <div class="btnrow">
+      ${b.status==="want" ? `<button class="btn" onclick="setStatus('${b.id}','reading')">Start reading</button>` : ""}
+      ${b.status==="reading" ? `<button class="btn" onclick="setStatus('${b.id}','finished')">Mark finished</button>` : ""}
+      <button class="btn ghost" onclick="go('add','${b.id}')">Edit</button>
+      <button class="btn danger" onclick="if(confirm('Remove this book from your log?')){ B.books = B.books.filter(x=>x.id!=='${b.id}'); save(); go('${b.status==="want"?"toread":"history"}'); }">Delete</button>
+    </div>`;
+}
+function setStatus(id, status){
+  const b = B.books.find(x=>x.id===id); if(!b) return;
+  b.status = status; const today = new Date().toISOString().slice(0,10);
+  if(status==="reading" && !b.started) b.started = today;
+  if(status==="finished"){ if(!b.finished) b.finished = today; if(!b.started) b.started = today; }
+  save(); go("detail", id);
+}
+
+/* ---------- Add / edit a book ---------- */
+let F = null;
+function viewAdd(editId){
+  const existing = editId ? B.books.find(x=>x.id===editId) : null;
+  if(!F || F._id !== (editId || "new")){
+    const today = new Date().toISOString().slice(0,10);
+    F = existing ? { ...existing, _id: editId } : { _id:"new", title:"", author:"", publisher:"", format:"Paper book",
+      status:"want", started: today, finished: today, rating: 5, review:"", cover:"" };
+  }
+  const showStarted = F.status !== "want", showFin = F.status === "finished";
+  app.innerHTML = `<p><span style="cursor:pointer; color:var(--rust); font-weight:600" onclick="F=null; go('history')">← Back</span></p>
+    <h1 style="margin-top:4px">${existing ? "Edit book" : "Add a book"}</h1>
+    <p class="muted" style="margin-top:0">The cover is looked up automatically from the title and author — you can always search again.</p>
+    <div class="flex">
+      <div>${F.cover ? `<img class="coverbig" src="${esc(F.cover)}" onerror="this.outerHTML='<div class=&quot;coverbigph&quot;>📖</div>'">` : `<div class="coverbigph">📖</div>`}
+        <div class="small muted" id="covermsg" style="margin-top:6px; max-width:110px"></div>
+        <button class="btn ghost" style="padding:8px 14px; margin-top:6px" onclick="findCover(true)">Find cover</button></div>
+      <div style="flex:1; min-width:220px">
+        <label style="margin-top:0">Title *</label>
+        <input type="text" id="f_title" placeholder="The book's title" value="${esc(F.title)}" oninput="F.title=this.value; document.getElementById('savebtn').disabled = !this.value.trim(); debounceCover()">
+        <label>Author</label>
+        <input type="text" id="f_author" placeholder="Author" value="${esc(F.author)}" oninput="F.author=this.value; debounceCover()">
+        <label>Publishing company</label>
+        <input type="text" id="f_publisher" placeholder="Publisher" value="${esc(F.publisher)}" oninput="F.publisher=this.value">
+        <label>Format</label>
+        <div class="pills">${["Paper book","Ebook","Audiobook","Other"].map(x=>`<button class="pillbtn ${F.format===x?"on":""}" onclick="F.format='${x}'; render()">${x}</button>`).join("")}</div>
+        <label>Where is it now?</label>
+        <div class="pills">${[["want","Want to read"],["reading","Reading now"],["finished","Finished"]].map(([v,t])=>`<button class="pillbtn ${F.status===v?"on":""}" onclick="F.status='${v}'; render()">${t}</button>`).join("")}</div>
+        ${showStarted ? `<label>Started</label><input type="date" value="${esc(F.started||"")}" onchange="F.started=this.value">` : ""}
+        ${showFin ? `<label>Finished</label><input type="date" value="${esc(F.finished||"")}" onchange="F.finished=this.value">
+          <label>Your rating</label>
+          <div>${[1,2,3,4,5].map(i=>`<button class="starbtn ${F.rating>=i?"on":""}" onclick="F.rating=${i}; render()">★</button>`).join("")}</div>
+          <label>Your review</label>
+          <textarea placeholder="Your review" oninput="F.review=this.value">${esc(F.review)}</textarea>` : ""}
+      </div>
+    </div>
+    <div class="btnrow" style="justify-content:flex-end">
+      <button class="btn" id="savebtn" ${F.title.trim() ? "" : "disabled"} onclick="saveBook()">Save book</button></div>`;
+}
+let coverTimer = null;
+function debounceCover(){ clearTimeout(coverTimer); coverTimer = setTimeout(()=>findCover(false), 900); }
+function findCover(manual){
+  if(!F || !F.title.trim()) return;
+  const msg = document.getElementById("covermsg"); if(msg) msg.textContent = "Searching…";
+  const q = "https://openlibrary.org/search.json?limit=3&fields=cover_i,publisher,title,author_name&title=" +
+    encodeURIComponent(F.title) + (F.author.trim() ? "&author=" + encodeURIComponent(F.author) : "");
+  fetch(q).then(r=>r.json()).then(j=>{
+    const doc = (j.docs||[]).find(d=>d.cover_i) || (j.docs||[])[0];
+    if(doc && doc.cover_i){ F.cover = "https://covers.openlibrary.org/b/id/" + doc.cover_i + "-M.jpg";
+      if(manual || !F.publisher) { if(doc.publisher && doc.publisher[0] && !F.publisher) { F.publisher = doc.publisher[0]; const pi = document.getElementById("f_publisher"); if(pi) pi.value = F.publisher; } }
+      if(msg) msg.textContent = "Cover found."; render();
+    } else if(msg) msg.textContent = "No cover found — the book still saves with a placeholder.";
+  }).catch(()=>{ if(msg) msg.textContent = "Cover lookup needs a connection."; });
+}
+function saveBook(){
+  if(!F.title.trim()) return;
+  const data = { title:F.title.trim(), author:F.author.trim(), publisher:F.publisher.trim(), format:F.format, status:F.status,
+    started:F.status==="want" ? "" : F.started, finished:F.status==="finished" ? F.finished : "",
+    rating:F.status==="finished" ? F.rating : 0, review:F.status==="finished" ? F.review : "", cover:F.cover };
+  if(F._id === "new"){ const nb = { id: uid(), addedAt: new Date().toISOString(), ...data }; B.books.push(nb); save(); F=null; go("detail", nb.id); }
+  else { const b = B.books.find(x=>x.id===F._id); Object.assign(b, data); save(); const id = F._id; F=null; go("detail", id); }
+}
+
+/* ---------- Suggestions (built-in curated list, matched to mood + your library) ---------- */
+const CATALOG = [
+ ["Gilead","Marilynne Robinson","Literary fiction",5,"A slow, meditative, quietly overpowering novel of faith, family, and forgiveness.",["quiet","emotional","classic"]],
+ ["The House in the Cerulean Sea","TJ Klune","Contemporary fantasy",5,"A heartwarming orphanage of magical children, and the caseworker who learns to see them.",["quiet","slump","funny"]],
+ ["A Psalm for the Wild-Built","Becky Chambers","Solarpunk",5,"A tea monk and a robot on a gentle journey — a meditation on contentment.",["quiet","short","scifi"]],
+ ["Stoner","John Williams","Literary fiction",5,"A beautifully underwritten portrait of a life of quiet dignity — one of the great American novels.",["quiet","classic","emotional"]],
+ ["The Summer Book","Tove Jansson","Literary fiction",4,"A spare, luminous story of a grandmother and granddaughter on a remote Finnish island.",["quiet","short","classic"]],
+ ["A Gentleman in Moscow","Amor Towles","Historical fiction",5,"A count confined to a grand hotel builds a full life inside its walls. Warm and elegant.",["quiet","sweeping","history"]],
+ ["Remarkably Bright Creatures","Shelby Van Pelt","Fiction",4,"A widow, a missing son, and a giant Pacific octopus who knows more than anyone.",["quiet","emotional","slump"]],
+ ["Klara and the Sun","Kazuo Ishiguro","Literary sci-fi",4,"An artificial girl watches the world with complete devotion. Quiet and devastating.",["quiet","scifi","emotional"]],
+ ["Piranesi","Susanna Clarke","Fantasy",4,"A man lives in an endless house of halls and tides. Strange, short, beautiful.",["quiet","short","mystery"]],
+ ["Braiding Sweetgrass","Robin Wall Kimmerer","Nature essays",5,"A botanist writes about plants, gratitude, and paying attention.",["quiet","growth"]],
+ ["The Little Prince","Antoine de Saint-Exupéry","Classic fable",5,"A tiny traveller, a fox, and what is essential — in under a hundred pages.",["quiet","short","classic"]],
+ ["The Midnight Library","Matt Haig","Fiction",4,"Between life and death sits a library of every life she could have lived.",["growth","slump","emotional"]],
+ ["Atomic Habits","James Clear","Self-development",4,"Small habits, compounded — the most practical book on changing behaviour.",["growth","short"]],
+ ["Man's Search for Meaning","Viktor E. Frankl","Memoir",5,"A psychiatrist's account of finding meaning in the hardest circumstances imaginable.",["growth","emotional","history"]],
+ ["Educated","Tara Westover","Memoir",5,"Raised without school, she educates herself to a Cambridge PhD. Unforgettable.",["growth","sweeping","emotional"]],
+ ["Sapiens","Yuval Noah Harari","History",4,"How an unremarkable ape came to rule the world — ideas on every page.",["growth","history"]],
+ ["Thinking, Fast and Slow","Daniel Kahneman","Psychology",4,"The two systems that drive how you think, decide, and misjudge.",["growth"]],
+ ["The Name of the Wind","Patrick Rothfuss","Fantasy",5,"A legendary arcanist tells his own story — music, magic, and loss.",["sweeping","slump"]],
+ ["East of Eden","John Steinbeck","Classic",5,"A vast California retelling of Cain and Abel across generations.",["sweeping","classic"]],
+ ["The Song of Achilles","Madeline Miller","Historical fiction",5,"Achilles and Patroclus, retold with heartbreaking beauty.",["sweeping","emotional","history"]],
+ ["Circe","Madeline Miller","Fantasy",4,"The witch of Aiaia tells her own story at last.",["sweeping","emotional"]],
+ ["Jane Eyre","Charlotte Brontë","Classic",4,"An orphan governess, a brooding house, and a will of iron.",["sweeping","classic","emotional"]],
+ ["Dune","Frank Herbert","Science fiction",5,"Politics, religion, and giant worms on a desert planet. The landmark of the genre.",["scifi","sweeping"]],
+ ["Project Hail Mary","Andy Weir","Science fiction",5,"A lone astronaut wakes with no memory and the fate of Earth in his hands. Pure momentum.",["scifi","slump","funny"]],
+ ["The Martian","Andy Weir","Science fiction",4,"Stranded on Mars, he sciences his way out — funny and relentless.",["scifi","funny","slump"]],
+ ["The Silent Patient","Alex Michaelides","Thriller",4,"She shot her husband and never spoke again. A twist you won't see coming.",["mystery","slump"]],
+ ["Gone Girl","Gillian Flynn","Thriller",4,"A marriage, a disappearance, and two unreliable narrators.",["mystery"]],
+ ["The Thursday Murder Club","Richard Osman","Mystery",4,"Four retirees solve cold cases over wine and cake. Cosy and sharp.",["mystery","funny","slump"]],
+ ["Born a Crime","Trevor Noah","Memoir",5,"Growing up in apartheid South Africa — harrowing and very funny.",["funny","growth","history"]],
+ ["Lessons in Chemistry","Bonnie Garmus","Fiction",4,"A chemist in the 1960s becomes an unlikely TV cooking star. Witty and warm.",["funny","slump","emotional"]],
+ ["Tomorrow, and Tomorrow, and Tomorrow","Gabrielle Zevin","Fiction",4,"Two friends make video games and a life together across thirty years.",["emotional","sweeping","slump"]],
+ ["The Vanishing Half","Brit Bennett","Fiction",4,"Twin sisters, two very different lives, one unshakeable bond.",["emotional","sweeping"]],
+];
+const MOODKEYS = { quiet:["quiet","slow","weekend","beautiful","beautifully","gentle","peaceful","calm","written"],
+  sweeping:["sweeping","epic","lost in","escape","saga","big"], slump:["slump","stuck","rut","gripping","page-turner","finish"],
+  growth:["growth","personal","grow","self","learn","improve","meaning"], mystery:["mystery","thriller","suspense","crime","twist"],
+  scifi:["science fiction","sci-fi","scifi","space","future","robot","alien"], funny:["funny","laugh","humor","humour","comedy","light"],
+  emotional:["cry","emotional","moving","heart","sad","tears"], classic:["classic","classics","older","literature"],
+  short:["short","quick","brief","novella"], history:["history","historical","past","war"] };
+let SUG = null;
+function viewSuggest(){
+  app.innerHTML = `<div class="eyebrow">Ask for ideas</div>
+    <h1>What should I read next?</h1>
+    <p class="muted" style="margin-top:0">Describe what you are in the mood for. The suggestions are shaped by what you have read, your ratings and your notes.</p>
+    <textarea id="mood" placeholder="I want more books with a similar style, but about personal growth…">${esc(SUG?.text || "")}</textarea>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px">
+      ${["A sweeping novel I can get lost in","Something quiet and beautifully written for a slow weekend","Books that pull me out of a reading slump"].map(c=>`<button class="chipbtn" onclick="document.getElementById('mood').value='${c}'; suggest()">${c}</button>`).join("")}
+    </div>
+    <div style="margin-top:14px"><button class="btn" id="sugbtn" onclick="suggest()">Suggest books</button></div>
+    <div id="sugout">${SUG ? SUG.html : ""}</div>`;
+}
+function suggest(){
+  const text = (document.getElementById("mood").value || "").trim();
+  if(!text) return;
+  const low = " " + text.toLowerCase() + " ";
+  const myTitles = new Set(B.books.map(b=>b.title.toLowerCase()));
+  const myAuthors = new Set(B.books.filter(b=>b.rating>=4).map(b=>(b.author||"").toLowerCase()).filter(Boolean));
+  let topMood = "", topHits = 0;
+  const scored = CATALOG.filter(c=>!myTitles.has(c[0].toLowerCase())).map(c=>{
+    let s = 0; const moods = {};
+    for(const [mood, keys] of Object.entries(MOODKEYS)){ const hit = keys.some(k=>low.includes(k));
+      if(hit && c[5].includes(mood)){ s += 3; moods[mood] = 1; } }
+    for(const m of c[5]) if(moods[m]) topHits++;
+    if(myAuthors.has(c[1].toLowerCase())) s += 3;
+    s += Math.random()*0.6;
+    return { c, s };
+  }).sort((a,b)=>b.s-a.s).slice(0,5);
+  for(const [mood, keys] of Object.entries(MOODKEYS)) if(keys.some(k=>low.includes(k))) { topMood = mood; break; }
+  const intros = { quiet:"For that mood, these selections offer gentle, atmospheric prose that invites you to linger over every page.",
+    sweeping:"Big canvases, all of them — books built to disappear into.",
+    slump:"Fast hooks and short chapters: these are chosen to get the pages turning again.",
+    growth:"Books that leave you slightly different from how they found you.",
+    mystery:"Each of these keeps one question open until very near the end.",
+    scifi:"Other worlds, rigorously built — and very human at the centre.",
+    funny:"Light on their feet, but not lightweight.",
+    emotional:"Keep the tissues nearby. These earn their feelings.",
+    classic:"Proven over decades — the ones people keep returning to.",
+    short:"Short, complete, and satisfying — finishable in a weekend.",
+    history:"The past, told by writers who make it breathe.", "":"Five picks, matched to your mood and weighted toward authors you have rated highly." };
+  const html = `<p class="intro" style="margin-top:20px">${esc(intros[topMood] || intros[""])}</p>` +
+    scored.map(({c})=>`<div class="card"><b style="font-family:Georgia,serif; font-size:1.15rem">${esc(c[0])}</b>
+      <div class="muted">${esc(c[1])}</div>
+      <div class="genre" style="margin:6px 0 2px">${esc(c[2])}</div>
+      <div>${starsHTML(c[3])}</div>
+      <p style="margin:8px 0 12px">${esc(c[4])}</p>
+      <button class="btn ghost" style="padding:9px 16px" onclick='addSuggestion(${JSON.stringify(c[0])}, ${JSON.stringify(c[1])}, this)'>+ To read</button></div>`).join("");
+  SUG = { text, html };
+  document.getElementById("sugout").innerHTML = html;
+}
+function addSuggestion(title, author, btn){
+  if(!B.books.some(b=>b.title.toLowerCase()===title.toLowerCase())){
+    B.books.push({ id: uid(), addedAt: new Date().toISOString(), title, author, publisher:"", format:"Paper book",
+      status:"want", started:"", finished:"", rating:0, review:"", cover:"" }); save();
+  }
+  btn.textContent = "✓ On your To read list"; btn.disabled = true;
+}
+
+/* ---------- Backup: export / import ---------- */
+function backupCard(){
+  return `<h2>Backup</h2><div class="card">
+    <p class="small muted" style="margin-top:0">Your library is saved only in this browser, on this device. Export a backup file and keep it somewhere safe (for example Google Drive or your PC) — you can import it on another device or browser to move your library there.</p>
+    <div class="btnrow">
+      <button class="btn ghost" onclick="exportBackup()">Export backup</button>
+      <button class="btn ghost" onclick="document.getElementById('impfile').click()">Import backup</button>
+    </div>
+    <input type="file" id="impfile" accept=".json,application/json" style="display:none" onchange="importBackup(this)"></div>`;
+}
+function exportBackup(){
+  const payload = JSON.stringify({ app:"BookBound", version:1, exportedAt:new Date().toISOString(), books:B.books }, null, 1);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([payload], { type:"application/json" }));
+  a.download = "bookbound-backup-" + new Date().toISOString().slice(0,10) + ".json";
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function importBackup(input){
+  const file = input.files && input.files[0]; if(!file) return;
+  file.text().then(t=>{
+    try { const data = JSON.parse(t); if(!data || !Array.isArray(data.books)) throw new Error("shape");
+      if(!confirm("Replace your current library (" + B.books.length + " books) with the backup (" + data.books.length + " books)?")) return;
+      B.books = data.books; save(); alert("Backup imported — " + B.books.length + " books restored."); go("history");
+    } catch(e){ alert("That file doesn't look like a BookBound backup."); }
+  });
+}
+go("history");
+</script>
+</body>
+</html>
