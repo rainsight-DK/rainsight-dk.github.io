@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>LocalPulse — Neighborhood Intel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📍</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📍</text></svg>">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root{ --ink:#1c2420; --muted:#6b7670; --line:#e3e8e5; --teal:#0f766e; --blue:#2563eb; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:#f7f9f8; color:var(--ink); font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
+  .wrap{max-width:720px; margin:0 auto; padding:0 14px 48px;}
+  header{background:linear-gradient(120deg,#059669,#0f766e); color:#fff; margin:0 -14px; padding:22px 18px 18px;}
+  header h1{margin:0; font-size:1.5rem;} header p{margin:4px 0 0; opacity:.85; font-size:.9rem;}
+  .controls{display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;}
+  .searchrow{display:flex; gap:8px; flex:1 1 100%;}
+  input[type=search]{flex:1; padding:12px 13px; font-size:1rem; border:1.5px solid var(--line); border-radius:12px; background:#fff;}
+  .btn{background:var(--blue); color:#fff; border:0; border-radius:12px; padding:12px 16px; font-size:.95rem; font-weight:600; cursor:pointer;}
+  .btn.teal{background:var(--teal);} .btn.ghost{background:#fff; color:var(--teal); border:1.5px solid var(--teal);}
+  .btn:disabled{opacity:.45;}
+  .card{background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px; margin:12px 0; box-shadow:0 1px 4px rgba(20,40,30,.05);}
+  .card h2{font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 8px;}
+  .big{font-size:1.25rem; font-weight:700; line-height:1.35;}
+  .src{font-size:.72rem; color:var(--muted); margin-top:10px;}
+  .src a{color:var(--teal);}
+  .kv{display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--line); font-size:.95rem;}
+  .kv:last-child{border-bottom:0;} .kv b{white-space:nowrap;}
+  #map{height:300px; border-radius:12px; z-index:0;}
+  .schoolrow{display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px dashed var(--line);}
+  .schoolrow:last-child{border-bottom:0;}
+  .pill{display:inline-block; background:#e6f4f1; color:var(--teal); font-size:.68rem; font-weight:700; padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em;}
+  #status{margin:14px 0 0; color:var(--muted); font-size:.92rem; min-height:1.2em;}
+  .savedrow{display:flex; justify-content:space-between; align-items:center; gap:10px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin:8px 0; cursor:pointer;}
+  select{padding:10px; border:1.5px solid var(--line); border-radius:10px; background:#fff; font-size:.95rem;}
+  footer{color:var(--muted); font-size:.76rem; text-align:center; margin-top:28px; line-height:1.55;}
+  .err{color:#a33327;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📍 LocalPulse</h1>
+    <p>Neighborhood Intel — real data about the area around a place.</p>
+  </header>
+
+  <div class="controls">
+    <div class="searchrow">
+      <input type="search" id="q" placeholder="Type an address or place — e.g. Canton, GA" enterkeyhint="search">
+      <button class="btn" onclick="searchPlace()">Search</button>
+    </div>
+    <button class="btn teal" onclick="useGPS()">📍 My location</button>
+    <button class="btn ghost" id="savebtn" onclick="saveCurrent()" disabled>🔖 Save this place</button>
+    <button class="btn ghost" onclick="toggleSaved()">Saved (<span id="savedcount">0</span>)</button>
+    <button class="btn ghost" onclick="refreshAll()">↻ Refresh</button>
+  </div>
+  <div id="status">Search for a place, or tap “My location”.</div>
+
+  <main id="dash">
+    <div class="card" id="card-address" style="display:none"><h2>Address</h2><div class="big" id="addr-main"></div><div class="muted" id="addr-sub" style="margin-top:4px"></div><div class="src">Source: OpenStreetMap geocoding (Nominatim)</div></div>
+    <div class="card" id="card-county" style="display:none"><h2>County</h2><div class="big" id="county-main"></div><div class="src">Source: OpenStreetMap · FCC Census Block API</div></div>
+    <div class="card" id="card-values" style="display:none"><h2>Home values & income — this census tract</h2><div id="values-body"><span class="muted">Loading Census data…</span></div>
+      <div class="src">Source: U.S. Census Bureau, American Community Survey 5-year estimates, via Census Reporter. These are survey estimates for the census tract (a small neighbourhood area), updated yearly — not live market prices or listings.</div></div>
+    <div class="card" id="card-schools" style="display:none"><h2>Nearest schools</h2><div id="schools-body"><span class="muted">Loading schools…</span></div>
+      <div class="src">Source: OpenStreetMap contributors, via the Overpass API. Real school locations and distances — this free data has no quality ratings.</div></div>
+    <div class="card" id="card-map" style="display:none"><h2>Map</h2><div id="map"></div>
+      <div class="src">Map © OpenStreetMap contributors. Pan the map, then use “Search this area” to reload the data for the new centre.</div>
+      <div style="margin-top:10px"><button class="btn teal" id="searcharea" style="display:none" onclick="searchMapCentre()">Search this area</button></div></div>
+  </main>
+
+  <section id="savedview" style="display:none">
+    <div style="display:flex; align-items:center; gap:10px; margin-top:18px">
+      <h2 style="margin:0; font-size:1.2rem">Saved locations</h2>
+      <span style="margin-left:auto"></span>
+      <select id="savedsort" onchange="renderSaved()">
+        <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="closest">Closest first</option>
+      </select>
+      <button class="btn ghost" onclick="toggleSaved()">← Back</button>
+    </div>
+    <div id="savedlist"></div>
+    <div class="card"><h2>Backup</h2>
+      <p class="muted" style="margin:0 0 10px; font-size:.9rem">Saved locations live only in this browser, on this device. Export a backup file (keep it in Google Drive or on your PC) and import it on another device or browser to move them there.</p>
+      <button class="btn ghost" onclick="exportBackup()">Export backup</button>
+      <button class="btn ghost" onclick="document.getElementById('impfile').click()">Import backup</button>
+      <input type="file" id="impfile" accept=".json,application/json" style="display:none" onchange="importBackup(this)">
+    </div>
+  </section>
+
+  <footer>LocalPulse (independent rebuild) — every figure on this page comes from a named public source.<br>Nothing here is AI-generated or estimated by this app.</footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+"use strict";
+const KEY = "localPulseV1";
+let LP = JSON.parse(localStorage.getItem(KEY) || "null") || { saved: [] };
+function saveLP(){ localStorage.setItem(KEY, JSON.stringify(LP)); }
+const esc = s => { const d=document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; };
+const $ = id => document.getElementById(id);
+const money = n => (n===null||n===undefined||isNaN(n)) ? "—" : "$" + Math.round(n).toLocaleString("en-US");
+const haversine = (a,b,c,d) => { const R=3958.8, t=x=>x*Math.PI/180; const h=Math.sin(t(c-a)/2)**2 + Math.cos(t(a))*Math.cos(t(c))*Math.sin(t(d-b)/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
+let CUR = null; // {lat, lng, label}
+let map = null, marker = null;
+
+function setStatus(t, isErr){ $("status").innerHTML = isErr ? '<span class="err">'+esc(t)+"</span>" : esc(t); }
+function updateSavedCount(){ $("savedcount").textContent = LP.saved.length; }
+updateSavedCount();
+
+$("q").addEventListener("keydown", e=>{ if(e.key==="Enter") searchPlace(); });
+
+async function searchPlace(){
+  const q = $("q").value.trim(); if(!q) return;
+  setStatus("Searching for “" + q + "”…");
+  try {
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&q=" + encodeURIComponent(q), { headers:{ "Accept":"application/json" } });
+    const j = await r.json();
+    if(!j.length){ setStatus("No match found for that search. Try adding a city or state.", true); return; }
+    const hit = j[0];
+    await loadPlace(parseFloat(hit.lat), parseFloat(hit.lon), hit.display_name);
+  } catch(e){ setStatus("Search needs an internet connection.", true); }
+}
+function useGPS(){
+  if(!navigator.geolocation){ setStatus("This browser does not provide location.", true); return; }
+  setStatus("Getting your location…");
+  navigator.geolocation.getCurrentPosition(
+    async pos => { await loadPlace(pos.coords.latitude, pos.coords.longitude, null); },
+    err => { setStatus("Location was not available (" + err.message + "). Type an address instead — no location permission is needed for search.", true); },
+    { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
+}
+function refreshAll(){ if(CUR) loadPlace(CUR.lat, CUR.lng, CUR.label); else useGPS(); }
+
+async function loadPlace(lat, lng, label){
+  CUR = { lat, lng, label };
+  setStatus("Loading neighbourhood data…");
+  $("savebtn").disabled = false;
+  showMap(lat, lng);
+  // Reverse geocode (or reuse search result label)
+  let addr = null;
+  try {
+    const r = await fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" + lat + "&lon=" + lng + "&addressdetails=1", { headers:{ "Accept":"application/json" } });
+    addr = await r.json();
+  } catch(e){}
+  const a = (addr && addr.address) || {};
+  const main = label || (addr && addr.display_name) || (lat.toFixed(5) + ", " + lng.toFixed(5));
+  const street = [a.house_number, a.road].filter(Boolean).join(" ");
+  $("card-address").style.display = "";
+  $("addr-main").textContent = street || main;
+  $("addr-sub").textContent = [a.city || a.town || a.village || a.hamlet || "", a.state || "", a.postcode || ""].filter(Boolean).join(", ") || main;
+  if(a.county){ $("card-county").style.display = ""; $("county-main").textContent = a.county + (a.state ? ", " + a.state : ""); }
+  setStatus("Showing data for " + (street || main) + ".");
+  loadValues(lat, lng);
+  loadSchools(lat, lng);
+}
+function showMap(lat, lng){
+  $("card-map").style.display = "";
+  if(window.L){
+    if(!map){ map = L.map("map").setView([lat,lng], 14);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"© OpenStreetMap contributors" }).addTo(map);
+      marker = L.marker([lat,lng]).addTo(map);
+      map.on("moveend", ()=>{ if(!CUR) return; const c = map.getCenter();
+        const moved = haversine(CUR.lat, CUR.lng, c.lat, c.lng);
+        $("searcharea").style.display = moved > 0.3 ? "" : "none"; });
+    } else { map.setView([lat,lng], 14); marker.setLatLng([lat,lng]); }
+    setTimeout(()=>map.invalidateSize(), 60);
+    $("searcharea").style.display = "none";
+  } else {
+    $("map").innerHTML = '<p class="muted">The map library could not load — check your connection and refresh.</p>';
+  }
+}
+function searchMapCentre(){ if(!map) return; const c = map.getCenter(); loadPlace(c.lat, c.lng, null); }
+
+async function loadValues(lat, lng){
+  $("card-values").style.display = "";
+  const body = $("values-body"); body.innerHTML = '<span class="muted">Loading Census data…</span>';
+  try {
+    const fr = await fetch("https://geo.fcc.gov/api/census/block/find?latitude=" + lat + "&longitude=" + lng + "&censusYear=2020&format=json");
+    const fj = await fr.json();
+    const block = fj && fj.Block && fj.Block.FIPS; const countyFips = fj && fj.County && fj.County.FIPS;
+    if(!block) throw new Error("geo");
+    const tractGeoid = "14000US" + block.slice(0,11);
+    const countyGeoid = "05000US" + countyFips;
+    const url = "https://api.censusreporter.org/1.0/data/show/acs2023_5yr?table_ids=B25077,B19013,B25064&geo_ids=" + tractGeoid + "," + countyGeoid;
+    const cr = await fetch(url); const cj = await cr.json();
+    const get = (g, t) => { try { const est = cj.data[g][t].estimate; const k = Object.keys(est)[0]; const v = est[k]; return (v===null||v===undefined) ? null : v; } catch(e){ return null; } };
+    const hv = get(tractGeoid, "B25077"), inc = get(tractGeoid, "B19013"), rent = get(tractGeoid, "B25064");
+    const hvCounty = get(countyGeoid, "B25077");
+    if(hv===null && inc===null) throw new Error("nodata");
+    body.innerHTML =
+      '<div class="kv"><span>Median home value (tract)</span><b>' + money(hv) + "</b></div>" +
+      '<div class="kv"><span>Median home value (' + esc((fj.County||{}).name || "county") + ')</span><b>' + money(hvCounty) + "</b></div>" +
+      '<div class="kv"><span>Median household income (tract)</span><b>' + money(inc) + "</b></div>" +
+      '<div class="kv"><span>Median gross rent (tract)</span><b>' + money(rent) + "</b></div>";
+  } catch(e){
+    body.innerHTML = '<span class="muted">Census figures could not be loaded for this spot right now (the free Census service may be busy, or this location is outside the US). Try Refresh.</span>';
+  }
+}
+async function loadSchools(lat, lng){
+  $("card-schools").style.display = "";
+  const body = $("schools-body"); body.innerHTML = '<span class="muted">Loading schools…</span>';
+  const query = '[out:json][timeout:25];(node["amenity"="school"](around:3500,' + lat + "," + lng + ');way["amenity"="school"](around:3500,' + lat + "," + lng + '););out center 40;';
+  const endpoints = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+  let els = null;
+  for(const ep of endpoints){
+    try { const r = await fetch(ep, { method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" }, body:"data=" + encodeURIComponent(query) });
+      const j = await r.json(); if(j && j.elements){ els = j.elements; break; } } catch(e){}
+  }
+  if(!els){ body.innerHTML = '<span class="muted">Schools could not be loaded right now — the free school-data service may be busy. Try Refresh in a moment.</span>'; return; }
+  const seen = new Set(); const list = [];
+  for(const el of els){ const name = el.tags && el.tags.name; if(!name || seen.has(name)) continue; seen.add(name);
+    const elat = el.lat ?? (el.center && el.center.lat), elng = el.lon ?? (el.center && el.center.lon); if(elat===undefined) continue;
+    const level = /elementary/i.test(name) ? "Elementary" : /middle/i.test(name) ? "Middle" : /high/i.test(name) ? "High" : "School";
+    list.push({ name, level, dist: haversine(lat, lng, elat, elng) }); }
+  list.sort((x,y)=>x.dist-y.dist);
+  if(!list.length){ body.innerHTML = '<span class="muted">No schools found within about 2 miles in OpenStreetMap data.</span>'; return; }
+  body.innerHTML = list.slice(0,8).map(s=>'<div class="schoolrow"><span>' + esc(s.name) + ' <span class="pill">' + esc(s.level) + '</span></span><b>' + s.dist.toFixed(1) + " mi</b></div>").join("");
+}
+
+/* ---------- Saved locations ---------- */
+function saveCurrent(){
+  if(!CUR) return;
+  const label = $("addr-main").textContent + ($("addr-sub").textContent ? ", " + $("addr-sub").textContent : "");
+  if(LP.saved.some(s=>Math.abs(s.lat-CUR.lat)<1e-6 && Math.abs(s.lng-CUR.lng)<1e-6)){ setStatus("That place is already saved."); return; }
+  LP.saved.push({ label, lat:CUR.lat, lng:CUR.lng, savedAt:new Date().toISOString() });
+  saveLP(); updateSavedCount(); setStatus("Location saved.");
+}
+function toggleSaved(){
+  const v = $("savedview"); const show = v.style.display === "none";
+  v.style.display = show ? "" : "none"; $("dash").style.display = show ? "none" : "";
+  if(show) renderSaved();
+}
+function renderSaved(){
+  const mode = $("savedsort").value; const list = [...LP.saved];
+  if(mode==="newest") list.sort((a,b)=>b.savedAt.localeCompare(a.savedAt));
+  if(mode==="oldest") list.sort((a,b)=>a.savedAt.localeCompare(b.savedAt));
+  if(mode==="closest" && CUR) list.sort((a,b)=>haversine(CUR.lat,CUR.lng,a.lat,a.lng)-haversine(CUR.lat,CUR.lng,b.lat,b.lng));
+  $("savedlist").innerHTML = list.length ? list.map((s,i)=>'<div class="savedrow" onclick="openSaved(' + LP.saved.indexOf(s) + ')"><span><b>' + esc(s.label) + '</b><br><span class="muted" style="font-size:.8rem">Saved ' + new Date(s.savedAt).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}) + (CUR ? " · " + haversine(CUR.lat,CUR.lng,s.lat,s.lng).toFixed(1) + " mi away" : "") + '</span></span><button class="btn ghost" onclick="event.stopPropagation(); deleteSaved(' + LP.saved.indexOf(s) + ')">Delete</button></div>').join("")
+    : '<p class="muted">No saved locations yet. Search or use your location, then tap “Save this place”.</p>';
+}
+function openSaved(i){ const s = LP.saved[i]; if(!s) return; toggleSaved(); loadPlace(s.lat, s.lng, s.label); }
+function deleteSaved(i){ LP.saved.splice(i,1); saveLP(); updateSavedCount(); renderSaved(); }
+
+/* ---------- Backup ---------- */
+function exportBackup(){
+  const payload = JSON.stringify({ app:"LocalPulse", version:1, exportedAt:new Date().toISOString(), saved:LP.saved }, null, 1);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([payload], { type:"application/json" }));
+  a.download = "localpulse-backup-" + new Date().toISOString().slice(0,10) + ".json";
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function importBackup(input){
+  const file = input.files && input.files[0]; if(!file) return;
+  file.text().then(t=>{ try { const data = JSON.parse(t); if(!data || !Array.isArray(data.saved)) throw new Error("shape");
+    if(!confirm("Replace your saved locations (" + LP.saved.length + ") with the backup (" + data.saved.length + ")?")) return;
+    LP.saved = data.saved; saveLP(); updateSavedCount(); renderSaved(); alert("Backup imported.");
+  } catch(e){ alert("That file doesn't look like a LocalPulse backup."); } });
+}
+</script>
+</body>
+</html>
