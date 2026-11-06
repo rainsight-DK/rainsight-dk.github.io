@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#faf6ef">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Memory Gym</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👁️</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👁️</text></svg>">
+<style>
+  :root{ --bg:#faf6ef; --card:#fff; --ink:#2b2620; --muted:#7a7264; --green:#2f4f43; --green2:#3c6656;
+    --line:#eadfd0; --chip:#fdf3d8; --chipink:#8a6d1a; --soft:#eef3ec; --bad:#b3402a; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
+  .wrap{max-width:680px; margin:0 auto; padding:14px 16px 48px;}
+  nav{display:flex; align-items:center; gap:4px; flex-wrap:wrap; padding:6px 0 12px; border-bottom:1px solid var(--line);}
+  .logo{font-family:Georgia,serif; font-weight:700; font-size:1.15rem; margin-right:auto; cursor:pointer;}
+  nav button{background:none; border:0; font-size:.86rem; padding:7px 9px; border-radius:999px; color:var(--muted); cursor:pointer;}
+  nav button.on{background:var(--soft); color:var(--green); font-weight:700;}
+  h1{font-family:Georgia,serif; font-size:1.7rem; line-height:1.2; margin:.4em 0 .2em;}
+  h2{font-family:Georgia,serif; font-size:1.25rem; margin:22px 0 8px;}
+  .muted{color:var(--muted);} .small{font-size:.86rem;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin:12px 0;}
+  .btn{display:inline-block; background:var(--green); color:#fff; border:0; border-radius:12px; padding:13px 20px;
+    font-size:1rem; font-weight:600; cursor:pointer; width:100%; text-align:center;}
+  .btn:active{background:var(--green2);} .btn:disabled{opacity:.45;}
+  .btn.ghost{background:#fff; color:var(--green); border:1.5px solid var(--green);}
+  .btnrow{display:flex; gap:10px; margin-top:14px;} .btnrow .btn{flex:1;}
+  .pill{display:inline-block; background:var(--chip); color:var(--chipink); font-size:.72rem; font-weight:700;
+    letter-spacing:.04em; padding:4px 10px; border-radius:999px; text-transform:uppercase;}
+  .weekstrip{display:flex; gap:6px; margin-top:10px;}
+  .day{flex:1; text-align:center; border:1px solid var(--line); border-radius:10px; padding:7px 2px; font-size:.68rem; color:var(--muted); background:#fff;}
+  .day b{display:block; font-size:.85rem; color:var(--ink);}
+  .day.today{border-color:var(--green); background:var(--soft); color:var(--green); font-weight:700;}
+  .day.done{background:var(--green); color:#fff;} .day.done b{color:#fff;}
+  .stats{display:flex; gap:10px;} .stat{flex:1; background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 8px; text-align:center;}
+  .stat b{display:block; font-family:Georgia,serif; font-size:1.4rem;} .stat span{font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;}
+  .bar{height:10px; background:#efe7d8; border-radius:99px; overflow:hidden;} .bar i{display:block; height:100%; background:var(--green);}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:340px; margin:14px auto;}
+  .cell{aspect-ratio:1; background:#fff; border:2px solid var(--line); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:2.2rem;}
+  .cell.lit{background:#cfe6cf; border-color:var(--green);}
+  .cell.q{border-color:var(--green); color:var(--green); font-weight:700;}
+  .cell.tap{cursor:pointer;} .cell.tap:active{background:var(--soft);}
+  .opts{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;}
+  .opt{background:#fff; border:2px solid var(--line); border-radius:12px; padding:14px; font-size:1rem; cursor:pointer; text-align:center;}
+  .opt.sel{border-color:var(--green); background:var(--soft);}
+  .opt.correct{border-color:var(--green); background:#dff0df;}
+  .checklist{counter-reset:step; list-style:none; padding:0; margin:10px 0;}
+  .checklist li{padding:8px 0 8px 40px; position:relative; border-bottom:1px dashed var(--line);}
+  .checklist li:before{counter-increment:step; content:counter(step); position:absolute; left:0; top:6px; width:26px; height:26px;
+    background:var(--green); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.85rem; font-weight:700;}
+  .faces{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:12px 0;}
+  .face{background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; width:30%; min-width:96px; text-align:center;}
+  .face .em{font-size:3rem;} .face b{display:block; margin-top:4px;}
+  .bignum{font-family:Georgia,serif; font-size:2.6rem; text-align:center; letter-spacing:.12em; margin:10px 0;}
+  .bignum .p1{color:var(--green);} .bignum .p2{color:#c47b12;} .bignum .p3{color:#38618c;} .bignum .p4{color:#8c3861;}
+  .hints{display:flex; gap:10px; justify-content:center; flex-wrap:wrap;}
+  .hint{background:#fff; border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:.9rem;}
+  input[type=text],input[type=tel]{width:100%; padding:14px; font-size:1.3rem; text-align:center; border:2px solid var(--line); border-radius:12px; background:#fff;}
+  input[type=search]{width:100%; padding:12px 14px; font-size:1rem; border:2px solid var(--line); border-radius:12px; background:#fff;}
+  .tiles{display:grid; grid-template-columns:repeat(auto-fill,minmax(86px,1fr)); gap:8px; margin-top:12px;}
+  .tile{background:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 6px; text-align:center; font-size:.85rem;}
+  .tile b{display:block; color:var(--green);}
+  .score{font-family:Georgia,serif; font-size:2.2rem; text-align:center;}
+  .center{text-align:center;}
+  footer{color:var(--muted); font-size:.78rem; text-align:center; margin-top:34px; line-height:1.5;}
+  .skillrow{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px dashed var(--line);}
+  .link{color:var(--green); font-weight:600; cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="logo" onclick="go('today')">👁️ Memory Gym</div>
+    <button data-nav="today" onclick="go('today')">Today</button>
+    <button data-nav="practice" onclick="go('practice')">Practice</button>
+    <button data-nav="progress" onclick="go('progress')">Progress</button>
+    <button data-nav="plan" onclick="go('plan')">Plan</button>
+    <button data-nav="numbers" onclick="go('numbers')">Numbers</button>
+    <button data-nav="techniques" onclick="go('techniques')">Techniques</button>
+  </nav>
+  <main id="app"></main>
+  <footer>Memory Gym — Built to help one person remember better.<br>Made for one person, on this device. Nothing is uploaded and no account is needed.</footer>
+</div>
+<script>
+"use strict";
+/* ---------- data ---------- */
+const MAJOR = {0:["sauce","suit","sun","sumo","sir","seal","sushi","sock","sofa","soap"],
+1:["dice","deed","tin","tomb","tire","tail","dish","duck","thief","tub"],
+2:["nose","net","nun","gnome","Nero","nail","nudge","neck","knife","knob"],
+3:["mouse","mat","moon","mime","mower","mule","match","mic","movie","map"],
+4:["rose","rat","rain","ram","roar","rail","rash","rock","reef","rope"],
+5:["lace","light","lion","elm","lorry","lily","leech","log","leaf","lip"],
+6:["cheese","jet","chain","jam","cherry","jail","judge","chick","chef","chip"],
+7:["keys","keate","cane","gum","car","coal","cage","cake","cave","cap"],
+8:["vase","feet","van","foam","fire","veil","fish","fog","fife","fib"],
+9:["bus","bat","bun","bomb","bear","ball","badge","book","beef","pope"]};
+const majorWord = n => MAJOR[Math.floor(n/10)][n%10];
+
+const SKILLS = {
+  visual:  { name:"Flash memory", short:"Visual", tag:"Hold a glimpse of a grid in your mind.",
+             techTitle:"Make the scene tell a story" },
+  names:   { name:"Names & faces", short:"Names", tag:"Pin a name to a face.",
+             techTitle:"Turn a feature into a story" },
+  sequences:{ name:"Sequences", short:"Sequences", tag:"Repeat a pattern back, step by step.",
+             techTitle:"Chunk it into shapes" },
+  numbers: { name:"Numbers", short:"Numbers", tag:"Turn digits into images, then recall them.",
+             techTitle:"Digits into images, images into a story" },
+};
+const TECHNIQUES = {
+  visual:{ body:"Your brain keeps what it can turn into a little scene. A plain picture fades, but a picture that is doing something in a place sticks. Take the items and make one ridiculous little scene with them, and put the scene in the room you are sitting in now. Forgotten items often return as soon as you picture the room again — the scene is the handle that pulls them back.",
+    detail:"Make it move and make it too big. A sock the size of a footstool, sliding across the table, is easier to find in your mind than a neat little sock. Quiet, still details fade; moving, oversized ones stay. Sweep the grid in a Z — top row left to right, then the next row — so you cover every square exactly once.",
+    life:"Learning where you left your keys or phone, finding your car in a car park, remembering where a face sat in a meeting room.",
+    steps:["Say the three steps — see it, make it move, put it in the room.","Open the grid — one Z sweep, name each item silently.","Close your eyes and replay the scene before you answer."] },
+  names:{ body:"A name sticks when it has a picture to hold onto. Find one clear feature in the face — the hair, the smile, the way the eyes sit — and link the name to it in a little scene. Forgetting a name in person is usually a finding problem, not a memory problem: look for one thing and use it.",
+    detail:"Borrow the name's sound if it helps: Lena, Liam and Leo can each be given a different sort of scene, because the names themselves tell you which one goes with which. Let one clear feature carry the name, and let the rest of the face fade.",
+    life:"Introductions at a party, a class, or a new team, where you meet three people at once and the names vanish before you sit down.",
+    steps:["Meet the faces — look at each one carefully.","Say each name out loud as you meet them.","When asked, pick the name that fits that face."] },
+  sequences:{ body:"Your working memory holds about four things at a time, not seven. When a run looks long, don't try to keep every square on its own. Cut it into chunks of two or three, give each chunk a shape, then stack the shapes. You can hold three shapes far more easily than eight separate moves. The chunk boundary is where slips happen, so pause there — say the shape to yourself, 'an L, then a diagonal', and let the words hold the pattern.",
+    detail:"Try two at a time first. If a three-step chunk slips, cut it down to two. A slow, certain tap beats a fast guess.",
+    life:"Remembering a short code or a PIN, following a route with a few turns, or holding a phone number long enough to type it.",
+    steps:["Watch the pattern once — don't rehearse while it plays.","Group it into chunks of two or three.","Tap it back in the same order."] },
+  numbers:{ body:"Numbers are hard because they have no picture. Give them one. Each pair of digits has an image in the Major System, and a pair of images makes a little story — and stories are easy to recall. Don't repeat the digits out loud: build the scene once and replay it. The scene replaces the numbers, and the numbers come back with it.",
+    detail:"A pair with itself is the hardest. If the same image turns up twice, make the second one bigger, louder, or do something silly — embarrassment sticks. Try it on '88' or '00' and exaggerate the repeat.",
+    life:"A PIN, a door code, a short phone number, or remembering today's date when someone asks.",
+    steps:["Read the number as pairs, not digits.","See the image for each pair — don't say the digits aloud.","Link the images with one action, in order."] },
+};
+const EXTRA_TECHNIQUES = [
+ { title:"Story chaining", text:"A list is hard to remember. A story is not. Take the first item, tie it to the second, then the third, until the whole list is one little scene. 'The sock slides across the table and knocks over the shell' is easier to hold than 'sock, shell'. The link is the memory.", life:"Shopping lists, what to pack, remembering items in order, or keeping a to-do list in your head.", skill:"visual" },
+ { title:"The method of loci", text:"Put each thing you want to remember in a place you know well — your kitchen, your walk to work — and walk the route in your mind. Later, walking that route in your mind brings the things back, in order. The more familiar the route, the easier the recall. Put each item in a different room, and exaggerate: an elephant squeezing through the door is easier to find than a plain photograph.", life:"A speech or presentation, a list of points in order, or learning facts for an exam.", skill:"visual" },
+ { title:"The sounds of the Major System", text:"0 — s, z (a hiss). 1 — t, d (one down-stroke). 2 — n (two down-strokes). 3 — m (three down-strokes). 4 — r (the last sound in 'four'). 5 — l (five fingers, L). 6 — j, ch, sh (the mirror of 6 is a jot). 7 — k, g (a 'K' shape). 8 — f, v (two loops like an f). 9 — p, b (a nine flipped looks like a p). Vowels and h, w, y are silent. So 23 becomes 'n' + 'm' = gnome, and 37 becomes 'm' + 'k' = mic.", life:"The system behind the Numbers skill and the Numbers page — learn it once, use it for every number.", skill:"numbers" },
+ { title:"Attention — the first two seconds", text:"Memory starts with attention, not with trying hard to remember. The first two seconds decide what gets in: look at the thing once, properly, before you name it or move on. If you are still half-reading the last item when the next one appears, you are not remembering — you are just watching.", life:"Everything. Names, faces, where things are — all of it starts here.", skill:"names" },
+];
+const VISUAL_ITEMS = [["sock","🧦"],["shell","🐚"],["moon","🌙"],["butterfly","🦋"],["grapes","🍇"],["key","🔑"],["mushroom","🍄"],["kite","🪁"],["balloon","🎈"],["plant","🪴"],["ice cube","🧊"],["candle","🕯️"],["apple","🍎"],["star","⭐"],["bell","🔔"],["book","📖"],["umbrella","☂️"],["fish","🐟"],["flower","🌸"],["car","🚗"],["hat","🎩"],["egg","🥚"],["coin","🪙"],["leaf","🍃"],["anchor","⚓"],["crown","👑"],["gem","💎"],["rocket","🚀"],["turtle","🐢"],["lemon","🍋"]];
+const PEOPLE = [["Kai","👱","blond long hair, freckles"],["Lena","👩🏾","black top bun, dark skin"],["Marcus","🧔","blond short fringe, full beard"],["Anya","👩‍🦰","long red hair, green eyes"],["Tomas","👨‍🦲","bald head, round glasses"],["Priya","👩🏽","long black hair, gold earrings"],["Oscar","👴","grey hair, kind smile"],["Nora","👵","white bun, pearl earrings"],["Felix","🧑‍🦱","curly brown hair, dimples"],["Sofia","👱‍♀️","blond bob, blue scarf"],["Ravi","🧑🏾","short black hair, trimmed beard"],["Ingrid","👩‍🦳","grey bob, red glasses"]];
+const POSNAME = i => ["top-left","top-middle","top-right","middle-left","centre","middle-right","bottom-left","bottom-middle","bottom-right"][i];
+
+/* ---------- state (saved on this device) ---------- */
+const KEY = "memoryGymV1";
+let S = JSON.parse(localStorage.getItem(KEY) || "null") || {
+  startDate: new Date().toDateString(), levels:{visual:1,names:1,sequences:1,numbers:1},
+  history: [], dailyDone: {}
+};
+function save(){ localStorage.setItem(KEY, JSON.stringify(S)); }
+const dstr = (d=new Date()) => d.toDateString();
+const todayIdx = () => Math.max(0, Math.floor((new Date(dstr()) - new Date(S.startDate)) / 864e5));
+const WEEK_PATTERN = ["visual","numbers","names","sequences","numbers","visual","names"];
+const skillForDay = idx => WEEK_PATTERN[idx % 7];
+const esc = s => { const d=document.createElement("div"); d.textContent=s??""; return d.innerHTML; };
+const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+const app = document.getElementById("app");
+function go(view, arg){ window._view=view; window._arg=arg; render(); window.scrollTo(0,0); }
+function setNav(){ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on", b.dataset.nav===window._view)); }
+
+/* ---------- shared helpers ---------- */
+function streaks(){
+  const days = new Set(Object.keys(S.dailyDone));
+  let cur = 0; const d = new Date();
+  if(!days.has(dstr(d))) d.setDate(d.getDate()-1);
+  while(days.has(dstr(d))){ cur++; d.setDate(d.getDate()-1); }
+  let best = 0, run = 0; const sorted = [...days].map(s=>new Date(s)).sort((a,b)=>a-b);
+  let prev = null;
+  for(const dt of sorted){ run = (prev && (dt-prev)===864e5) ? run+1 : 1; best = Math.max(best, run); prev = dt; }
+  return { cur, best, activeDays: days.size };
+}
+function weekInfo(){
+  const idx = todayIdx(); const week = Math.floor(idx/7); const start = new Date(S.startDate);
+  const wstart = new Date(start); wstart.setDate(start.getDate() + week*7);
+  const days = []; for(let i=0;i<7;i++){ const dt = new Date(wstart); dt.setDate(wstart.getDate()+i);
+    days.push({ dt, skill: skillForDay(week*7+i), done: !!S.dailyDone[dstr(dt)], isToday: dstr(dt)===dstr() }); }
+  return { week, days, doneCount: days.filter(d=>d.done).length };
+}
+function skillLevelsLine(k){ return "Level " + S.levels[k] + " — " + (S.levels[k]<=1 ? "settling in" : S.levels[k]===2 ? "finding the rhythm" : "stretching further"); }
+
+/* ---------- views ---------- */
+function render(){ setNav();
+  const v = window._view || "today";
+  if(v==="today") return viewToday();
+  if(v==="practice") return viewPractice();
+  if(v==="progress") return viewProgress();
+  if(v==="plan") return viewPlan();
+  if(v==="numbers") return viewNumbers();
+  if(v==="techniques") return viewTechniques();
+  if(v==="session") return viewSession(window._arg);
+}
+function viewToday(){
+  const now = new Date(); const h = now.getHours();
+  const greet = h<12 ? "Good morning." : h<18 ? "Good afternoon." : "Good evening.";
+  const idx = todayIdx(); const wk = weekInfo(); const st = streaks();
+  const skill = skillForDay(idx); const sk = SKILLS[skill];
+  const doneToday = !!S.dailyDone[dstr()];
+  app.innerHTML = `
+    <div class="muted" style="margin-top:10px">${esc(now.toLocaleDateString(undefined,{weekday:"long", month:"long", day:"numeric"}))}</div>
+    <h1>${greet}</h1>
+    <div class="muted">Day ${idx%7+1} of 7 · Week ${wk.week+1} of 8 · ${esc(wk.days[0].dt.toLocaleDateString(undefined,{month:"short",day:"numeric"}))} – ${esc(wk.days[6].dt.toLocaleDateString(undefined,{month:"short",day:"numeric"}))}</div>
+    <div class="card"><b style="font-family:Georgia,serif;font-size:1.5rem">${st.cur} day${st.cur===1?"":"s"}</b>
+      <div class="muted small">Current streak · Your best is ${st.best} — keep showing up and it grows.</div>
+      <div class="weekstrip">${wk.days.map(d=>`<div class="day ${d.isToday?"today":""} ${d.done?"done":""}"><b>${d.dt.getDate()}</b>${d.isToday?"Today":d.dt.toLocaleDateString(undefined,{weekday:"short"})}<br>${SKILLS[d.skill].short}</div>`).join("")}</div>
+      <div class="muted small" style="margin-top:8px">${wk.doneCount} of 7 days this week</div></div>
+    <h2>Today's practice</h2>
+    <div class="card"><span class="pill">${esc(sk.name)}</span>
+      <p style="margin:10px 0 4px"><b>Today's technique:</b> ${esc(sk.techTitle)}</p>
+      <p class="muted small" style="margin:0">About 2 minutes · ${skill==="visual" ? Math.min(2+(S.levels.visual-1),6)+" to remember" : skill==="names" ? Math.min(3+(S.levels.names-1),6)+" faces" : skill==="sequences" ? "2 patterns" : (4+2*(S.levels.numbers-1))+" digits"} · ${skillLevelsLine(skill)}</p>
+      ${doneToday ? `<p style="margin:12px 0 0"><b>✓ Done for today.</b> <span class="muted">You can still run it again, or practice another skill freely.</span></p>` : ""}
+      <div style="margin-top:14px"><button class="btn" onclick="startSession('${skill}','daily')">${doneToday ? "Run today's session again" : "Begin today's session"}</button></div>
+      <p class="small" style="margin:12px 0 0">Pick another skill instead? <span class="link" onclick="go('practice')">Practice for free</span></p></div>
+    <h2>How this works</h2>
+    <div class="card"><ol class="checklist">
+      <li>Sit somewhere quiet.</li>
+      <li>Learn one technique — read it slowly.</li>
+      <li>Test yourself right away — one short round, no timer, no pressure.</li></ol></div>
+    <h2>Your week</h2>
+    <div class="card"><div class="stats">
+      <div class="stat"><b>4</b><span>skills to practice</span></div>
+      <div class="stat"><b>7</b><span>days this week</span></div>
+      <div class="stat"><b>${wk.week+1} of 8</b><span>in your plan</span></div></div>
+      <p class="small" style="margin:12px 0 0"><span class="link" onclick="go('plan')">View full plan</span></p></div>`;
+}
+function viewPractice(){
+  app.innerHTML = `<h1>Practice, without the day</h1>
+    <p class="muted">Four skills, no streak to protect. Start anywhere, stop whenever you like.</p>
+    ${Object.keys(SKILLS).map(k=>{ const rounds = S.history.filter(x=>x.skill===k).length;
+      return `<div class="card"><b style="font-family:Georgia,serif;font-size:1.1rem">${SKILLS[k].name}</b>
+      <p class="muted" style="margin:4px 0">${SKILLS[k].tag}</p>
+      <p class="small muted" style="margin:0 0 12px">Level ${S.levels[k]} · ${rounds ? rounds+" round"+(rounds>1?"s":"") : "no rounds yet"}</p>
+      <button class="btn" onclick="startSession('${k}','free')">Practice for free</button></div>`; }).join("")}
+    <p class="small muted">Free rounds don't change your daily streak — they're for getting comfortable with the techniques. Your daily session is the one that counts.</p>`;
+}
+function viewProgress(){
+  const st = streaks(); const wk = weekInfo();
+  const weekStart = wk.days[0].dt.getTime();
+  const freeThisWeek = S.history.filter(x=>x.mode==="free" && new Date(x.when).getTime()>=weekStart).length;
+  const recent = [...S.history].reverse().slice(0,10);
+  app.innerHTML = `<h1>Your progress</h1>
+    <p class="muted">Small rounds, repeated. That's the whole game.</p>
+    <div class="stats">
+      <div class="stat"><b>${S.history.length}</b><span>rounds completed</span></div>
+      <div class="stat"><b>${st.activeDays}</b><span>days active</span></div>
+      <div class="stat"><b>${st.cur}</b><span>current streak</span></div>
+      <div class="stat"><b>${st.best}</b><span>best streak</span></div></div>
+    <h2>This week's goal</h2>
+    <div class="card"><p style="margin:0 0 8px">Hit at least 4 days this week. <span class="muted">${wk.doneCount}/4 · ${wk.doneCount} of 7 days</span></p>
+      <div class="bar"><i style="width:${Math.min(100, wk.doneCount/4*100)}%"></i></div>
+      <p class="small muted" style="margin:10px 0 0">Free practice this week — ${freeThisWeek} round${freeThisWeek===1?"":"s"}.</p></div>
+    <h2>Skills</h2>
+    <div class="card">${Object.keys(SKILLS).map(k=>{ const r = S.history.filter(x=>x.skill===k).length;
+      return `<div class="skillrow"><span>${SKILLS[k].name}</span><span class="muted small">${r} round${r===1?"":"s"} · Level ${S.levels[k]}</span></div>`; }).join("")}</div>
+    <h2>Recent rounds</h2>
+    <div class="card">${recent.length ? recent.map(x=>`<div class="skillrow"><span>${SKILLS[x.skill].name} — ${x.score}/${x.total} (${x.pct}%)</span><span class="muted small">${new Date(x.when).toLocaleDateString(undefined,{month:"short",day:"numeric"})} ${new Date(x.when).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}</span></div>`).join("") : `<p class="muted" style="margin:0">No rounds yet. Finish a session and it will show up here, with what you got right and when.</p>`}</div>`;
+}
+function viewPlan(){
+  const start = new Date(S.startDate); const wk = weekInfo();
+  let weeksHtml = "";
+  for(let w=0; w<8; w++){
+    const ws = new Date(start); ws.setDate(start.getDate()+w*7);
+    const we = new Date(ws); we.setDate(ws.getDate()+6);
+    const rows = []; let doneC = 0;
+    for(let i=0;i<7;i++){ const dt = new Date(ws); dt.setDate(ws.getDate()+i); const dn = !!S.dailyDone[dstr(dt)]; if(dn) doneC++;
+      rows.push(`<div class="skillrow"><span>${dt.toLocaleDateString(undefined,{weekday:"short", month:"short", day:"numeric"})} — ${SKILLS[skillForDay(w*7+i)].name}${i>=4?" review":""}</span><span>${dn?"✓":""}</span></div>`); }
+    weeksHtml += `<div class="card"><b>Week ${w+1}</b> <span class="muted small">${ws.toLocaleDateString(undefined,{month:"short",day:"numeric"})} – ${we.toLocaleDateString(undefined,{month:"short",day:"numeric"})}${w===wk.week ? " · this week" : ""} · ${doneC} of 7 days done · Ends with a review</span>${rows.join("")}</div>`;
+  }
+  const recent = [...S.history].reverse().slice(0,5);
+  app.innerHTML = `<h1>Your 8-week plan</h1>
+    <p class="muted">A slow climb: one skill a day, then mixed review. Each week ends with a review.</p>
+    ${weeksHtml}
+    <h2>Recent sessions</h2>
+    <div class="card">${recent.length ? recent.map(x=>`<div class="skillrow"><span>${SKILLS[x.skill].name} — ${x.pct}%</span><span class="muted small">${SKILLS[x.skill].techTitle}</span></div>`).join("") : `<p class="muted" style="margin:0">No sessions yet. Your completed sessions will appear here, with the score and the technique you used.</p>`}</div>`;
+}
+function viewNumbers(){
+  let tiles = "";
+  for(let n=0;n<100;n++) tiles += `<div class="tile" data-word="${esc(majorWord(n).toLowerCase())}" data-num="${String(n).padStart(2,"0")}"><b>${String(n).padStart(2,"0")}</b>${esc(majorWord(n))}</div>`;
+  app.innerHTML = `<h1>Number images</h1>
+    <p class="muted">Learn them once, use them again and again. A picture for every pair, 00–99. The Major System turns sounds into digits, and the picture is easier to hold than the number.</p>
+    <input type="search" id="numsearch" placeholder="Type a word or a pair, like 23 or 'moon'" oninput="filterTiles(this.value)">
+    <div class="tiles" id="tiles">${tiles}</div>`;
+}
+function filterTiles(q){
+  q = q.trim().toLowerCase();
+  document.querySelectorAll("#tiles .tile").forEach(t=>{
+    t.style.display = (!q || t.dataset.word.includes(q) || t.dataset.num.startsWith(q)) ? "" : "none"; });
+}
+function viewTechniques(){
+  const card = (title, text, life, skill) => `<div class="card"><b style="font-family:Georgia,serif;font-size:1.1rem">${esc(title)}</b>
+    <p style="margin:8px 0">${esc(text)}</p><p class="small muted" style="margin:0 0 12px"><b>In real life —</b> ${esc(life)}</p>
+    <button class="btn ghost" onclick="startSession('${skill}','free')">Explore the technique</button></div>`;
+  app.innerHTML = `<h1>Techniques that actually work</h1>
+    <p class="muted">Four ideas — plus the Major System and one rule about attention. Use them in practice, then in real life.</p>
+    ${card(SKILLS.visual.techTitle, TECHNIQUES.visual.body + " " + TECHNIQUES.visual.detail, TECHNIQUES.visual.life, "visual")}
+    ${card(SKILLS.names.techTitle, TECHNIQUES.names.body + " " + TECHNIQUES.names.detail, TECHNIQUES.names.life, "names")}
+    ${card(SKILLS.sequences.techTitle, TECHNIQUES.sequences.body + " " + TECHNIQUES.sequences.detail, TECHNIQUES.sequences.life, "sequences")}
+    ${card(SKILLS.numbers.techTitle, TECHNIQUES.numbers.body + " " + TECHNIQUES.numbers.detail, TECHNIQUES.numbers.life, "numbers")}
+    ${EXTRA_TECHNIQUES.map(t=>card(t.title, t.text, t.life, t.skill)).join("")}`;
+}
+
+/* ---------- sessions ---------- */
+let SS = null;
+function startSession(skill, mode){ SS = { skill, mode, phase:"technique" }; window._view="session"; render(); window.scrollTo(0,0); }
+function viewSession(){ const k = SS.skill, sk = SKILLS[k], T = TECHNIQUES[k], L = S.levels[k];
+  setNav();
+  if(SS.phase==="technique"){
+    app.innerHTML = `<p><span class="link" onclick="go('${SS.mode==="daily" ? "today" : "practice"}')">← ${SS.mode==="daily" ? "Today" : "Practice"}</span>
+      <span class="muted small" style="float:right">${SS.mode==="daily" ? "Today's round" : "Free round"} · level ${L}</span></p>
+      <span class="pill">${SS.mode==="daily" ? "Today's technique" : "Technique"}</span>
+      <h1>${esc(sk.techTitle)}</h1>
+      <p class="small muted" style="letter-spacing:.06em">${esc(sk.name.toUpperCase())} · LEVEL ${L}</p>
+      <p>${esc(T.body)}</p>
+      <p><b>In detail —</b> ${esc(T.detail)}</p>
+      <p><b>In real life —</b> ${esc(T.life)}</p>
+      <h2>Try this first</h2>
+      <ol class="checklist">${T.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>
+      <button class="btn" onclick="beginExercise()">I'm ready</button>
+      <p class="center small muted" style="margin-top:14px">✓ No timer, no streak to break. Stop whenever you like.</p>`;
+    return; }
+  if(SS.phase==="exercise") return exerciseHTML();
+  if(SS.phase==="done") return doneHTML();
+}
+function beginExercise(){ const k = SS.skill, L = S.levels[k];
+  if(k==="visual"){ const n = Math.min(2+(L-1), 6); const cells = shuffle([...Array(9).keys()]).slice(0,n);
+    const items = shuffle(VISUAL_ITEMS).slice(0,n);
+    SS.data = { placed: cells.map((c,i)=>({cell:c, name:items[i][0], em:items[i][1]})), flashMs: Math.max(1500, 2800-(L-1)*300), q:0, answers:[] }; }
+  if(k==="names"){ const n = Math.min(3+(L-1), 6); const people = shuffle(PEOPLE).slice(0,n);
+    SS.data = { people, q:0, answers:[] }; }
+  if(k==="sequences"){ const lens = [3+L, 4+L]; SS.data = { patterns: lens.map(len=>({ seq: shuffle([...Array(9).keys()]).slice(0,len), len })), p:0, got:0, totalSteps: lens.reduce((a,b)=>a+b,0), tapped:0 }; }
+  if(k==="numbers"){ const digits = 4 + 2*(L-1); let num = ""; for(let i=0;i<digits;i++) num += Math.floor(Math.random()*10);
+    SS.data = { num }; }
+  SS.phase = "exercise"; SS.step = "intro"; render();
+}
+function gridHTML(cells, mode){ // mode: blank | flash | question | tap
+  return `<div class="grid3">${[...Array(9).keys()].map(i=>{
+    let cls = "cell", content = "";
+    if(mode==="flash"){ const p = cells.find(x=>x.cell===i); if(p) content = p.em; }
+    if(mode==="question"){ if(i===cells.qcell){ cls += " q"; content = "?"; } }
+    if(mode==="tap"){ cls += " tap"; if(cells.lit===i) cls += " lit"; }
+    const oc = mode==="tap" ? `onclick="seqTap(${i})"` : "";
+    return `<div class="${cls}" ${oc}>${content}</div>`; }).join("")}</div>`;
+}
+function exerciseHTML(){ const k = SS.skill, L = S.levels[k], sk = SKILLS[k];
+  if(k==="visual"){ const d = SS.data;
+    if(SS.step==="intro") return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">${esc(sk.name.toUpperCase())} · LEVEL ${L} — ${d.placed.length} items · ${(d.flashMs/1000).toFixed(1)}s</p>
+      ${gridHTML(d.placed,"blank")}
+      <p>A few objects will appear for about ${(d.flashMs/1000).toFixed(1)} seconds. Sweep the grid in a Z, name each object silently, then link them into one scene. When they vanish, you'll be asked what was where.</p>
+      <button class="btn" onclick="visualFlash()">Show me the grid</button>`;
+    if(SS.step==="flash") return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">MEMORISE — one Z sweep</p>${gridHTML(d.placed,"flash")}<p class="center muted">Make the scene tell a story…</p>`;
+    if(SS.step==="recall"){ const cur = d.placed[d.q]; const others = shuffle(VISUAL_ITEMS.filter(v=>v[0]!==cur.name)).slice(0,3).map(v=>v[0]);
+      const opts = shuffle([cur.name, ...others]);
+      return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">SPOT WHAT WAS WHERE · ${d.q+1}/${d.placed.length}</p>
+        ${gridHTML({qcell:cur.cell},"question")}
+        <p class="center"><b>What was in the highlighted square?</b></p>
+        <div class="opts">${opts.map(o=>`<button class="opt" onclick="visualAnswer('${esc(o)}')">${esc(o)}</button>`).join("")}</div>`; }
+  }
+  if(k==="names"){ const d = SS.data;
+    if(SS.step==="intro") return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">${esc(sk.name.toUpperCase())} · LEVEL ${L} — ${d.people.length} faces · identify each</p>
+      <p><b>Meet ${d.people.length} people.</b> Match each face to their name — find one clear feature and link the name to it.</p>
+      <div class="faces">${d.people.map(p=>`<div class="face"><div class="em">${p[1]}</div><b>${esc(p[0])}</b><span class="small muted">${esc(p[2])}</span></div>`).join("")}</div>
+      <button class="btn" onclick="SS.step='recall'; SS.data.q=0; render()">Ready — test me</button>`;
+    if(SS.step==="recall"){ const cur = d.people[d.q]; const others = shuffle(PEOPLE.map(p=>p[0]).filter(n=>!d.people.some(x=>x[0]===n))).slice(0,1);
+      const opts = shuffle([...d.people.map(p=>p[0]), ...others]).slice(0,4);
+      return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">WHOSE FACE IS THIS? · ${d.q+1}/${d.people.length}</p>
+        <div class="faces"><div class="face" style="width:45%"><div class="em" style="font-size:4.2rem">${cur[1]}</div><span class="small muted">${esc(cur[2])}</span></div></div>
+        <div class="opts">${opts.map(o=>`<button class="opt" onclick="namesAnswer('${esc(o)}')">${esc(o)}</button>`).join("")}</div>`; }
+  }
+  if(k==="sequences"){ const d = SS.data; const pat = d.patterns[d.p];
+    if(SS.step==="intro") return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">${esc(sk.name.toUpperCase())} · LEVEL ${L} — Pattern ${d.p+1} of ${d.patterns.length} · ${pat.len} steps</p>
+      ${gridHTML({},"blank")}
+      <p>Watch the pattern, then repeat it in the same order. Don't rehearse while it plays — let the whole thing land, then group it into chunks of two or three as you tap.</p>
+      <button class="btn" onclick="seqPlay()">Show the pattern</button>`;
+    if(SS.step==="play") return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">WATCH — don't rehearse</p>${gridHTML({lit:SS.lit},"tap")}<p class="center muted">Chunk it into shapes…</p>`;
+    if(SS.step==="recall") return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">YOUR TURN — ${SS.tappedCount||0} of ${pat.len} so far</p>
+      ${gridHTML({lit:-1},"tap")}
+      <p class="center"><button class="btn ghost" style="width:auto" onclick="seqRestart()">Start over</button></p>`;
+    if(SS.step==="slip") return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">PATTERN ${d.p+1} OF ${d.patterns.length}</p>
+      <div class="card center"><p style="margin:0">You had <b>${SS.slipAt} of ${pat.len}</b> steps. The slip is where most people slip — at the chunk boundary. Run it back in chunks: three, then two.</p></div>
+      <button class="btn" onclick="seqNext()">${d.p+1 < d.patterns.length ? "Next pattern" : "See how I did"}</button>`;
+  }
+  if(k==="numbers"){ const d = SS.data; const pairs = d.num.match(/../g) || [];
+    const cls = ["p1","p2","p3","p4","p1","p2","p3"];
+    if(SS.step==="intro") return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">${esc(sk.name.toUpperCase())} · LEVEL ${L} — ${d.num.length} digits</p>
+      <div class="bignum">${pairs.map((p,i)=>`<span class="${cls[i%7]}">${p}</span>`).join(" ")}</div>
+      <div class="hints">${pairs.map((p,i)=>`<span class="hint">${p} · ${esc(mw(parseInt(p,10)))}</span>`).join("")}</div>
+      <p style="margin-top:14px">Read it like this — as pairs, not digits. See each pair as one thing, then link them in one short scene: the first thing doing something to the second. Tap any pair on the Numbers page later if you want to <i>see</i> its image.</p>
+      <button class="btn" onclick="SS.step='recall'; render()">I have a story — hide the number</button>`;
+    if(SS.step==="recall") return app.innerHTML = `<p class="small muted" style="letter-spacing:.06em">WHAT WAS THE NUMBER?</p>
+      <div class="bignum">${"● ".repeat(d.num.length).trim()}</div>
+      <div class="hints">${pairs.map((p,i)=>`<span class="hint">${i+1} · ${esc(mw(parseInt(p,10)))}</span>`).join("")}</div>
+      <p class="muted">Your story should give you both images in order. Type the number back.</p>
+      <input type="tel" id="numin" inputmode="numeric" placeholder="${pairs.map(()=>"00").join(" ")}" maxlength="${d.num.length + pairs.length - 1}">
+      <div style="margin-top:14px"><button class="btn" id="numcheck" onclick="numbersAnswer()">Check my number</button></div>`;
+  }
+}
+function visualFlash(){ SS.step="flash"; render(); setTimeout(()=>{ SS.step="recall"; SS.data.q=0; render(); }, SS.data.flashMs); }
+function visualAnswer(choice){ const d = SS.data; const cur = d.placed[d.q];
+  d.answers.push({ name: cur.name, cell: cur.cell, ok: choice===cur.name });
+  if(d.q+1 < d.placed.length){ d.q++; render(); }
+  else { const score = d.answers.filter(a=>a.ok).length;
+    const missed = d.answers.filter(a=>!a.ok);
+    let fb = missed.length===0 ? "Every item came back, in its place. The scene did its job."
+      : "You missed " + missed.map(a=>`the ${a.name} in the ${POSNAME(a.cell)}`).join(", ") + ". Linking each item to its corner — 'the " + missed[0].name + " sits there like a lamp' — is what would have caught it.";
+    finishRound(score, d.placed.length, fb); } }
+function namesAnswer(choice){ const d = SS.data; const cur = d.people[d.q];
+  d.answers.push({ name: cur[0], ok: choice===cur[0] });
+  if(d.q+1 < d.people.length){ d.q++; render(); }
+  else { const score = d.answers.filter(a=>a.ok).length;
+    let fb = score===d.people.length ? "Every name came back. The feature link is working — try it on a real introduction this week."
+      : "Missed: " + d.answers.filter(a=>!a.ok).map(a=>a.name).join(", ") + ". Give each face one clear feature and hang the name on it — one feature, one name.";
+    finishRound(score, d.people.length, fb); } }
+function seqPlay(){ const pat = SS.data.patterns[SS.data.p]; SS.step="play"; SS.lit=-1; render();
+  let i = 0; const tick = () => { if(i < pat.seq.length){ SS.lit = pat.seq[i]; render(); i++; setTimeout(()=>{ SS.lit=-1; render(); setTimeout(tick, 180); }, 650); }
+    else { SS.step="recall"; SS.tappedCount=0; SS.tapIdx=0; render(); } };
+  setTimeout(tick, 400); }
+function seqTap(cell){ if(SS.step!=="recall") return; const d = SS.data; const pat = d.patterns[d.p];
+  if(cell === pat.seq[SS.tapIdx]){ SS.tapIdx++; SS.tappedCount = SS.tapIdx; d.got++;
+    if(SS.tapIdx >= pat.len){ SS.step="slip"; SS.slipAt = pat.len; SS.perfect = true; render(); } else render(); }
+  else { SS.step="slip"; SS.slipAt = SS.tapIdx; SS.perfect = false; render(); } }
+function seqRestart(){ SS.data.got -= (SS.tapIdx||0); SS.tapIdx = 0; SS.tappedCount = 0; render(); }
+function seqNext(){ const d = SS.data; if(d.p+1 < d.patterns.length){ d.p++; SS.step="intro"; render(); }
+  else { const fb = d.got===d.totalSteps ? "A clean run — every step in order. The chunks held."
+      : "It slipped where the run changed shape — exactly where the chunk boundary is. Name each chunk of three next time, and pause at the boundary.";
+    finishRound(d.got, d.totalSteps, fb); } }
+function numbersAnswer(){ const d = SS.data; const val = (document.getElementById("numin").value || "").replace(/\D/g,"");
+  if(val.length !== d.num.length){ alert("Type all " + d.num.length + " digits first."); return; }
+  let score = 0; for(let i=0;i<d.num.length;i++) if(val[i]===d.num[i]) score++;
+  const fb = val===d.num ? "That's a clean recall. Keep building the story for the longer numbers coming next."
+    : "The number was " + d.num.match(/../g).join(" ") + ". Replay the scene once more — first image doing something to the second — and the digits come back with it.";
+  finishRound(score, d.num.length, fb); }
+function finishRound(score, total, feedback){
+  const k = SS.skill, pct = total ? Math.round(score/total*100) : 0;
+  let levelMsg = "";
+  if(pct >= 80 && S.levels[k] < 5){ S.levels[k]++; levelMsg = "Level up — " + SKILLS[k].name + " is now level " + S.levels[k] + ". Next round will stretch further."; }
+  else levelMsg = SKILLS[k].name + " stays at level " + S.levels[k] + " — " + (S.levels[k]<=1 ? "settling in." : "keep building.");
+  S.history.push({ skill:k, mode:SS.mode, score, total, pct, when: new Date().toISOString() });
+  if(SS.mode==="daily") S.dailyDone[dstr()] = k;
+  save();
+  SS.phase = "done"; SS.result = { score, total, pct, feedback, levelMsg }; render();
+}
+function doneHTML(){ const r = SS.result, sk = SKILLS[SS.skill];
+  const head = r.pct>=100 ? "That was sharp." : r.pct>=80 ? "Strong round." : r.pct>=50 ? "A fair round — the technique is landing." : "A gentle round. Nothing lost — the next one will feel easier.";
+  app.innerHTML = `<p class="small muted center" style="letter-spacing:.06em">${SS.mode==="daily" ? "SESSION" : "ROUND"} COMPLETE</p>
+    <div class="score">${r.pct}% · ${r.score} of ${r.total}</div>
+    <p class="center"><b>${esc(sk.name)}</b> — ${head}</p>
+    <div class="card"><p style="margin:0">${esc(r.feedback)}</p>
+    <p class="muted" style="margin:10px 0 0">${SS.mode==="daily" ? "Today is marked complete. " : "Saved to your practice history. "}${esc(r.levelMsg)}</p></div>
+    <div class="btnrow"><button class="btn ghost" onclick="startSession('${SS.skill}','${SS.mode}')">One more round</button>
+    <button class="btn" onclick="go('${SS.mode==="daily" ? "today" : "practice"}')">${SS.mode==="daily" ? "Back to today" : "Back to practice"}</button></div>`;
+}
+/* custom Major words (his own designations win over the defaults) */
+function mw(n){ return (S.customWords && S.customWords[n]) || majorWord(n); }
+
+/* ---------- Numbers page: images, custom words, scene builder ---------- */
+if(!S.customWords) S.customWords = {};
+let NUMSEL = null; // selected pair number (0-99) or null
+function viewNumbers(){
+  let tiles = "";
+  for(let n=0;n<100;n++) tiles += `<div class="tile" data-word="${esc(mw(n).toLowerCase())}" data-num="${String(n).padStart(2,"0")}" onclick="selectPair(${n})" style="cursor:pointer"><b>${String(n).padStart(2,"0")}</b>${esc(mw(n))}</div>`;
+  app.innerHTML = `<h1>Number images</h1>
+    <p class="muted">Learn them once, use them again and again. A picture for every pair, 00–99. Tap any pair to <b>see</b> its image — or search a longer number (try <b>1402</b>) and the app builds a scene from the pairs and can generate a picture of it.</p>
+    <input type="search" id="numsearch" placeholder="Type a word, a pair (14), or a number (1402)" oninput="numSearch(this.value)">
+    <div id="numdetail"></div>
+    <div class="tiles" id="tiles">${tiles}</div>`;
+  if(NUMSEL!==null) selectPair(NUMSEL, true);
+}
+function numSearch(q){
+  q = (q||"").trim().toLowerCase();
+  const digits = q.replace(/\D/g,"");
+  const detail = document.getElementById("numdetail");
+  if(/^\d+$/.test(q) && digits.length>=3){ sceneBuilder(digits); }
+  else if(/^\d+$/.test(q) && digits.length===2){ selectPair(parseInt(digits,10), true); }
+  else if(detail && !/^\d+$/.test(q)) detail.innerHTML = "";
+  document.querySelectorAll("#tiles .tile").forEach(t=>{
+    t.style.display = (!q || t.dataset.word.includes(q) || t.dataset.num.startsWith(q)) ? "" : "none"; });
+}
+function selectPair(n, keep){
+  NUMSEL = n; const w = mw(n);
+  const d = document.getElementById("numdetail"); if(!d) return;
+  d.innerHTML = `<div class="card">
+    <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:Georgia,serif;font-size:2rem;color:var(--green)">${String(n).padStart(2,"0")}</span>
+    <b style="font-family:Georgia,serif;font-size:1.5rem">${esc(w)}</b>
+    ${S.customWords[n] ? '<span class="pill">your word</span>' : ""}</div>
+    <div id="pairimg" style="margin-top:10px"></div>
+    <div class="btnrow">
+      <button class="btn" onclick="showPairImage(${n})">🖼️ Show the ${esc(w)}</button>
+      <button class="btn ghost" onclick="editPairWord(${n})">Change word</button>
+    </div></div>`;
+}
+function showPairImage(n){
+  const w = mw(n); const box = document.getElementById("pairimg");
+  box.innerHTML = `<p class="muted small">Looking for a picture of “${esc(w)}”…</p>`;
+  const url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" +
+    encodeURIComponent(w) + "&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|size&iiurlwidth=760&format=json&origin=*";
+  fetch(url).then(r=>r.json()).then(j=>{
+    const pages = j && j.query && j.query.pages ? Object.values(j.query.pages) : [];
+    let best = null;
+    for(const p of pages){ const ii = p.imageinfo && p.imageinfo[0]; if(!ii) continue;
+      if(!/\.(jpg|jpeg|png)$/i.test(ii.url||"")) continue;
+      if(ii.width && ii.width < 350) continue; best = ii; break; }
+    if(best){ box.innerHTML = `<img src="${esc(best.thumburl || best.url)}" alt="${esc(w)}" style="width:100%;border-radius:12px" onerror="this.parentNode.innerHTML='<p class=muted>That photo would not load — try again.</p>'">
+      <p class="muted small" style="margin:6px 0 0">Photo: Wikimedia Commons. Picture the ${esc(w)} clearly — that image is your hook for ${String(n).padStart(2,"0")}.</p>`; }
+    else { box.innerHTML = `<p class="muted">No clear photo found for “${esc(w)}”. Try the generated example in a scene below, or change the word to one that's easier to picture.</p>`; }
+  }).catch(()=>{ box.innerHTML = `<p class="muted">Couldn't reach the photo library — check your connection and try again.</p>`; });
+}
+function editPairWord(n){
+  const cur = mw(n);
+  const v = prompt("Your image word for " + String(n).padStart(2,"0") + ":", cur);
+  if(v === null) return;
+  const word = v.trim();
+  if(!word){ delete S.customWords[n]; } else { S.customWords[n] = word; }
+  save(); render();
+}
+const SCENE_ACTIONS = ["under","on top of","next to a giant","crashing into","carrying","chasing","melting into","balanced on top of","hiding behind","dancing with"];
+let SCENE = null;
+function sceneBuilder(digits){
+  const pairs = []; let rest = digits;
+  while(rest.length >= 2){ pairs.push(parseInt(rest.slice(0,2),10)); rest = rest.slice(2); }
+  SCENE = { digits, pairs, leftover: rest, seed: Math.floor(Math.random()*997) };
+  const d = document.getElementById("numdetail"); if(!d) return;
+  const words = pairs.map(mw);
+  d.innerHTML = `<div class="card">
+    <p class="small muted" style="letter-spacing:.06em;margin:0">YOUR NUMBER, AS A SCENE</p>
+    <div class="bignum" style="font-size:2rem">${pairs.map(p=>String(p).padStart(2,"0")).join(" ")}${rest ? ' <span class="muted" style="font-size:1rem">(+ '+rest+' left over — numbers split into pairs)</span>' : ""}</div>
+    <div class="hints">${pairs.map((p,i)=>`<span class="hint">${String(p).padStart(2,"0")} · ${esc(words[i])}</span>`).join("")}</div>
+    <h2 style="margin:16px 0 4px">Visual description</h2>
+    <p id="scenedesc" style="font-size:1.05rem;margin:0">${esc(sceneText())}</p>
+    <div id="sceneimg" style="margin-top:10px"></div>
+    <div class="btnrow">
+      <button class="btn" onclick="showSceneImage()">🎨 Image example</button>
+      <button class="btn ghost" onclick="reshuffleScene()">Another idea</button>
+    </div>
+    <p class="muted small" style="margin:10px 0 0">Read the scene once, close your eyes, and run it like a film. The stranger and more exaggerated it is, the better it sticks.</p></div>`;
+}
+function sceneText(){
+  if(!SCENE) return "";
+  const words = SCENE.pairs.map(mw); if(!words.length) return "";
+  let rnd = SCENE.seed; const pick = arr => { rnd = (rnd*37 + 11) % 9973; return arr[rnd % arr.length]; };
+  let s = "A " + words[0];
+  for(let i=1;i<words.length;i++){ s += " " + pick(SCENE_ACTIONS) + " a " + words[i]; if(i < words.length-1) s += ","; }
+  s += " — right in the middle of your kitchen, far too big and making a scene of itself.";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function reshuffleScene(){ if(!SCENE) return; SCENE.seed = Math.floor(Math.random()*9973);
+  document.getElementById("scenedesc").textContent = sceneText(); document.getElementById("sceneimg").innerHTML = ""; }
+function showSceneImage(){
+  if(!SCENE) return; const box = document.getElementById("sceneimg");
+  const desc = sceneText();
+  box.innerHTML = `<p class="muted small">Generating your scene… (a few seconds)</p>`;
+  const src = "https://image.pollinations.ai/prompt/" + encodeURIComponent(desc + " Vivid, clear, simple digital illustration, no text, no words.") + "?width=880&height=620&nologo=true&seed=" + (SCENE.seed % 1000);
+  const img = new Image();
+  img.onload = () => { box.innerHTML = ""; img.style.width = "100%"; img.style.borderRadius = "12px"; box.appendChild(img);
+    const p = document.createElement("p"); p.className = "muted small"; p.textContent = "Generated from your scene description. If it doesn't match how you pictured it, tap “Another idea” and generate again."; box.appendChild(p); };
+  img.onerror = () => { box.innerHTML = `<p class="muted">The image generator didn't answer this time — tap Image example to try again.</p>`; };
+  img.src = src;
+}
+
+/* ---------- boot ---------- */
+go("today");
+</script>
+</body>
+</html>
