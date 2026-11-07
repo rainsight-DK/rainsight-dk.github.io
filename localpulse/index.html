@@ -83,7 +83,7 @@
       <div class="src">Source: RentCast market statistics — monthly median sale price for this ZIP code. RentCast's sale history starts January 2024, so the chart covers roughly the last three years. ZIP-level market data, not a single home's value.</div></div>
     <div class="card" id="card-rcsetup" style="display:none"><h2>Listings &amp; trend — RentCast key</h2>
       <div id="rcsetup-body"></div>
-      <div class="src">Free RentCast Developer plan: 50 lookups a month, no credit card. Get a key at rentcast.io (sign up → API → Developer plan), paste it here once per device. The key is saved only in this browser on this device — it is never in the app's code and is not part of backups. This app caches each area's results for the day to save your quota.</div></div>
+      <div class="src">Free RentCast Developer plan: 50 lookups a month, no credit card. Steps that make the key work: at app.rentcast.io open the API dashboard → Select Plan → Developer (free) → Activate the subscription, then Create API Key with no IP or endpoint restrictions, and paste that key here once per device. The key is saved only in this browser on this device — it is never in the app's code and is not part of backups. This app caches each area's results for the day to save your quota.</div></div>
   </main>
 
   <section id="savedview" style="display:none">
@@ -295,6 +295,14 @@ function clearRcKey(){
   renderRcSetup();
   if(CUR){ loadListings(CUR.lat, CUR.lng); loadTrend(); }
 }
+async function rcErrorText(r){
+  try { const j = await r.json(); return (j && (j.message || j.error || j.detail)) ? String(j.message || j.error || j.detail) : ""; } catch(e){}
+  return "";
+}
+function rcRejectedHTML(status, msg){
+  return '<span class="err">RentCast rejected the saved key (HTTP ' + status + (msg ? ": " + esc(msg) : "") + ').</span>' +
+    '<div style="margin-top:8px; font-size:.9rem">Usual causes, per RentCast: 401 = the key itself is invalid or incomplete; 403 = no active plan on the API dashboard, or the key has IP/endpoint restrictions set. Fix it in the RentCast API dashboard (activate the free Developer plan; create the key with no restrictions), then remove and re-paste the key in the “RentCast key” card below.</div>';
+}
 function parseListings(j){
   if(Array.isArray(j)) return j;
   if(j && Array.isArray(j.results)) return j.results;
@@ -315,7 +323,7 @@ async function loadListings(lat, lng){
   if(!list){
     try {
       const r = await fetch("https://api.rentcast.io/v1/listings/sale?latitude=" + lat + "&longitude=" + lng + "&radius=3&status=Active&limit=20", { headers:{ "X-Api-Key": rcKey, "Accept":"application/json" } });
-      if(r.status === 401 || r.status === 403){ body.innerHTML = '<span class="err">RentCast rejected the saved key. Check or replace it in the “RentCast key” card below.</span>'; return; }
+      if(r.status === 401 || r.status === 403){ body.innerHTML = rcRejectedHTML(r.status, await rcErrorText(r)); return; }
       if(!r.ok) throw new Error("http " + r.status);
       list = parseListings(await r.json());
       rcCacheSet(ck, list);
@@ -382,7 +390,7 @@ async function loadTrend(){
   if(!parsed){
     try {
       const r = await fetch("https://api.rentcast.io/v1/markets?zipCode=" + encodeURIComponent(zip) + "&dataType=Sale&historyRange=36", { headers:{ "X-Api-Key": rcKey, "Accept":"application/json" } });
-      if(r.status === 401 || r.status === 403){ body.innerHTML = '<span class="err">RentCast rejected the saved key. Check or replace it in the “RentCast key” card below.</span>'; return; }
+      if(r.status === 401 || r.status === 403){ body.innerHTML = rcRejectedHTML(r.status, await rcErrorText(r)); return; }
       if(!r.ok) throw new Error("http " + r.status);
       parsed = parseTrendHistory(await r.json());
       rcCacheSet(ck, parsed);
