@@ -35,7 +35,6 @@
   .schoolrow:last-child{border-bottom:0;}
   .pill{display:inline-block; background:#e6f4f1; color:var(--teal); font-size:.68rem; font-weight:700; padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em;}
   #status{margin:14px 0 0; color:var(--muted); font-size:.92rem; min-height:1.2em;}
-  input[type=password]{flex:1; padding:12px 13px; font-size:1rem; border:1.5px solid var(--line); border-radius:12px; background:#fff; min-width:0;}
   a.sch{color:var(--brand); font-weight:600; text-decoration:none;}
   .savedrow{display:flex; justify-content:space-between; align-items:center; gap:10px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin:8px 0; cursor:pointer;}
   select{padding:10px; border:1.5px solid var(--line); border-radius:10px; background:#fff; font-size:.95rem;}
@@ -63,7 +62,7 @@
   <div id="status">Search for a place, or tap “My location”.</div>
 
   <main id="dash">
-    <div class="card" id="card-address" style="display:none"><h2>Address</h2><div class="big" id="addr-main"></div><div class="muted" id="addr-sub" style="margin-top:4px"></div><div class="src">Source: OpenStreetMap geocoding (Nominatim)</div></div>
+    <div class="card" id="card-address" style="display:none"><h2>Address</h2><div class="big" id="addr-main" onclick="openSummary()" title="Tap for the location summary" style="cursor:pointer; text-decoration:underline dotted; text-underline-offset:4px"></div><div class="muted" id="addr-sub" style="margin-top:4px"></div><div class="src">Source: OpenStreetMap geocoding (Nominatim). Tap the location name above for a summary — prices, price trend, and schools.</div></div>
     <div class="card" id="card-county" style="display:none"><h2>County</h2><div class="big" id="county-main"></div><div class="src">Source: OpenStreetMap · FCC Census Block API</div></div>
     <div class="card" id="card-values" style="display:none"><h2>Home values & income — this census tract</h2><div id="values-body"><span class="muted">Loading Census data…</span></div>
       <div class="src">Source: U.S. Census Bureau, American Community Survey (ACS 2024) 5-year estimates, via Census Reporter. These are survey estimates for the census tract (a small neighbourhood area), updated yearly — not live market prices or listings.</div></div>
@@ -72,11 +71,6 @@
     <div class="card" id="card-map" style="display:none"><h2>Map</h2><div id="map"></div>
       <div class="src">Map © OpenStreetMap contributors. Pan the map, then use “Search this area” to reload the data for the new centre.</div>
       <div style="margin-top:10px"><button class="btn teal" id="searcharea" style="display:none" onclick="searchMapCentre()">Search this area</button></div></div>
-    <div class="card" id="card-trend" style="display:none"><h2>Home price trend</h2><div id="trend-body"><span class="muted">Loading trend…</span></div>
-      <div class="src">Source: RentCast market statistics — monthly median sale price for this ZIP code. RentCast's sale history starts January 2024, so the chart covers roughly the last three years. ZIP-level market data, not a single home's value.</div></div>
-    <div class="card" id="card-rcsetup" style="display:none"><h2>Home price trend — RentCast key</h2>
-      <div id="rcsetup-body"></div>
-      <div class="src">Free RentCast Developer plan: 50 lookups a month, no credit card. Steps that make the key work: at app.rentcast.io open the API dashboard → Select Plan → Developer (free) → Activate the subscription, then Create API Key with no IP or endpoint restrictions, and paste that key here once per device. The key is saved only in this browser on this device — it is never in the app's code and is not part of backups. This app caches each ZIP's trend for the day to save your quota.</div></div>
   </main>
 
   <section id="savedview" style="display:none">
@@ -97,6 +91,15 @@
     </div>
   </section>
 
+  <section id="summaryview" style="display:none">
+    <div style="display:flex; align-items:center; gap:10px; margin-top:18px">
+      <h2 style="margin:0; font-size:1.2rem">Location summary</h2>
+      <span style="margin-left:auto"></span>
+      <button class="btn ghost" onclick="closeSummary()">← Back</button>
+    </div>
+    <div id="summary-body"></div>
+  </section>
+
   <footer>LocalPulse (independent rebuild) — every figure on this page comes from a named public source.<br>Nothing here is AI-generated or estimated by this app.</footer>
 </div>
 
@@ -112,9 +115,8 @@ const money = n => (n===null||n===undefined||isNaN(n)) ? "—" : "$" + Math.roun
 const haversine = (a,b,c,d) => { const R=3958.8, t=x=>x*Math.PI/180; const h=Math.sin(t(c-a)/2)**2 + Math.cos(t(a))*Math.cos(t(c))*Math.sin(t(d-b)/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
 let CUR = null; // {lat, lng, label, zip}
 let map = null, marker = null;
-const RCKEY = "localPulseRentcastKey";
-let rcKey = "";
-try { rcKey = localStorage.getItem(RCKEY) || ""; } catch(e){}
+try { localStorage.removeItem("localPulseRentcastKey"); } catch(e){}
+let STATE = { values: null, schools: null };
 
 function setStatus(t, isErr){ $("status").innerHTML = isErr ? '<span class="err">'+esc(t)+"</span>" : esc(t); }
 function updateSavedCount(){ $("savedcount").textContent = LP.saved.length; }
@@ -162,11 +164,10 @@ async function loadPlace(lat, lng, label){
   $("addr-sub").textContent = [a.city || a.town || a.village || a.hamlet || "", a.state || "", a.postcode || ""].filter(Boolean).join(", ") || main;
   if(a.county){ $("card-county").style.display = ""; $("county-main").textContent = a.county + (a.state ? ", " + a.state : ""); }
   CUR.zip = a.postcode || "";
+  STATE.values = null; STATE.schools = null;
   setStatus("Showing data for " + (street || main) + ".");
   loadValues(lat, lng);
   loadSchools(lat, lng);
-  renderRcSetup();
-  loadTrend();
 }
 function showMap(lat, lng){
   $("card-map").style.display = "";
@@ -202,12 +203,14 @@ async function loadValues(lat, lng){
     const hv = get(tractGeoid, "B25077"), inc = get(tractGeoid, "B19013"), rent = get(tractGeoid, "B25064");
     const hvCounty = get(countyGeoid, "B25077");
     if(hv===null && inc===null) throw new Error("nodata");
+    STATE.values = { hv, hvCounty, inc, rent, county: (fj.County||{}).name || "County" };
     body.innerHTML =
       '<div class="kv"><span>Median home value (tract)</span><b>' + money(hv) + "</b></div>" +
       '<div class="kv"><span>Median home value (' + esc((fj.County||{}).name || "county") + ')</span><b>' + money(hvCounty) + "</b></div>" +
       '<div class="kv"><span>Median household income (tract)</span><b>' + money(inc) + "</b></div>" +
       '<div class="kv"><span>Median gross rent (tract)</span><b>' + money(rent) + "</b></div>";
   } catch(e){
+    STATE.values = "err";
     body.innerHTML = '<span class="muted">Census figures could not be loaded for this spot right now (the free Census service may be busy, or this location is outside the US). Try Refresh.</span>';
   }
 }
@@ -221,124 +224,17 @@ async function loadSchools(lat, lng){
     try { const r = await fetch(ep, { method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" }, body:"data=" + encodeURIComponent(query) });
       const j = await r.json(); if(j && j.elements){ els = j.elements; break; } } catch(e){}
   }
-  if(!els){ body.innerHTML = '<span class="muted">Schools could not be loaded right now — the free school-data service may be busy. Try Refresh in a moment.</span>'; return; }
+  if(!els){ STATE.schools = "err"; body.innerHTML = '<span class="muted">Schools could not be loaded right now — the free school-data service may be busy. Try Refresh in a moment.</span>'; return; }
   const seen = new Set(); const list = [];
   for(const el of els){ const name = el.tags && el.tags.name; if(!name || seen.has(name)) continue; seen.add(name);
     const elat = el.lat ?? (el.center && el.center.lat), elng = el.lon ?? (el.center && el.center.lon); if(elat===undefined) continue;
     const level = /elementary/i.test(name) ? "Elementary" : /middle/i.test(name) ? "Middle" : /high/i.test(name) ? "High" : "School";
     list.push({ name, level, dist: haversine(lat, lng, elat, elng) }); }
   list.sort((x,y)=>x.dist-y.dist);
+  STATE.schools = list;
   if(!list.length){ body.innerHTML = '<span class="muted">No schools found within about 2 miles in OpenStreetMap data.</span>'; return; }
   const zq = (CUR && CUR.zip) ? " " + CUR.zip : " Georgia";
   body.innerHTML = list.slice(0,8).map(s=>'<div class="schoolrow"><span><a class="sch" target="_blank" rel="noopener" href="https://www.google.com/search?q=' + encodeURIComponent(s.name + zq + ' school rating GreatSchools') + '">' + esc(s.name) + '</a> <span class="pill">' + esc(s.level) + '</span></span><b>' + s.dist.toFixed(1) + " mi</b></div>").join("");
-}
-
-/* ---------- RentCast: price trend ---------- */
-function rcCacheGet(k){
-  try { const c = (LP.cache || {})[k]; if(c && c.day === new Date().toISOString().slice(0,10)) return c.data; } catch(e){}
-  return null;
-}
-function rcCacheSet(k, data){
-  LP.cache = LP.cache || {};
-  LP.cache[k] = { day: new Date().toISOString().slice(0,10), data };
-  // keep the cache small: at most 12 entries
-  const keys = Object.keys(LP.cache); if(keys.length > 12) delete LP.cache[keys[0]];
-  saveLP();
-}
-function renderRcSetup(){
-  $("card-rcsetup").style.display = "";
-  const b = $("rcsetup-body");
-  if(rcKey){
-    b.innerHTML = '<p style="margin:0 0 10px; font-size:.92rem">✅ Your RentCast key is saved on this device, so the price trend loads automatically.</p>' +
-      '<button class="btn ghost" onclick="clearRcKey()">Remove key from this device</button>';
-  } else {
-    b.innerHTML = '<p style="margin:0 0 10px; font-size:.92rem">To see the monthly home-price trend for the searched ZIP code, add a free RentCast API key (one-time, per device):</p>' +
-      '<div style="display:flex; gap:8px"><input type="password" id="rckey" placeholder="Paste your RentCast API key" autocomplete="off">' +
-      '<button class="btn" onclick="saveRcKey()">Save key</button></div>';
-  }
-}
-function saveRcKey(){
-  const v = ($("rckey").value || "").trim();
-  if(!v){ alert("Paste the key first."); return; }
-  rcKey = v;
-  try { localStorage.setItem(RCKEY, v); } catch(e){}
-  LP.cache = {}; saveLP();
-  renderRcSetup();
-  if(CUR){ loadTrend(); }
-  setStatus("RentCast key saved on this device.");
-}
-function clearRcKey(){
-  rcKey = "";
-  try { localStorage.removeItem(RCKEY); } catch(e){}
-  LP.cache = {}; saveLP();
-  renderRcSetup();
-  if(CUR){ loadTrend(); }
-}
-async function rcErrorText(r){
-  try { const j = await r.json(); return (j && (j.message || j.error || j.detail)) ? String(j.message || j.error || j.detail) : ""; } catch(e){}
-  return "";
-}
-function rcRejectedHTML(status, msg){
-  return '<span class="err">RentCast rejected the saved key (HTTP ' + status + (msg ? ": " + esc(msg) : "") + ').</span>' +
-    '<div style="margin-top:8px; font-size:.9rem">Usual causes, per RentCast: 401 = the key itself is invalid or incomplete; 403 = no active plan on the API dashboard, or the key has IP/endpoint restrictions set. Fix it in the RentCast API dashboard (activate the free Developer plan; create the key with no restrictions), then remove and re-paste the key in the “RentCast key” card below.</div>';
-}
-function parseTrendHistory(j){
-  const sd = j && j.saleData; if(!sd) return { series: [], current: null };
-  let pts = [];
-  const h = sd.history;
-  if(h && !Array.isArray(h)){
-    for(const k of Object.keys(h)){
-      const v = h[k] || {};
-      const val = (v.medianPrice != null ? v.medianPrice : v.averagePrice);
-      if(val) pts.push({ d: k, v: Number(val) });
-    }
-  } else if(Array.isArray(h)){
-    for(const v of h){ const val = (v && (v.medianPrice != null ? v.medianPrice : v.averagePrice)); if(val) pts.push({ d: v.date || v.month || "", v: Number(val) }); }
-  }
-  pts = pts.filter(p=>p.d && p.v > 0).sort((a,b)=> a.d < b.d ? -1 : 1);
-  return { series: pts, current: (sd.medianPrice != null ? sd.medianPrice : null) };
-}
-function trendChartSVG(pts){
-  const W = 320, H = 120, P = 8;
-  const vals = pts.map(p=>p.v), min = Math.min(...vals), max = Math.max(...vals);
-  const span = (max - min) || 1;
-  const x = i => P + (W - 2*P) * (pts.length === 1 ? 0.5 : i / (pts.length - 1));
-  const y = v => H - P - (H - 2*P) * ((v - min) / span) * 0.92 - (H - 2*P) * 0.04;
-  const line = pts.map((p,i)=> (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p.v).toFixed(1)).join(" ");
-  const dots = pts.map((p,i)=> '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(p.v).toFixed(1) + '" r="2.2" fill="#0f766e"/>').join("");
-  return '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%; height:auto; display:block" role="img" aria-label="Median sale price trend chart">' +
-    '<path d="' + line + '" fill="none" stroke="#0f766e" stroke-width="2.4"/>' + dots + "</svg>";
-}
-async function loadTrend(){
-  $("card-trend").style.display = "";
-  const body = $("trend-body");
-  const zip = (CUR && CUR.zip) || "";
-  if(!zip){ body.innerHTML = '<span class="muted">The trend is by ZIP code, and no ZIP was found for this spot (US addresses only).</span>'; return; }
-  if(!rcKey){ body.innerHTML = '<span class="muted">Add a free RentCast key below to see the monthly median sale-price trend for ZIP ' + esc(zip) + " (from January 2024).</span>"; return; }
-  body.innerHTML = '<span class="muted">Loading price trend…</span>';
-  const ck = "trend:" + zip;
-  let parsed = rcCacheGet(ck);
-  if(!parsed){
-    try {
-      const r = await fetch("https://api.rentcast.io/v1/markets?zipCode=" + encodeURIComponent(zip) + "&dataType=Sale&historyRange=36", { headers:{ "X-Api-Key": rcKey, "Accept":"application/json" } });
-      if(r.status === 401 || r.status === 403){ body.innerHTML = rcRejectedHTML(r.status, await rcErrorText(r)); return; }
-      if(!r.ok) throw new Error("http " + r.status);
-      parsed = parseTrendHistory(await r.json());
-      rcCacheSet(ck, parsed);
-    } catch(e){
-      body.innerHTML = '<span class="muted">The trend could not be loaded right now. Try Refresh in a moment.</span>';
-      return;
-    }
-  }
-  const pts = parsed.series || [];
-  if(pts.length < 2){ body.innerHTML = '<span class="muted">RentCast does not have enough sale history for ZIP ' + esc(zip) + " to draw a trend yet.</span>"; return; }
-  const first = pts[0], last = pts[pts.length - 1];
-  const pct = ((last.v - first.v) / first.v * 100);
-  const fmtD = d => { const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; const mm = /^(\d{4})-(\d{2})/.exec(d); return mm ? m[Number(mm[2]) - 1] + " " + mm[1] : d; };
-  body.innerHTML = '<div class="kv"><span>Median sale price, ZIP ' + esc(zip) + " (" + fmtD(last.d) + ')</span><b>' + money(last.v) + "</b></div>" +
-    '<div class="kv"><span>Change since ' + fmtD(first.d) + "</span><b>" + (pct >= 0 ? "+" : "") + pct.toFixed(1) + "% (" + money(first.v) + " → " + money(last.v) + ")</b></div>" +
-    trendChartSVG(pts) +
-    '<div style="display:flex; justify-content:space-between; color:var(--muted); font-size:.75rem"><span>' + fmtD(first.d) + "</span><span>" + fmtD(last.d) + "</span></div>";
 }
 
 /* ---------- Saved locations ---------- */
@@ -351,6 +247,7 @@ function saveCurrent(){
 }
 function toggleSaved(){
   const v = $("savedview"); const show = v.style.display === "none";
+  if(show) $("summaryview").style.display = "none";
   v.style.display = show ? "" : "none"; $("dash").style.display = show ? "none" : "";
   if(show) renderSaved();
 }
@@ -364,6 +261,68 @@ function renderSaved(){
 }
 function openSaved(i){ const s = LP.saved[i]; if(!s) return; toggleSaved(); loadPlace(s.lat, s.lng, s.label); }
 function deleteSaved(i){ LP.saved.splice(i,1); saveLP(); updateSavedCount(); renderSaved(); }
+
+/* ---------- Location summary ---------- */
+function openSummary(){
+  if(!CUR) return;
+  $("dash").style.display = "none"; $("savedview").style.display = "none"; $("summaryview").style.display = "";
+  renderSummary();
+  window.scrollTo(0, 0);
+}
+function closeSummary(){
+  $("summaryview").style.display = "none"; $("dash").style.display = "";
+}
+function schoolRowHTML(s){
+  const zq = (CUR && CUR.zip) ? " " + CUR.zip : " Georgia";
+  return '<div class="schoolrow"><span><a class="sch" target="_blank" rel="noopener" href="https://www.google.com/search?q=' + encodeURIComponent(s.name + zq + ' school rating GreatSchools') + '">' + esc(s.name) + '</a> <span class="pill">' + esc(s.level) + '</span></span><b>' + s.dist.toFixed(1) + " mi</b></div>";
+}
+function renderSummary(){
+  const name = $("addr-main").textContent || (CUR && CUR.label) || "This location";
+  const sub = $("addr-sub").textContent || "";
+  const zip = (CUR && CUR.zip) || "";
+  let h = '<div class="card"><div class="big">' + esc(name) + '</div>' + (sub ? '<div class="muted" style="margin-top:4px">' + esc(sub) + "</div>" : "") + "</div>";
+  h += '<div class="card"><h2>Home prices — current snapshot</h2>';
+  const v = STATE.values;
+  if(v && v !== "err"){
+    const diff = (v.hv != null && v.hvCounty) ? ((v.hv - v.hvCounty) / v.hvCounty * 100) : null;
+    h += '<div class="kv"><span>Median home value (this census tract)</span><b>' + money(v.hv) + "</b></div>" +
+      '<div class="kv"><span>Median home value (' + esc(v.county) + ')</span><b>' + money(v.hvCounty) + "</b></div>" +
+      '<div class="kv"><span>Median household income (tract)</span><b>' + money(v.inc) + "</b></div>" +
+      '<div class="kv"><span>Median gross rent (tract)</span><b>' + money(v.rent) + "</b></div>" +
+      (diff !== null ? '<p style="margin:10px 0 0; font-size:.92rem">The median home value in this tract is <b>' + (diff >= 0 ? "+" : "") + diff.toFixed(1) + "%</b> " + (diff >= 0 ? "above" : "below") + " the county median.</p>" : "") +
+      '<div class="src">Source: U.S. Census Bureau, American Community Survey (ACS 2024) 5-year estimates, via Census Reporter — survey estimates for the small census tract around this spot.</div>';
+  } else if(v === "err"){
+    h += '<span class="muted">Census figures could not be loaded for this spot (outside the US, or the free Census service is busy). Go back and tap Refresh, then open the summary again.</span>';
+  } else {
+    h += '<span class="muted">Census figures are still loading — go back, give it a few seconds, then tap the location name again.</span>';
+  }
+  h += "</div>";
+  h += '<div class="card"><h2>Home price trend</h2>' +
+    '<p style="margin:0; font-size:.92rem">A year-by-year price series for this area is not published by any free source this app can load without an account key — the Census publishes the current snapshot above, and detailed ZIP histories sit behind paid data services. The live trend charts for this ZIP are on Redfin and Zillow:</p>';
+  if(zip){
+    h += '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px">' +
+      '<a class="btn ghost" target="_blank" rel="noopener" href="https://www.redfin.com/zipcode/' + zip + '">Redfin — ZIP ' + esc(zip) + ' ↗</a>' +
+      '<a class="btn ghost" target="_blank" rel="noopener" href="https://www.zillow.com/homes/for_sale/' + zip + '_rb/">Zillow — ZIP ' + esc(zip) + ' ↗</a></div>';
+  } else {
+    h += '<p class="muted" style="margin:10px 0 0; font-size:.9rem">No ZIP code was found for this spot, so no chart link can be built.</p>';
+  }
+  h += "</div>";
+  h += '<div class="card"><h2>Schools in this area</h2>';
+  const sc = STATE.schools;
+  if(Array.isArray(sc) && sc.length){
+    h += sc.slice(0,8).map(schoolRowHTML).join("") +
+      '<div class="src">Real school locations and distances from OpenStreetMap (via Overpass). Ratings are not in any free data feed, so each school name links to its ratings lookup.</div>';
+  } else if(sc === "err"){
+    h += '<span class="muted">Schools could not be loaded (the free school-data service may be busy). Go back and tap Refresh, then open the summary again.</span>';
+  } else if(Array.isArray(sc)){
+    h += '<span class="muted">No schools found within about 2 miles in OpenStreetMap data.</span>';
+  } else {
+    h += '<span class="muted">Schools are still loading — go back, give it a few seconds, then tap the location name again.</span>';
+  }
+  h += "</div>";
+  h += '<p class="muted" style="font-size:.8rem; text-align:center">Summary built on this device on ' + new Date().toLocaleDateString(undefined, { month:"long", day:"numeric", year:"numeric" }) + " from the sources named above. Nothing here is AI-generated.</p>";
+  $("summary-body").innerHTML = h;
+}
 
 /* ---------- Backup ---------- */
 function exportBackup(){
