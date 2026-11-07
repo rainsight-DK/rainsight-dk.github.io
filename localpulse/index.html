@@ -64,7 +64,7 @@
     <div class="card" id="card-address" style="display:none"><h2>Address</h2><div class="big" id="addr-main"></div><div class="muted" id="addr-sub" style="margin-top:4px"></div><div class="src">Source: OpenStreetMap geocoding (Nominatim)</div></div>
     <div class="card" id="card-county" style="display:none"><h2>County</h2><div class="big" id="county-main"></div><div class="src">Source: OpenStreetMap · FCC Census Block API</div></div>
     <div class="card" id="card-values" style="display:none"><h2>Home values & income — this census tract</h2><div id="values-body"><span class="muted">Loading Census data…</span></div>
-      <div class="src">Source: U.S. Census Bureau, American Community Survey 5-year estimates, via Census Reporter. These are survey estimates for the census tract (a small neighbourhood area), updated yearly — not live market prices or listings.</div></div>
+      <div class="src">Source: U.S. Census Bureau, American Community Survey (ACS 2024) 5-year estimates, via Census Reporter. These are survey estimates for the census tract (a small neighbourhood area), updated yearly — not live market prices or listings.</div></div>
     <div class="card" id="card-schools" style="display:none"><h2>Nearest schools</h2><div id="schools-body"><span class="muted">Loading schools…</span></div>
       <div class="src">Source: OpenStreetMap contributors, via the Overpass API. Real school locations and distances — this free data has no quality ratings.</div></div>
     <div class="card" id="card-map" style="display:none"><h2>Map</h2><div id="map"></div>
@@ -183,7 +183,7 @@ async function loadValues(lat, lng){
     if(!block) throw new Error("geo");
     const tractGeoid = "14000US" + block.slice(0,11);
     const countyGeoid = "05000US" + countyFips;
-    const url = "https://api.censusreporter.org/1.0/data/show/acs2023_5yr?table_ids=B25077,B19013,B25064&geo_ids=" + tractGeoid + "," + countyGeoid;
+    const url = "https://api.censusreporter.org/1.0/data/show/acs2024_5yr?table_ids=B25077,B19013,B25064&geo_ids=" + tractGeoid + "," + countyGeoid;
     const cr = await fetch(url); const cj = await cr.json();
     const get = (g, t) => { try { const est = cj.data[g][t].estimate; const k = Object.keys(est)[0]; const v = est[k]; return (v===null||v===undefined) ? null : v; } catch(e){ return null; } };
     const hv = get(tractGeoid, "B25077"), inc = get(tractGeoid, "B19013"), rent = get(tractGeoid, "B25064");
