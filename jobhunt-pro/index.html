@@ -210,8 +210,12 @@ const esc = s => { const d = document.createElement("div"); d.textContent = s ??
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const DEFAULT_STAGES = ["Saved", "Applied", "Phone Screen", "Interview", "Offer", "Rejected", "Withdrawn"];
 const ALL_SITES = ["LinkedIn", "Indeed", "Glassdoor", "HigherEdJobs"];
-let DB = loadDB();
+let DB;
+try { DB = loadDB(); } catch(e){ DB = seedData(); }
 
+const MemStore = {};
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return (k in MemStore) ? MemStore[k] : null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, v); } catch(e){ MemStore[k] = v; } }
 function seedData(){
   return {
     profiles: [
@@ -228,20 +232,20 @@ function seedData(){
 }
 function loadDB(){
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = lsGet(KEY);
     if(raw){ const d = JSON.parse(raw); if(d && Array.isArray(d.jobs)) return d; }
   } catch(e){}
   let d;
-  if(!localStorage.getItem(SEEDFLAG)){
+  if(!lsGet(SEEDFLAG)){
     d = seedData();
-    try { localStorage.setItem(SEEDFLAG, "1"); } catch(e){}
+    lsSet(SEEDFLAG, "1");
   } else {
     d = { profiles: [], jobs: [], applications: [], documents: [], stages: [...DEFAULT_STAGES] };
   }
   saveDB(d);
   return d;
 }
-function saveDB(d){ DB = d || DB; try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch(e){} }
+function saveDB(d){ DB = d || DB; lsSet(KEY, JSON.stringify(DB)); }
 
 /* ---------- Navigation ---------- */
 function showView(name){
