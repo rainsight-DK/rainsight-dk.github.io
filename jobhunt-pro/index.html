@@ -240,7 +240,10 @@ function loadDB(){
     d = seedData();
     lsSet(SEEDFLAG, "1");
   } else {
-    d = { profiles: [], jobs: [], applications: [], documents: [], stages: [...DEFAULT_STAGES] };
+    // Seed flag exists but the saved data itself is missing (storage was cleared
+    // or blocked inconsistently): self-heal by seeding again. A deliberately
+    // emptied app always has stored data JSON, so it never lands here.
+    d = seedData();
   }
   saveDB(d);
   return d;
