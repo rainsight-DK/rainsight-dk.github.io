@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Recipe Finder — Your intelligent culinary companion</title>
+<meta name="description" content="Discover recipes, decide from what's in your kitchen, scale servings, and keep your personal recipe library.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fffaf6; --card:#ffffff; --line:#f0ddd2; --ink:#2b211c; --sub:#8a7163;
+  --accent:#e2483a; --accent2:#f97316; --dark:#1c1917; --chip:#fdf0e9; --good:#15803d;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%}
+.wrap{max-width:780px;margin:0 auto;padding:0 16px 44px}
+header.site{display:flex;align-items:center;gap:10px;padding:18px 2px 6px}
+.logo{font-family:"Playfair Display",Georgia,serif;font-size:25px;font-weight:800}
+.logo span{color:var(--accent)}
+.view{display:none}.view.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.modecard{display:block;width:100%;text-align:left;border-radius:14px;padding:20px;margin:12px 0;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.modecard.orange{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none}
+.modecard.dark{background:var(--dark);color:#fff;border:none}
+.modecard h2{margin:0 0 4px;font-size:19px;font-family:"Playfair Display",Georgia,serif}
+.modecard p{margin:0;font-size:13.5px;opacity:.85}
+h1{font-family:"Playfair Display",Georgia,serif;font-size:23px;margin:14px 0 4px}
+h2{font-size:16px;margin:18px 0 8px}
+.sub{color:var(--sub);font-size:14px;line-height:1.55}
+.note{color:var(--sub);font-size:12.5px;line-height:1.55}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:15px;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:600}
+.btn.dark{background:var(--dark);color:#fff}
+.btn.small{padding:7px 12px;font-size:13px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+input[type=text],input[type=url],input[type=number],textarea{width:100%;background:#fff;border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:15.5px;padding:11px;outline:none;font-family:inherit}
+textarea{min-height:90px;resize:vertical;line-height:1.5}
+label{display:block;font-size:13px;color:var(--sub);margin:12px 0 5px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--chip);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:13.5px;cursor:pointer}
+.chip.on{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}
+.checkgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.check{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:14.5px;cursor:pointer}
+.check input{width:17px;height:17px;accent-color:var(--accent)}
+.progress{display:flex;gap:6px;margin:10px 0}
+.progress span{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.progress span.on{background:var(--accent)}
+.recipecard{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;cursor:pointer;width:100%;text-align:left;color:var(--ink);align-items:center}
+.recipecard img{width:74px;height:74px;object-fit:cover;border-radius:9px;flex:0 0 auto;background:var(--chip)}
+.recipecard .t{font-weight:700;font-size:15.5px}
+.recipecard .m{color:var(--sub);font-size:12.5px;margin-top:2px}
+.recipecard:hover{border-color:var(--accent)}
+.hero{width:100%;border-radius:14px;object-fit:cover;max-height:300px;background:var(--chip)}
+.pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--chip);border:1px solid var(--line)}
+.stepper{display:inline-flex;align-items:center;gap:10px}
+.stepper button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:17px;cursor:pointer;color:var(--ink)}
+.ingrow{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.ingrow input{width:18px;height:18px;margin-top:2px;accent-color:var(--good)}
+.ingrow.have span{color:var(--sub);text-decoration:line-through}
+ol.steps{padding-left:20px;line-height:1.65;font-size:15px}
+ol.steps li{margin-bottom:8px}
+.backlink{color:var(--accent);cursor:pointer;font-size:14.5px;background:none;border:none;padding:0;font-weight:600}
+a.ext{color:var(--accent)}
+footer{color:var(--sub);font-size:12.5px;text-align:center;padding:22px 10px 4px;line-height:1.6}
+.dropzone{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--sub);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div style="font-size:25px">👨‍🍳</div>
+    <div class="logo">Recipe <span>Finder</span></div>
+  </header>
+
+  <!-- HOME -->
+  <section class="view" id="view-home">
+    <p class="note" style="letter-spacing:1.5px;margin-bottom:0">WELCOME BACK, DH</p>
+    <h1>What would you like to cook?</h1>
+    <p class="sub">Choose an option to get started.</p>
+    <button class="modecard orange" data-nav="search"><h2>🍽 I have a food in mind</h2><p>Find recipes for a specific dish</p></button>
+    <button class="modecard dark" data-nav="decide"><h2>🧺 Help me decide</h2><p>Tell me what I can make with what I have</p></button>
+    <button class="modecard" data-nav="extract"><h2>🔗 Extract a recipe</h2><p>Paste a URL or upload a recipe file</p></button>
+    <button class="modecard" data-nav="saved"><h2>📚 My saved recipes</h2><p>Open your personal recipe library (<span id="savedCount">0</span>)</p></button>
+    <p class="note">Recipes come from TheMealDB, a real recipe database. If a dish isn't there, you'll get a web-search link instead of an invented recipe.</p>
+  </section>
+
+  <!-- SEARCH -->
+  <section class="view" id="view-search">
+    <button class="backlink" data-nav="home">← Back</button>
+    <h1>Find a Recipe</h1>
+    <p class="sub">What are you craving? Type a dish name and we'll find the best versions for you.</p>
+    <div class="row" style="flex-wrap:nowrap">
+      <span style="flex:1"><input type="text" id="dishInput" placeholder="e.g. Pasta carbonara, Chicken curry..."></span>
+      <button class="btn" id="dishSearchBtn">Search</button>
+    </div>
+    <p class="note" id="searchMsg"></p>
+    <div id="searchResults"></div>
+  </section>
+
+  <!-- DECIDE -->
+  <section class="view" id="view-decide">
+    <button class="backlink" data-nav="home">← Back</button>
+    <div class="row" style="justify-content:space-between"><h1 style="margin:0">Help Me Decide</h1><button class="btn ghost small" id="decideReset">Reset</button></div>
+    <div class="progress" id="decideProgress"><span class="on"></span><span></span><span></span></div>
+    <div id="decideBody"></div>
+  </section>
+
+  <!-- EXTRACT / ADD -->
+  <section class="view" id="view-extract">
+    <button class="backlink" data-nav="home">← Back</button>
+    <h1>Extract a Recipe</h1>
+    <p class="sub">Import from a TheMealDB link, or add any recipe manually — from a website, a book, or a file.</p>
+    <div class="card">
+      <label>TheMealDB recipe link or ID</label>
+      <div class="row" style="flex-wrap:nowrap"><span style="flex:1"><input type="url" id="importInput" placeholder="https://www.themealdb.com/meal/52771-... or just 52771"></span>
+      <button class="btn" id="importBtn">Import</button></div>
+      <p class="note" id="importMsg"></p>
+      <div class="dropzone" id="fileDrop">📄 Upload a recipe text file (.txt) — it fills the form below<input type="file" id="fileInput" accept=".txt,text/plain" style="display:none"></div>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">Add a recipe manually</h2>
+      <label>Title *</label><input type="text" id="mfTitle">
+      <div class="row"><span style="flex:1;min-width:130px"><label>Source URL</label><input type="url" id="mfSource"></span>
+      <span style="flex:1;min-width:110px"><label>Servings (number)</label><input type="number" id="mfServings" min="1" placeholder="4"></span></div>
+      <div class="row"><span style="flex:1;min-width:110px"><label>Cuisine</label><input type="text" id="mfCuisine" placeholder="e.g. Korean"></span>
+      <span style="flex:1;min-width:110px"><label>Style / category</label><input type="text" id="mfStyle" placeholder="e.g. Comfort food"></span></div>
+      <label>Ingredients (one per line, e.g. "200g flour")</label><textarea id="mfIngredients"></textarea>
+      <label>Steps (one per line)</label><textarea id="mfSteps"></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn" id="mfSave">Save to library</button></div>
+      <p class="note" id="mfMsg"></p>
+    </div>
+  </section>
+
+  <!-- RECIPE VIEW -->
+  <section class="view" id="view-recipe">
+    <button class="backlink" id="recipeBack">← Back</button>
+    <div id="recipeBody"></div>
+  </section>
+
+  <!-- SAVED -->
+  <section class="view" id="view-saved">
+    <button class="backlink" data-nav="home">← Back</button>
+    <h1>My saved recipes</h1>
+    <p class="sub">Your personal recipe collection</p>
+    <div id="savedList"></div>
+    <div class="card">
+      <h2 style="margin-top:0">Backup</h2>
+      <p class="note">Your library lives only on this device/browser. Export a backup file and keep it somewhere safe (e.g. Google Drive); import it on another device to restore. Importing replaces current data after you confirm.</p>
+      <div class="row"><button class="btn" id="exportBtn">Export backup</button><button class="btn ghost" id="importBackupBtn">Import backup</button>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none"></div>
+      <p class="note" id="backupMsg"></p>
+    </div>
+  </section>
+
+  <footer>Recipe Finder — rebuilt as an independent app.<br>Recipe data: TheMealDB. Always check a recipe's source for the original.</footer>
+</div>
+
+<script>
+"use strict";
+/* Failure-proof storage (works even where localStorage is restricted). */
+var MemStore = {};
+function lsGet(k){ try { return window.localStorage.getItem(k); } catch(e){ return (k in MemStore) ? MemStore[k] : null; } }
+function lsSet(k,v){ try { window.localStorage.setItem(k,v); } catch(e){ MemStore[k]=v; } }
+
+var DBKEY = "recipeFriendV1", SEEDFLAG = "recipeFriendSeededV1";
+var API = "https://www.themealdb.com/api/json/v1/1/";
+function seedDB(){ return { saved: [] }; }
+function loadDB(){
+  var db = null;
+  try { var raw = lsGet(DBKEY); if (raw) db = JSON.parse(raw); } catch(e){ db = null; }
+  if (!db || !Array.isArray(db.saved)) { db = seedDB(); lsSet(SEEDFLAG,"1"); saveDB(db); }
+  return db;
+}
+function saveDB(db){ try { lsSet(DBKEY, JSON.stringify(db)); } catch(e){} }
+var DB = seedDB();
+try { DB = loadDB(); } catch(e){ /* keep seed */ }
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+
+/* ---------- TheMealDB ---------- */
+function mealToRecipe(m){
+  var ings = [];
+  for (var i = 1; i <= 20; i++) {
+    var name = (m["strIngredient"+i] || "").trim();
+    if (!name) continue;
+    ings.push({ name: name, measure: (m["strMeasure"+i] || "").trim() });
+  }
+  var steps = String(m.strInstructions || "").split(/\r?\n+/).map(function(s){ return s.trim(); }).filter(function(s){ return s && !/^step\s*\d+$/i.test(s); });
+  return { id: "mdb-"+m.idMeal, mealDbId: m.idMeal, title: m.strMeal,
+    source: m.strSource || ("https://www.themealdb.com/meal/"+m.idMeal),
+    description: (m.strCategory || "") + (m.strArea ? " · " + m.strArea : ""),
+    servings: "", servingsNumber: null, ingredients: ings, steps: steps,
+    tags: m.strTags ? m.strTags.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [],
+    cuisine: m.strArea || "", style: m.strCategory || "", imageUrl: m.strMealThumb || "", youtube: m.strYoutube || "" };
+}
+function apiGet(path){
+  if (typeof fetch !== "function") return Promise.reject(new Error("offline"));
+  return fetch(API + path).then(function(r){ return r.json(); });
+}
+
+/* ---------- Quantity scaling ---------- */
+var FRAC = { "½":0.5, "¼":0.25, "¾":0.75, "⅓":1/3, "⅔":2/3, "⅛":0.125, "⅜":0.375, "⅝":0.625, "⅞":0.875 };
+function parseQty(str){
+  var m = String(str).match(/^(\d+)\s+(\d+)\/(\d+)/);            /* 1 1/2 */
+  if (m) return { value: parseInt(m[1],10) + parseInt(m[2],10)/parseInt(m[3],10), len: m[0].length };
+  m = String(str).match(/^(\d+)\/(\d+)/);                          /* 1/2 */
+  if (m) return { value: parseInt(m[1],10)/parseInt(m[2],10), len: m[0].length };
+  m = String(str).match(/^(\d*\.\d+|\d+)/);                        /* 1.5 or 200 */
+  if (m) return { value: parseFloat(m[1]), len: m[0].length };
+  var c = String(str).charAt(0);
+  if (FRAC[c] != null) return { value: FRAC[c], len: 1 };
+  return null;
+}
+function fmtQty(v){
+  if (v <= 0) return "0";
+  var rounded = Math.round(v * 4) / 4;
+  if (Math.abs(v - rounded) > 0.06) return String(Math.round(v * 100) / 100);
+  var whole = Math.floor(rounded), frac = rounded - whole;
+  var fs = { 0.25:"1/4", 0.5:"1/2", 0.75:"3/4" }[frac] || "";
+  if (whole && fs) return whole + " " + fs;
+  if (fs) return fs;
+  return String(whole || rounded);
+}
+function scaleMeasure(measure, factor){
+  var s = String(measure || "").trim();
+  if (!s || factor === 1) return s;
+  var range = s.match(/^([^\s-]+)-([^\s]+)(\s.*)?$/);            /* 1-2 cloves */
+  if (range) {
+    var a = parseQty(range[1]), b = parseQty(range[2]);
+    if (a && b && a.len === range[1].length && b.len === range[2].length) return fmtQty(a.value*factor) + "-" + fmtQty(b.value*factor) + (range[3]||"");
+  }
+  var q = parseQty(s);
+  if (!q) return s;
+  return fmtQty(q.value * factor) + s.slice(q.len);
+}
+
+/* ---------- Views ---------- */
+var currentView = "home", recipeReturn = "home", currentRecipe = null, baseServings = 4, targetServings = 4, haveSet = {};
+function showView(v){
+  currentView = v;
+  document.querySelectorAll(".view").forEach(function(s){ s.classList.remove("active"); });
+  var el = document.getElementById("view-"+v); if (el) el.classList.add("active");
+  window.scrollTo(0,0);
+}
+function recipeCardHtml(r, coverage){
+  return '<button class="recipecard" data-recipe="'+esc(r.id)+'">' +
+    (r.imageUrl ? '<img src="'+esc(r.imageUrl)+'" alt="">' : '<img alt="">') +
+    '<span><span class="t">'+esc(r.title)+'</span><div class="m">'+esc(r.cuisine || "")+(r.cuisine && r.style ? " · " : "")+esc(r.style || "")+
+    (coverage != null ? ' · <b style="color:var(--good)">You have '+coverage.matched+' of '+coverage.total+' ingredients</b>' : '')+'</div></span></button>';
+}
+function bindRecipeCards(container, recipes){
+  if (!container) return;
+  container.querySelectorAll("[data-recipe]").forEach(function(c){ c.addEventListener("click", function(){
+    var r = recipes.filter(function(x){ return x.id === c.getAttribute("data-recipe"); })[0];
+    if (r) openRecipe(r, currentView);
+  }); });
+}
+function renderHome(){ document.getElementById("savedCount").textContent = DB.saved.length; }
+
+/* ---------- Search ---------- */
+var lastSearch = [];
+function doSearch(){
+  var q = document.getElementById("dishInput").value.trim(); if (!q) return;
+  var msg = document.getElementById("searchMsg"), box = document.getElementById("searchResults");
+  msg.textContent = "Searching TheMealDB for “"+q+"”…"; box.innerHTML = "";
+  apiGet("search.php?s="+encodeURIComponent(q)).then(function(data){
+    var meals = (data && data.meals) || [];
+    lastSearch = meals.map(mealToRecipe);
+    if (!lastSearch.length) {
+      msg.innerHTML = "No recipes for “"+esc(q)+"” in TheMealDB's catalog (its coverage is uneven — Korean dishes especially). " +
+        'Try a <a class="ext" href="https://www.google.com/search?q='+encodeURIComponent(q+" recipe")+'" target="_blank" rel="noopener">web recipe search for '+esc(q)+'</a>, then save what you find via Extract → Add manually.';
+      return;
+    }
+    msg.textContent = lastSearch.length + " version(s) found:";
+    box.innerHTML = lastSearch.map(function(r){ return recipeCardHtml(r); }).join("");
+    bindRecipeCards(box, lastSearch);
+  }).catch(function(){ msg.textContent = "Search failed — check your connection."; });
+}
+
+/* ---------- Decide wizard ---------- */
+var PANTRY = ["Salt","Pepper","Sugar","Olive oil","Butter","Garlic","Onion","Eggs"," Flour","Soy sauce","Vinegar","Tomato paste","Chicken broth","Milk","Cheese","Rice","Pasta","Potatoes","Canned tomatoes","Lemon"].map(function(s){ return s.trim(); });
+var CUISINES = ["American","Italian","Mexican","Japanese","Korean","Thai","Indian","Chinese","French","Mediterranean"];
+var AREA_MAP = { Mediterranean: "Greek" };
+var STYLES = ["Healthy","Spicy","Quick & Easy","Comfort food","Vegetarian","Vegan","Low-carb","High-protein"];
+var PANTRY_FILTER = { "Olive oil":"olive_oil", "Butter":"butter", "Garlic":"garlic", "Onion":"onion", "Eggs":"egg", "Soy sauce":"soy_sauce", "Rice":"rice", "Pasta":"penne", "Potatoes":"potatoes", "Lemon":"lemon", "Cheese":"cheddar_cheese", "Milk":"milk", "Chicken broth":"chicken_stock" };
+var decide = { step: 1, pantry: [], cuisine: "", style: [] };
+function normName(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim(); }
+function ingMatches(recipeIngName, pantry){
+  var rn = normName(recipeIngName);
+  return pantry.some(function(p){
+    var pn = normName(p);
+    return rn === pn || rn.indexOf(pn) !== -1 || pn.indexOf(rn) !== -1 ||
+      rn.replace(/s\b/g,"") === pn.replace(/s\b/g,"");
+  });
+}
+function renderDecide(){
+  var body = document.getElementById("decideBody");
+  document.querySelectorAll("#decideProgress span").forEach(function(s, i){ s.classList.toggle("on", i < decide.step); });
+  if (decide.step === 1) {
+    body.innerHTML = '<h2>Step 1 — What\'s in your kitchen?</h2><p class="sub">Check off what you already have, or skip this step.</p>' +
+      '<div class="checkgrid">' + PANTRY.map(function(p){ return '<label class="check"><input type="checkbox" data-pantry="'+esc(p)+'"'+(decide.pantry.indexOf(p)!==-1?" checked":"")+'> '+esc(p)+'</label>'; }).join("") + '</div>' +
+      '<div class="row" style="margin-top:10px;flex-wrap:nowrap"><span style="flex:1"><input type="text" id="extraIng" placeholder="Add ingredient..."></span><button class="btn ghost" id="addIngBtn">+</button></div>' +
+      '<div class="chips" style="margin-top:8px">'+decide.pantry.filter(function(p){ return PANTRY.indexOf(p)===-1; }).map(function(p){ return '<span class="chip on">'+esc(p)+'</span>'; }).join("")+'</div>' +
+      '<div class="row" style="margin-top:14px"><button class="btn ghost" id="dSkip1">Skip</button><button class="btn" id="dNext1">Continue</button></div>';
+    body.querySelectorAll("[data-pantry]").forEach(function(cb){ cb.addEventListener("change", function(){
+      var p = cb.getAttribute("data-pantry");
+      if (cb.checked) { if (decide.pantry.indexOf(p)===-1) decide.pantry.push(p); }
+      else decide.pantry = decide.pantry.filter(function(x){ return x !== p; });
+    }); });
+    document.getElementById("addIngBtn").addEventListener("click", function(){
+      var v = document.getElementById("extraIng").value.trim();
+      if (v && decide.pantry.indexOf(v)===-1) { decide.pantry.push(v); renderDecide(); }
+    });
+    document.getElementById("dSkip1").addEventListener("click", function(){ decide.step = 2; renderDecide(); });
+    document.getElementById("dNext1").addEventListener("click", function(){ decide.step = 2; renderDecide(); });
+  } else if (decide.step === 2) {
+    body.innerHTML = '<h2>Step 2 — Cuisine preference</h2><div class="chips">' +
+      CUISINES.map(function(c){ return '<button class="chip'+(decide.cuisine===c?" on":"")+'" data-cuisine="'+esc(c)+'">'+esc(c)+'</button>'; }).join("") + '</div>' +
+      '<label>Other cuisine (type here)...</label><input type="text" id="otherCuisine" value="'+esc(CUISINES.indexOf(decide.cuisine)===-1 ? decide.cuisine : "")+'">' +
+      '<div class="row" style="margin-top:14px"><button class="btn ghost" id="dBack2">Back</button><button class="btn ghost" id="dSkip2">Skip</button><button class="btn" id="dNext2">Continue</button></div>';
+    body.querySelectorAll("[data-cuisine]").forEach(function(b){ b.addEventListener("click", function(){ decide.cuisine = b.getAttribute("data-cuisine"); renderDecide(); }); });
+    document.getElementById("dBack2").addEventListener("click", function(){ decide.step = 1; renderDecide(); });
+    document.getElementById("dSkip2").addEventListener("click", function(){ decide.cuisine = ""; decide.step = 3; renderDecide(); });
+    document.getElementById("dNext2").addEventListener("click", function(){ var o = document.getElementById("otherCuisine").value.trim(); if (o) decide.cuisine = o; decide.step = 3; renderDecide(); });
+  } else if (decide.step === 3) {
+    body.innerHTML = '<h2>Step 3 — Style &amp; mood</h2><div class="chips">' +
+      STYLES.map(function(s){ return '<button class="chip'+(decide.style.indexOf(s)!==-1?" on":"")+'" data-style="'+esc(s)+'">'+esc(s)+'</button>'; }).join("") + '</div>' +
+      '<label>Other preference (e.g. gluten-free, dairy-free)...</label><input type="text" id="otherStyle">' +
+      '<div class="row" style="margin-top:14px"><button class="btn ghost" id="dBack3">Back</button><button class="btn ghost" id="dSkip3">Skip &amp; Show Results</button><button class="btn" id="dShow">Show Results</button></div>' +
+      '<div id="decideResults" style="margin-top:12px"></div>';
+    body.querySelectorAll("[data-style]").forEach(function(b){ b.addEventListener("click", function(){
+      var s = b.getAttribute("data-style");
+      if (decide.style.indexOf(s)===-1) decide.style.push(s); else decide.style = decide.style.filter(function(x){ return x !== s; });
+      b.classList.toggle("on");
+    }); });
+    document.getElementById("dBack3").addEventListener("click", function(){ decide.step = 2; renderDecide(); });
+    document.getElementById("dSkip3").addEventListener("click", runDecide);
+    document.getElementById("dShow").addEventListener("click", runDecide);
+  }
+}
+function runDecide(){
+  var box = document.getElementById("decideResults");
+  box.innerHTML = '<p class="sub">Finding recipes…</p>';
+  var poolPromise;
+  var vegCat = decide.style.indexOf("Vegetarian") !== -1 ? "Vegetarian" : (decide.style.indexOf("Vegan") !== -1 ? "Vegan" : null);
+  if (vegCat) poolPromise = apiGet("filter.php?c="+vegCat);
+  else if (decide.cuisine) poolPromise = apiGet("filter.php?a="+encodeURIComponent(AREA_MAP[decide.cuisine] || decide.cuisine));
+  else if (decide.pantry.length && PANTRY_FILTER[decide.pantry[0]]) poolPromise = apiGet("filter.php?i="+PANTRY_FILTER[decide.pantry[0]]);
+  else poolPromise = apiGet("search.php?s=chicken");
+  poolPromise.then(function(data){
+    var pool = ((data && data.meals) || []).slice(0, 24);
+    if (!pool.length) { box.innerHTML = '<p class="sub">No recipes matched in TheMealDB\'s catalog for that combination. Try fewer filters, or a <a class="ext" href="https://www.google.com/search?q='+encodeURIComponent((decide.cuisine||"")+" recipes")+'" target="_blank" rel="noopener">web recipe search</a>.</p>'; return; }
+    return Promise.all(pool.map(function(m){ return apiGet("lookup.php?i="+m.idMeal).catch(function(){ return null; }); })).then(function(fulls){
+      var recipes = fulls.filter(Boolean).map(function(d){ return mealToRecipe(d.meals[0]); }).filter(Boolean);
+      var scored = recipes.map(function(r){
+        var matched = r.ingredients.filter(function(i){ return ingMatches(i.name, decide.pantry); }).length;
+        return { r: r, matched: matched, total: r.ingredients.length, ratio: r.ingredients.length ? matched / r.ingredients.length : 0 };
+      });
+      scored.sort(function(a,b){ return (b.matched - a.matched) || (b.ratio - a.ratio); });
+      var otherStyles = decide.style.filter(function(s){ return s !== "Vegetarian" && s !== "Vegan"; });
+      box.innerHTML = '<h2>'+scored.length+' recipes</h2>' +
+        (decide.pantry.length ? '' : '<p class="note">No pantry items selected — results are unranked suggestions.</p>') +
+        (otherStyles.length ? '<p class="note">Note: "'+otherStyles.map(esc).join('", "')+'" can\'t be verified against this recipe database, so it wasn\'t used as a filter.</p>' : '') +
+        scored.map(function(s){ return recipeCardHtml(s.r, decide.pantry.length ? { matched: s.matched, total: s.total } : null); }).join("");
+      bindRecipeCards(box, scored.map(function(s){ return s.r; }));
+    });
+  }).catch(function(){ box.innerHTML = '<p class="sub">Lookup failed — check your connection.</p>'; });
+}
+
+/* ---------- Recipe view ---------- */
+function openRecipe(r, fromView){
+  currentRecipe = r;
+  recipeReturn = fromView || "home";
+  baseServings = r.servingsNumber || 4;
+  targetServings = baseServings;
+  haveSet = {};
+  renderRecipe();
+  showView("recipe");
+}
+function renderRecipe(){
+  var r = currentRecipe; if (!r) return;
+  var isSaved = DB.saved.some(function(x){ return x.id === r.id; });
+  var factor = targetServings / baseServings;
+  var needList = r.ingredients.filter(function(_, i){ return !haveSet[i]; });
+  var h = (r.imageUrl ? '<img class="hero" src="'+esc(r.imageUrl)+'" alt="">' : '') +
+    '<h1>'+esc(r.title)+'</h1>' +
+    '<div class="row"><span class="pill">'+esc(r.cuisine || "—")+'</span><span class="pill">'+esc(r.style || "—")+'</span>' +
+    r.tags.map(function(t){ return '<span class="pill">'+esc(t)+'</span>'; }).join("") + '</div>' +
+    (r.description ? '<p class="sub">'+esc(r.description)+'</p>' : '') +
+    '<div class="row" style="margin:10px 0">' +
+    (isSaved ? '<button class="btn ghost" id="rvDelete">Remove from library</button>' : '<button class="btn" id="rvSave">Save to library</button>') +
+    '<button class="btn ghost" id="rvShare">Share</button>' +
+    (r.youtube ? '<a class="ext" href="'+esc(r.youtube)+'" target="_blank" rel="noopener">▶ Watch on YouTube</a>' : '') +
+    (r.source ? '<a class="ext" href="'+esc(r.source)+'" target="_blank" rel="noopener">Original source</a>' : '') + '</div>' +
+    '<h2>Servings</h2><div class="row"><span class="stepper"><button id="svMinus">−</button><b id="svVal">'+targetServings+'</b><button id="svPlus">+</button></span>' +
+    '<span class="note">Base recipe serves '+baseServings+'; quantities scale automatically.</span></div>' +
+    '<h2>Ingredients</h2><p class="note">Tick what you already have — the rest becomes your buy list.</p>' +
+    r.ingredients.map(function(ing, i){
+      return '<label class="ingrow'+(haveSet[i]?" have":"")+'"><input type="checkbox" data-have="'+i+'"'+(haveSet[i]?" checked":"")+'><span><b>'+esc(scaleMeasure(ing.measure, factor))+'</b> '+esc(ing.name)+'</span></label>';
+    }).join("") +
+    '<div class="card"><b>What you still need to buy ('+needList.length+')</b>' +
+    (needList.length ? '<ul style="margin:8px 0 0;padding-left:18px;line-height:1.6">'+needList.map(function(ing){ return '<li>'+esc(scaleMeasure(ing.measure, factor))+' '+esc(ing.name)+'</li>'; }).join("")+'</ul>' : '<p class="note" style="margin:6px 0 0">You have everything. 🎉</p>') + '</div>' +
+    '<h2>Instructions</h2><ol class="steps">'+r.steps.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join("")+'</ol>';
+  document.getElementById("recipeBody").innerHTML = h;
+  document.getElementById("svMinus").addEventListener("click", function(){ if (targetServings > 1) { targetServings--; renderRecipe(); } });
+  document.getElementById("svPlus").addEventListener("click", function(){ if (targetServings < 24) { targetServings++; renderRecipe(); } });
+  document.querySelectorAll("[data-have]").forEach(function(cb){ cb.addEventListener("change", function(){
+    var i = parseInt(cb.getAttribute("data-have"),10);
+    if (cb.checked) haveSet[i] = true; else delete haveSet[i];
+    renderRecipe();
+  }); });
+  var saveBtn = document.getElementById("rvSave");
+  if (saveBtn) saveBtn.addEventListener("click", function(){
+    var copy = JSON.parse(JSON.stringify(r)); copy.servingsNumber = baseServings; copy.savedDate = todayStr();
+    DB.saved.unshift(copy); saveDB(DB); renderHome(); renderRecipe();
+  });
+  var delBtn = document.getElementById("rvDelete");
+  if (delBtn) delBtn.addEventListener("click", function(){
+    if (confirm("Remove this recipe from your library?")) { DB.saved = DB.saved.filter(function(x){ return x.id !== r.id; }); saveDB(DB); renderHome(); renderSaved(); showView("saved"); }
+  });
+  document.getElementById("rvShare").addEventListener("click", function(){
+    var text = r.title + "\n\nIngredients:\n" + r.ingredients.map(function(i){ return "- "+(scaleMeasure(i.measure, factor)+" "+i.name).trim(); }).join("\n") + "\n\nSteps:\n" + r.steps.map(function(s, i){ return (i+1)+". "+s; }).join("\n") + (r.source ? "\n\nSource: "+r.source : "");
+    if (navigator.share) navigator.share({ title: r.title, text: text }).catch(function(){});
+    else if (navigator.clipboard) { navigator.clipboard.writeText(text); alert("Recipe copied to clipboard."); }
+  });
+}
+
+/* ---------- Extract / manual add ---------- */
+function doImport(){
+  var v = document.getElementById("importInput").value.trim();
+  var msg = document.getElementById("importMsg");
+  var m = v.match(/(\d{4,})/);
+  if (!m) { msg.textContent = "Paste a TheMealDB link or a recipe ID (numbers)."; return; }
+  msg.textContent = "Importing…";
+  apiGet("lookup.php?i="+m[1]).then(function(data){
+    if (!data || !data.meals) { msg.textContent = "No recipe with that ID in TheMealDB."; return; }
+    msg.textContent = "";
+    openRecipe(mealToRecipe(data.meals[0]), "extract");
+  }).catch(function(){ msg.textContent = "Import failed — check your connection."; });
+}
+function manualSave(){
+  var title = document.getElementById("mfTitle").value.trim();
+  var msg = document.getElementById("mfMsg");
+  if (!title) { msg.textContent = "Give the recipe a title."; return; }
+  var ings = document.getElementById("mfIngredients").value.split("\n").map(function(s){ return s.trim(); }).filter(Boolean).map(function(line){
+    var q = parseQty(line);
+    if (q) { var rest = line.slice(q.len).trim(); var sp = rest.indexOf(" ");
+      /* keep the whole line as measure+name: split at first word boundary after qty+unit */
+      var parts = rest.split(/\s+/);
+      if (parts.length >= 2) return { measure: (line.slice(0, q.len) + " " + parts[0]).trim(), name: parts.slice(1).join(" ") };
+      return { measure: line, name: "" };
+    }
+    return { measure: "", name: line };
+  });
+  var r = { id: "local-"+Date.now(), title: title, source: document.getElementById("mfSource").value.trim(),
+    description: "", servings: "", servingsNumber: parseInt(document.getElementById("mfServings").value,10) || null,
+    ingredients: ings, steps: document.getElementById("mfSteps").value.split("\n").map(function(s){ return s.trim(); }).filter(Boolean),
+    tags: [], cuisine: document.getElementById("mfCuisine").value.trim(), style: document.getElementById("mfStyle").value.trim(),
+    imageUrl: "", youtube: "", savedDate: todayStr() };
+  DB.saved.unshift(r); saveDB(DB); renderHome(); renderSaved();
+  msg.textContent = "Saved to your library.";
+  openRecipe(r, "extract");
+}
+
+/* ---------- Saved ---------- */
+function renderSaved(){
+  document.getElementById("savedList").innerHTML = DB.saved.length ? DB.saved.map(function(r){ return recipeCardHtml(r); }).join("") :
+    '<div class="card"><p class="sub" style="margin:0 0 10px">No saved recipes yet<br>Find and save recipes to see them here</p><button class="btn" data-nav="search">Explore recipes</button></div>';
+  bindRecipeCards(document.getElementById("savedList"), DB.saved);
+  document.querySelectorAll("#savedList [data-nav]").forEach(function(b){ b.addEventListener("click", function(){ showView(b.getAttribute("data-nav")); }); });
+  renderHome();
+}
+
+/* ---------- Backup ---------- */
+function exportBackup(){
+  var blob = new Blob([JSON.stringify(DB, null, 2)], { type:"application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "recipefinder-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  document.getElementById("backupMsg").textContent = "Backup exported — keep the file somewhere safe (e.g. Google Drive).";
+}
+function importBackup(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var data = JSON.parse(String(reader.result));
+      if (!data || !Array.isArray(data.saved)) throw new Error("bad format");
+      if (!confirm("Import this backup? It replaces your current recipe library on this device.")) return;
+      DB = data; lsSet(SEEDFLAG,"1"); saveDB(DB); renderAll();
+      document.getElementById("backupMsg").textContent = "Backup imported.";
+    } catch(e){ document.getElementById("backupMsg").textContent = "That file is not a valid Recipe Finder backup."; }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Wiring & init ---------- */
+function renderAll(){ renderHome(); renderSaved(); }
+document.querySelectorAll("[data-nav]").forEach(function(b){ b.addEventListener("click", function(){ showView(b.getAttribute("data-nav")); }); });
+document.getElementById("dishSearchBtn").addEventListener("click", doSearch);
+document.getElementById("dishInput").addEventListener("keydown", function(e){ if (e.key === "Enter") doSearch(); });
+document.getElementById("decideReset").addEventListener("click", function(){ decide = { step: 1, pantry: [], cuisine: "", style: [] }; renderDecide(); });
+document.getElementById("importBtn").addEventListener("click", doImport);
+document.getElementById("mfSave").addEventListener("click", manualSave);
+document.getElementById("fileDrop").addEventListener("click", function(){ document.getElementById("fileInput").click(); });
+document.getElementById("fileInput").addEventListener("change", function(){
+  var f = this.files && this.files[0]; if (!f) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    var text = String(reader.result || "");
+    var lines = text.split(/\r?\n/);
+    if (!document.getElementById("mfTitle").value) document.getElementById("mfTitle").value = (lines[0] || f.name.replace(/\.txt$/i,"")).trim();
+    document.getElementById("mfSteps").value = text;
+    document.getElementById("importMsg").textContent = "File loaded into the form below — split it into ingredients/steps as needed, then Save.";
+  };
+  reader.readAsText(f); this.value = "";
+});
+document.getElementById("recipeBack").addEventListener("click", function(){ showView(recipeReturn || "home"); });
+document.getElementById("exportBtn").addEventListener("click", exportBackup);
+document.getElementById("importBackupBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+document.getElementById("importFile").addEventListener("change", function(){ if (this.files && this.files[0]) importBackup(this.files[0]); this.value=""; });
+window.RF = { scaleMeasure: scaleMeasure, getDB: function(){ return DB; }, getDecide: function(){ return decide; } };
+renderAll();
+renderDecide();
+showView("home");
+</script>
+</body>
+</html>
