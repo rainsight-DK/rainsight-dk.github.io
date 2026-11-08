@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MedSearch — Your family's care, one search away</title>
+<meta name="description" content="Your family's household and insurance details, plus real nearby emergency care from OpenStreetMap.">
+<style>
+:root{
+  --bg:#f4f8ff; --card:#ffffff; --line:#d7e5f7; --ink:#12233d; --sub:#5b7292;
+  --accent:#2563eb; --accent2:#1d4ed8; --danger:#dc2626; --dangerbg:#fef2f2; --good:#15803d;
+}
+[data-theme="dark"]{ --bg:#0b1526; --card:#122036; --line:#23406b; --ink:#e6eefc; --sub:#93a9c8; --dangerbg:#3a1212; }
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%}
+.wrap{max-width:780px;margin:0 auto;padding:0 16px 96px}
+header.site{display:flex;align-items:center;gap:10px;padding:18px 2px 4px}
+.logo{font-size:23px;font-weight:800}.logo span{color:var(--accent)}
+.view{display:none}.view.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;margin:11px 0}
+h1{font-size:21px;margin:14px 0 4px}
+h2{font-size:15.5px;margin:16px 0 8px}
+.sub{color:var(--sub);font-size:14px;line-height:1.55}
+.note{color:var(--sub);font-size:12.5px;line-height:1.55}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 16px;font-size:15px;font-weight:700;cursor:pointer}
+.btn.big{width:100%;padding:15px;font-size:16.5px;margin:6px 0}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:600}
+.btn.danger{background:var(--danger)}
+.btn.small{padding:7px 12px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+input[type=text],input[type=url],input[type=date],select,textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:15.5px;padding:10px;outline:none;font-family:inherit}
+textarea{min-height:76px;resize:vertical;line-height:1.5}
+label{display:block;font-size:13px;color:var(--sub);margin:11px 0 5px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13.5px;cursor:pointer;color:var(--ink)}
+.chip.on{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}
+.pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--line)}
+.member{display:flex;gap:11px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin:7px 0;cursor:pointer;width:100%;text-align:left;color:var(--ink)}
+.member:hover{border-color:var(--accent)}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex:0 0 auto}
+.alert911{background:var(--dangerbg);border:2px solid var(--danger);border-radius:14px;padding:15px;margin:11px 0}
+.alert911 b{color:var(--danger);font-size:17px}
+.alert911 a{color:var(--danger);font-weight:800}
+.fac{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px;margin:8px 0}
+.fac .t{font-weight:800;font-size:16px}
+.fac .m{color:var(--sub);font-size:13px;line-height:1.5;margin-top:2px}
+nav.bottom{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:20}
+nav.bottom button{flex:1;background:none;border:none;padding:10px 0 14px;font-size:12.5px;color:var(--sub);cursor:pointer}
+nav.bottom button.active{color:var(--accent);font-weight:700}
+a.ext{color:var(--accent)}
+footer{color:var(--sub);font-size:12.5px;text-align:center;padding:20px 10px 6px;line-height:1.6}
+.qa{border-bottom:1px solid var(--line);padding:9px 0;font-size:14.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div style="font-size:24px;color:var(--accent)">✚</div>
+    <div><div class="logo">Med<span>Search</span></div><div class="note" style="margin-top:-2px">Your family's care, one search away</div></div>
+    <span style="flex:1"></span>
+    <button class="chip" id="themeToggle">🌙</button>
+  </header>
+
+  <!-- HOME -->
+  <section class="view" id="view-home">
+    <h1>Hi, Daehoon 👋</h1>
+    <div id="homeBody"></div>
+  </section>
+
+  <!-- FIND CARE -->
+  <section class="view" id="view-find">
+    <h1>Find Care Now</h1>
+    <div id="findBody"></div>
+  </section>
+
+  <!-- FAMILY -->
+  <section class="view" id="view-family">
+    <h1>Family</h1>
+    <div id="familyBody"></div>
+  </section>
+
+  <!-- BENEFITS -->
+  <section class="view" id="view-benefits">
+    <h1>Ask About Benefits</h1>
+    <div id="benefitsBody"></div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="view" id="view-history">
+    <h1>Past Incidents</h1>
+    <div id="historyBody"></div>
+  </section>
+
+  <footer>MedSearch — rebuilt as an independent app.<br>Facilities: OpenStreetMap contributors. In an emergency, always call 911 first.</footer>
+</div>
+
+<nav class="bottom" id="bottomnav">
+  <button data-nav="home" class="active">🏠<br>Home</button>
+  <button data-nav="family">👨‍👩‍👧‍👦<br>Family</button>
+  <button data-nav="benefits">🛡<br>Benefits</button>
+  <button data-nav="history">🕘<br>History</button>
+</nav>
+
+<script>
+"use strict";
+/* Failure-proof storage (works even where localStorage is restricted). */
+var MemStore = {};
+function lsGet(k){ try { return window.localStorage.getItem(k); } catch(e){ return (k in MemStore) ? MemStore[k] : null; } }
+function lsSet(k,v){ try { window.localStorage.setItem(k,v); } catch(e){ MemStore[k]=v; } }
+
+var DBKEY = "medSearchV1", SEEDFLAG = "medSearchSeededV1";
+function seedDB(){
+  return {
+    households: [{
+      id: "hh-kang", name: "Kang family", insurancePlan: "Blue Cross Blue Shield",
+      homeAddress: "124 Seattle Slew Way, Canton, GA 30115, United States",
+      documents: [],
+      members: [
+        { id: "m-daehoon", name: "Daehoon Kang", relationship: "self", dob: "1977-02-01", sex: "Male" },
+        { id: "m-alejandra", name: "Alejandra Reyes Andres", relationship: "spouse_partner", dob: "1983-01-25", sex: "Female" },
+        { id: "m-nathalie", name: "Nathalie Kang", relationship: "child", dob: "2015-10-08", sex: "Female" },
+        { id: "m-emilie", name: "Emilie Kang", relationship: "child", dob: "2018-05-21", sex: "Female" },
+        { id: "m-lucky", name: "Lucky Kang", relationship: "pet", dob: "2024-02-20", sex: "Male" }
+      ]
+    }],
+    incidents: [], benefitsNotes: "", theme: "light"
+  };
+}
+function loadDB(){
+  var db = null;
+  try { var raw = lsGet(DBKEY); if (raw) db = JSON.parse(raw); } catch(e){ db = null; }
+  if (!db || !Array.isArray(db.households) || !Array.isArray(db.incidents)) { db = seedDB(); lsSet(SEEDFLAG,"1"); saveDB(db); }
+  return db;
+}
+function saveDB(db){ try { lsSet(DBKEY, JSON.stringify(db)); } catch(e){} }
+var DB = seedDB();
+try { DB = loadDB(); } catch(e){ /* keep seed */ }
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function relLabel(r){ return { self:"You", spouse_partner:"Spouse/Partner", child:"Child", pet:"Pet", other:"Family" }[r] || r; }
+function ageOn(dob, ref){
+  var b = new Date(dob+"T00:00:00"); if (isNaN(b)) return null;
+  var t = ref || new Date();
+  var a = t.getFullYear() - b.getFullYear();
+  var m = t.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && t.getDate() < b.getDate())) a--;
+  return a;
+}
+function initials(name){ return String(name||"?").split(/\s+/).map(function(w){ return w.charAt(0); }).slice(0,2).join("").toUpperCase(); }
+function hh(){ return DB.households[0] || null; }
+function findMember(id){ var h = hh(); if (!h) return null; return h.members.filter(function(m){ return m.id === id; })[0] || null; }
+
+/* ---------- Views ---------- */
+var currentView = "home";
+function showView(v){
+  currentView = v;
+  document.querySelectorAll(".view").forEach(function(s){ s.classList.remove("active"); });
+  var el = document.getElementById("view-"+v); if (el) el.classList.add("active");
+  document.querySelectorAll("#bottomnav button").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-nav")===v); });
+  window.scrollTo(0,0);
+}
+
+/* ---------- Home ---------- */
+function renderHome(){
+  var h = hh();
+  var html = "";
+  if (h) {
+    html += '<div class="card"><b>'+esc(h.name)+'</b> <span class="pill">'+esc(h.insurancePlan)+'</span><div class="note">'+h.members.length+' members · '+esc(h.homeAddress)+'</div></div>';
+  }
+  html += '<button class="btn big" id="homeFind">🚨 Find Care Now</button>' +
+    '<button class="btn big ghost" id="homeBenefits">Ask About Benefits</button>' +
+    '<button class="btn big ghost" id="homeHistory">Past Incidents ('+DB.incidents.length+')</button>';
+  if (h) {
+    html += '<h2>Manage</h2>' + h.members.map(function(m){
+      return '<button class="member" data-manage="'+esc(m.id)+'"><span class="avatar">'+esc(initials(m.name))+'</span><span><b>'+esc(m.name)+'</b>'+(m.relationship==="self"?' <span class="pill">You</span>':'')+'<div class="note">'+esc(relLabel(m.relationship))+' · Age '+ageOn(m.dob)+' · '+esc(m.sex)+'</div></span></button>';
+    }).join("");
+  }
+  document.getElementById("homeBody").innerHTML = html;
+  document.getElementById("homeFind").addEventListener("click", function(){ startFind(); showView("find"); });
+  document.getElementById("homeBenefits").addEventListener("click", function(){ showView("benefits"); });
+  document.getElementById("homeHistory").addEventListener("click", function(){ showView("history"); });
+  document.querySelectorAll("[data-manage]").forEach(function(b){ b.addEventListener("click", function(){ renderFamily(b.getAttribute("data-manage")); showView("family"); }); });
+}
+
+/* ---------- Find Care ---------- */
+var find = { step: 1, memberId: null, situation: "", locationText: "", coords: null, results: [] };
+var RED_FLAGS = ["chest pain","stroke","cardiac","heart attack","not breathing","can't breathe","cannot breathe","difficulty breathing","unconscious","severe bleeding","bleeding heavily","overdose","suicid","choking","seizure","anaphyla","crushing","slurred speech","face drooping","paralys"];
+function isRedFlag(text){
+  var t = String(text||"").toLowerCase();
+  return RED_FLAGS.some(function(f){ return t.indexOf(f) !== -1; });
+}
+function startFind(){ find = { step: 1, memberId: null, situation: "", locationText: (hh() ? hh().homeAddress : ""), coords: null, results: [] }; renderFind(); }
+function renderFind(){
+  var body = document.getElementById("findBody"); var h = hh();
+  if (find.step === 1) {
+    body.innerHTML = '<p class="sub">Step 1 — Who needs help?</p>' +
+      (h ? h.members.map(function(m){
+        return '<button class="member" data-pick="'+esc(m.id)+'"><span class="avatar">'+esc(initials(m.name))+'</span><span><b>'+esc(m.name)+'</b><div class="note">'+esc(relLabel(m.relationship))+' · Age '+ageOn(m.dob)+' · '+esc(m.sex)+' · '+esc(h.insurancePlan)+'</div></span></button>';
+      }).join("") : '<p class="sub">Add a household in Family first.</p>');
+    body.querySelectorAll("[data-pick]").forEach(function(b){ b.addEventListener("click", function(){ find.memberId = b.getAttribute("data-pick"); find.step = 2; renderFind(); }); });
+  } else if (find.step === 2) {
+    var m = findMember(find.memberId);
+    body.innerHTML = '<p class="sub">Step 2 — For <b>'+esc(m.name)+'</b> (Age '+ageOn(m.dob)+' · '+esc(m.sex)+' · '+esc(h.insurancePlan)+')</p>' +
+      '<label>What happened? (optional)</label><input type="text" id="fSituation" placeholder="Stroke, fall, cardiac arrest, severe chest pain…" value="'+esc(find.situation)+'">' +
+      '<label>Location</label><input type="text" id="fLocation" value="'+esc(find.locationText)+'">' +
+      '<div class="row" style="margin-top:8px"><button class="btn ghost small" id="fGeo">📍 Use my location</button><span class="note" id="fGeoMsg"></span></div>' +
+      '<div class="row" style="margin-top:14px"><button class="btn ghost" id="fBack">Back</button><button class="btn" id="fGo">Find the right care</button></div>' +
+      '<p class="note">Facilities come from OpenStreetMap, sorted by distance. Nothing is ranked by an AI. For a pet, veterinary clinics are searched instead.</p>';
+    document.getElementById("fBack").addEventListener("click", function(){ find.step = 1; renderFind(); });
+    document.getElementById("fGeo").addEventListener("click", function(){
+      var msg = document.getElementById("fGeoMsg");
+      if (!navigator.geolocation) { msg.textContent = "Location is not available in this browser."; return; }
+      msg.textContent = "Getting location…";
+      navigator.geolocation.getCurrentPosition(function(pos){
+        find.coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        document.getElementById("fLocation").value = "My current location";
+        msg.textContent = "Location set.";
+      }, function(){ msg.textContent = "Could not get your location — type an address instead."; });
+    });
+    document.getElementById("fGo").addEventListener("click", function(){
+      find.situation = document.getElementById("fSituation").value;
+      find.locationText = document.getElementById("fLocation").value.trim();
+      runCareSearch();
+    });
+  } else {
+    renderResults();
+  }
+}
+function haversineMi(lat1, lon1, lat2, lon2){
+  var R = 3958.8, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+function geocode(address){
+  return fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(address), { headers: { "Accept":"application/json" } })
+    .then(function(r){ return r.json(); }).then(function(j){ return (j && j[0]) ? { lat: parseFloat(j[0].lat), lng: parseFloat(j[0].lon) } : null; });
+}
+var OVERPASS_EPS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
+function overpass(query, eps){
+  eps = eps || OVERPASS_EPS;
+  if (!eps.length) return Promise.reject(new Error("overpass failed"));
+  return fetch(eps[0], { method:"POST", body:"data="+encodeURIComponent(query) }).then(function(r){
+    if (!r.ok) throw new Error("status "+r.status); return r.json();
+  }).catch(function(){ return overpass(query, eps.slice(1)); });
+}
+function runCareSearch(){
+  find.step = 3; renderFind();
+  var body = document.getElementById("findResults");
+  if (body) body.innerHTML = '<p class="sub">Locating…</p>';
+  var m = findMember(find.memberId);
+  var locP = find.coords ? Promise.resolve(find.coords) : geocode(find.locationText || (hh() ? hh().homeAddress : ""));
+  locP.then(function(coords){
+    if (!coords) { if (body) body.innerHTML = '<p class="sub">Could not find that location. Go back and check the address.</p>'; return; }
+    find.coords = coords;
+    var isPet = m && m.relationship === "pet";
+    var q;
+    if (isPet) q = '[out:json][timeout:30];(node["amenity"="veterinary"](around:16000,'+coords.lat+','+coords.lng+');way["amenity"="veterinary"](around:16000,'+coords.lat+','+coords.lng+'););out center 60;';
+    else q = '[out:json][timeout:30];(node["amenity"="hospital"](around:16000,'+coords.lat+','+coords.lng+');way["amenity"="hospital"](around:16000,'+coords.lat+','+coords.lng+');node["amenity"="clinic"](around:16000,'+coords.lat+','+coords.lng+');node["healthcare"~"clinic|centre"](around:16000,'+coords.lat+','+coords.lng+'););out center 60;';
+    return overpass(q).then(function(data){
+      var seen = {};
+      find.results = (data.elements || []).map(function(e){
+        var lat = e.lat != null ? e.lat : (e.center && e.center.lat), lng = e.lon != null ? e.lon : (e.center && e.center.lon);
+        if (lat == null || !e.tags || !e.tags.name) return null;
+        var t = e.tags;
+        var addr = [t["addr:housenumber"], t["addr:street"]].filter(Boolean).join(" ") + (t["addr:city"] ? (", ")+t["addr:city"] : "") + (t["addr:state"] ? ", "+t["addr:state"] : "") + (t["addr:postcode"] ? " "+t["addr:postcode"] : "");
+        var type = isPet ? "Veterinary" : (t.amenity === "hospital" ? (t.emergency === "yes" ? "Hospital · Emergency" : "Hospital") : "Clinic");
+        return { name: t.name, type: type, address: addr.replace(/^, /, ""), phone: t.phone || t["contact:phone"] || "", lat: lat, lng: lng, dist: haversineMi(coords.lat, coords.lng, lat, lng) };
+      }).filter(function(f){ if (!f || seen[f.name+f.lat.toFixed(3)]) return false; seen[f.name+f.lat.toFixed(3)] = 1; return true; })
+        .sort(function(a,b){ return a.dist - b.dist; }).slice(0, 12);
+      renderResults();
+    });
+  }).catch(function(){ if (body) body.innerHTML = '<p class="sub">Search failed — check your connection and try again. In an emergency, call 911.</p>'; });
+}
+function renderResults(){
+  var body = document.getElementById("findBody"); var m = findMember(find.memberId); var h = hh();
+  var red = isRedFlag(find.situation) || (m && m.relationship !== "pet");
+  var html = '<p class="sub">Step 3 — Care near <b>'+esc(find.locationText || "you")+'</b> for <b>'+esc(m ? m.name : "")+'</b>'+(find.situation ? ' — “'+esc(find.situation)+'”' : '')+'</p>';
+  html += '<div class="alert911"><b>'+(isRedFlag(find.situation) ? '⚠️ This could be life-threatening. ' : '')+'If this is an emergency, call 911 now:</b> <a href="tel:911">Call 911</a><div class="note" style="margin-top:4px">Don\'t drive yourself with serious symptoms. '+(h ? 'Insurance: '+esc(h.insurancePlan)+' · Member age '+ageOn(m.dob)+' · '+esc(m.sex)+'.' : '')+'</div></div>';
+  html += '<div id="findResults">' + (find.results.length ? find.results.map(function(f, i){
+    return '<div class="fac"><div class="t">'+esc(f.name)+'</div><div class="m"><span class="pill">'+esc(f.type)+'</span> · '+f.dist.toFixed(1)+' mi'+(f.address ? '<br>'+esc(f.address) : '')+(f.phone ? '<br>📞 <a class="ext" href="tel:'+esc(f.phone.replace(/[^0-9+]/g,""))+'">'+esc(f.phone)+'</a>' : '')+'</div>' +
+      '<div class="row" style="margin-top:8px"><a class="btn small" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(f.name+" "+f.address)+'">Directions</a>' +
+      '<button class="btn ghost small" data-going="'+i+'">I\'m going here — share &amp; save</button></div></div>';
+  }).join("") : '<p class="sub">Searching… if results don\'t appear, the facilities service may be slow — or no facilities are mapped nearby in OpenStreetMap.</p>') + '</div>';
+  html += '<div class="row"><button class="btn ghost" id="rBack">Back</button></div>';
+  body.innerHTML = html;
+  document.getElementById("rBack").addEventListener("click", function(){ find.step = 2; renderFind(); });
+  body.querySelectorAll("[data-going]").forEach(function(b){ b.addEventListener("click", function(){ goingHere(find.results[parseInt(b.getAttribute("data-going"),10)]); }); });
+}
+function goingHere(f){
+  var m = findMember(find.memberId);
+  var inc = { id: "inc-"+Date.now(), date: new Date().toISOString(), memberId: find.memberId, memberName: m ? m.name : "",
+    situation: find.situation, locationString: find.locationText, facility: f };
+  DB.incidents.unshift(inc); saveDB(DB);
+  var text = "MedSearch: " + inc.memberName + " is heading to " + f.name + (f.address ? " (" + f.address + ")" : "") +
+    (find.situation ? " — " + find.situation : "") + ". Directions: https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(f.name + " " + f.address);
+  if (navigator.share) navigator.share({ title: "Heading to care", text: text }).catch(function(){});
+  else if (navigator.clipboard) { navigator.clipboard.writeText(text); alert("Saved to History. Details copied to clipboard to share."); }
+  renderHistory(); renderHome(); showView("history");
+}
+
+/* ---------- Family ---------- */
+function renderFamily(focusMemberId){
+  var body = document.getElementById("familyBody"); var h = hh();
+  if (!h) { body.innerHTML = '<button class="btn" id="addHh">Add a Household</button>'; document.getElementById("addHh").addEventListener("click", function(){ DB.households.push({ id:"hh-"+Date.now(), name:"", insurancePlan:"", homeAddress:"", documents:[], members:[] }); saveDB(DB); renderFamily(); }); return; }
+  var html = '<div class="card"><label>Family Name *</label><input type="text" id="hhName" value="'+esc(h.name)+'">' +
+    '<label>Address *</label><input type="text" id="hhAddr" value="'+esc(h.homeAddress)+'">' +
+    '<label>Insurance Plan *</label><input type="text" id="hhPlan" value="'+esc(h.insurancePlan)+'">' +
+    '<label>Insurance documents (names/links only — the original\'s uploads were never stored there either)</label>' +
+    h.documents.map(function(d, i){ return '<div class="row" style="margin:4px 0"><span style="flex:1">📄 '+(d.url ? '<a class="ext" target="_blank" rel="noopener" href="'+esc(d.url)+'">'+esc(d.name)+'</a>' : esc(d.name))+'</span><button class="btn ghost small" data-deldoc="'+i+'">✕</button></div>'; }).join("") +
+    '<div class="row"><span style="flex:1;min-width:110px"><input type="text" id="docName" placeholder="Document name"></span><span style="flex:1;min-width:110px"><input type="url" id="docUrl" placeholder="Link (optional)"></span><button class="btn ghost" id="addDoc">Add</button></div>' +
+    '<div class="row" style="margin-top:12px"><button class="btn" id="saveHh">Save Household</button><button class="btn ghost" id="delHh">Delete Household</button></div><p class="note" id="hhMsg"></p></div>';
+  html += '<h2>Members ('+h.members.length+')</h2>' + h.members.map(function(m){
+    return '<div class="card" style="'+(focusMemberId===m.id ? 'border-color:var(--accent)' : '')+'"><label>Family Member\'s Name *</label><input type="text" data-mf="name" data-mid="'+esc(m.id)+'" value="'+esc(m.name)+'">' +
+      '<div class="row"><span style="flex:1;min-width:120px"><label>Relationship to you</label><select data-mf="relationship" data-mid="'+esc(m.id)+'">' +
+      ["self","spouse_partner","child","pet","other"].map(function(r){ return '<option value="'+r+'"'+(m.relationship===r?" selected":"")+'>'+relLabel(r)+'</option>'; }).join("") + '</select></span>' +
+      '<span style="flex:1;min-width:110px"><label>Sex</label><select data-mf="sex" data-mid="'+esc(m.id)+'"><option'+(m.sex==="Male"?" selected":"")+'>Male</option><option'+(m.sex==="Female"?" selected":"")+'>Female</option></select></span></div>' +
+      '<label>Date of Birth</label><input type="date" data-mf="dob" data-mid="'+esc(m.id)+'" value="'+esc(m.dob)+'">' +
+      '<div class="row" style="margin-top:10px"><button class="btn small" data-savemem="'+esc(m.id)+'">Save Member</button><button class="btn ghost small" data-delmem="'+esc(m.id)+'">Delete</button></div></div>';
+  }).join("") + '<button class="btn ghost" id="addMem">Add Member</button>';
+  html += '<div class="card"><h2 style="margin-top:0">Backup</h2><p class="note">Household, members, and incident history live only on this device/browser. Export a backup file and keep it somewhere safe (e.g. Google Drive); import restores it on another device. Importing replaces current data after you confirm.</p>' +
+    '<div class="row"><button class="btn" id="exportBtn">Export backup</button><button class="btn ghost" id="importBackupBtn">Import backup</button><input type="file" id="importFile" accept=".json,application/json" style="display:none"></div><p class="note" id="backupMsg"></p></div>';
+  body.innerHTML = html;
+  document.getElementById("saveHh").addEventListener("click", function(){
+    h.name = document.getElementById("hhName").value; h.homeAddress = document.getElementById("hhAddr").value; h.insurancePlan = document.getElementById("hhPlan").value;
+    saveDB(DB); renderHome(); document.getElementById("hhMsg").textContent = "Household saved.";
+  });
+  document.getElementById("delHh").addEventListener("click", function(){ if (confirm("Delete this household and its members?")) { DB.households = []; DB.incidents = []; saveDB(DB); renderAll(); } });
+  document.getElementById("addDoc").addEventListener("click", function(){
+    var n = document.getElementById("docName").value.trim(); if (!n) return;
+    h.documents.push({ name: n, url: document.getElementById("docUrl").value.trim() }); saveDB(DB); renderFamily();
+  });
+  body.querySelectorAll("[data-deldoc]").forEach(function(b){ b.addEventListener("click", function(){ h.documents.splice(parseInt(b.getAttribute("data-deldoc"),10),1); saveDB(DB); renderFamily(); }); });
+  body.querySelectorAll("[data-savemem]").forEach(function(b){ b.addEventListener("click", function(){
+    var id = b.getAttribute("data-savemem"); var m = h.members.filter(function(x){ return x.id === id; })[0]; if (!m) return;
+    body.querySelectorAll('[data-mid="'+id+'"]').forEach(function(inp){ m[inp.getAttribute("data-mf")] = inp.value; });
+    saveDB(DB); renderHome(); renderFamily();
+  }); });
+  body.querySelectorAll("[data-delmem]").forEach(function(b){ b.addEventListener("click", function(){
+    if (confirm("Delete this member?")) { h.members = h.members.filter(function(x){ return x.id !== b.getAttribute("data-delmem"); }); saveDB(DB); renderFamily(); renderHome(); }
+  }); });
+  document.getElementById("addMem").addEventListener("click", function(){
+    h.members.push({ id: "m-"+Date.now(), name: "", relationship: "other", dob: "", sex: "Male" }); saveDB(DB); renderFamily();
+  });
+  document.getElementById("exportBtn").addEventListener("click", exportBackup);
+  document.getElementById("importBackupBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+  document.getElementById("importFile").addEventListener("change", function(){ if (this.files && this.files[0]) importBackup(this.files[0]); this.value=""; });
+}
+
+/* ---------- Benefits ---------- */
+function renderBenefits(){
+  var h = hh();
+  document.getElementById("benefitsBody").innerHTML =
+    (h ? '<div class="card"><b>'+esc(h.name)+'</b><div style="margin-top:4px"><span class="pill">'+esc(h.insurancePlan)+'</span></div><p class="note" style="margin-bottom:0">No insurance documents are stored in this app'+(h.documents.length ? ' — you\'ve recorded '+h.documents.length+' document link(s) under Family.' : ' — the original had none either.')+' Plan answers must come from your plan documents or the member portal; this app won\'t invent coverage terms.</p></div>' : '') +
+    '<div class="card"><h2 style="margin-top:0">Official sources</h2>' +
+    '<div class="qa"><a class="ext" target="_blank" rel="noopener" href="https://www.bcbs.com">Blue Cross Blue Shield — member resources (bcbs.com)</a></div>' +
+    '<div class="qa"><a class="ext" target="_blank" rel="noopener" href="https://www.healthcare.gov/glossary/">HealthCare.gov — health insurance glossary</a></div>' +
+    '<div class="qa" style="border-bottom:none"><a class="ext" target="_blank" rel="noopener" href="https://www.healthcare.gov/using-marketplace-coverage/">HealthCare.gov — using your coverage</a></div></div>' +
+    '<div class="card"><h2 style="margin-top:0">Questions people ask (check your plan for the answers)</h2>' +
+    ["What does my plan cover for ER visits?","What is my emergency deductible?","Do I need preauthorization for surgery?","What happens if I go out of network?"].map(function(q){ return '<div class="qa">'+esc(q)+'</div>'; }).join("") +
+    '<label>Your plan facts (record the real answers here — deductible, ER copay, urgent-care copay, network hospitals…)</label>' +
+    '<textarea id="benefitsNotes" placeholder="e.g. ER copay $…, deductible $…, in-network hospitals: …">'+esc(DB.benefitsNotes)+'</textarea>' +
+    '<div class="row" style="margin-top:8px"><button class="btn" id="saveNotes">Save notes</button><span class="note" id="notesMsg"></span></div></div>';
+  document.getElementById("saveNotes").addEventListener("click", function(){
+    DB.benefitsNotes = document.getElementById("benefitsNotes").value; saveDB(DB);
+    document.getElementById("notesMsg").textContent = "Saved.";
+  });
+}
+
+/* ---------- History ---------- */
+function renderHistory(){
+  document.getElementById("historyBody").innerHTML = DB.incidents.length ? DB.incidents.map(function(inc){
+    var f = inc.facility || {};
+    return '<div class="card"><b>'+esc(inc.memberName)+'</b> <span class="note">'+esc(new Date(inc.date).toLocaleString())+'</span>' +
+      (inc.situation ? '<div style="margin-top:3px">“'+esc(inc.situation)+'”</div>' : '') +
+      '<div class="note">From: '+esc(inc.locationString || "")+'</div>' +
+      '<div style="margin-top:4px">🏥 <b>'+esc(f.name || "")+'</b>'+(f.type ? ' <span class="pill">'+esc(f.type)+'</span>' : '')+(f.address ? '<div class="note">'+esc(f.address)+'</div>' : '')+'</div>' +
+      '<div class="row" style="margin-top:8px"><button class="btn ghost small" data-delinc="'+esc(inc.id)+'">Delete</button></div></div>';
+  }).join("") : '<div class="card"><p class="sub" style="margin:0">No past incidents yet<br>When you find care, your searches and chosen facilities will appear here.</p></div>';
+  document.querySelectorAll("[data-delinc]").forEach(function(b){ b.addEventListener("click", function(){
+    DB.incidents = DB.incidents.filter(function(x){ return x.id !== b.getAttribute("data-delinc"); }); saveDB(DB); renderHistory(); renderHome();
+  }); });
+}
+
+/* ---------- Backup ---------- */
+function exportBackup(){
+  var blob = new Blob([JSON.stringify(DB, null, 2)], { type:"application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "medsearch-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  var m = document.getElementById("backupMsg"); if (m) m.textContent = "Backup exported — keep the file somewhere safe (e.g. Google Drive).";
+}
+function importBackup(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var data = JSON.parse(String(reader.result));
+      if (!data || !Array.isArray(data.households) || !Array.isArray(data.incidents)) throw new Error("bad format");
+      if (!confirm("Import this backup? It replaces your current MedSearch data on this device.")) return;
+      DB = data; lsSet(SEEDFLAG,"1"); saveDB(DB); applyTheme(); renderAll();
+      var m = document.getElementById("backupMsg"); if (m) m.textContent = "Backup imported.";
+    } catch(e){ var m2 = document.getElementById("backupMsg"); if (m2) m2.textContent = "That file is not a valid MedSearch backup."; }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Theme & init ---------- */
+function applyTheme(){ document.documentElement.setAttribute("data-theme", DB.theme || "light"); document.getElementById("themeToggle").textContent = DB.theme === "dark" ? "☀️" : "🌙"; }
+document.getElementById("themeToggle").addEventListener("click", function(){ DB.theme = DB.theme === "dark" ? "light" : "dark"; saveDB(DB); applyTheme(); });
+document.querySelectorAll("#bottomnav button").forEach(function(b){ b.addEventListener("click", function(){ showView(b.getAttribute("data-nav")); }); });
+function renderAll(){ renderHome(); renderFamily(); renderBenefits(); renderHistory(); }
+window.MS = { getDB: function(){ return DB; }, isRedFlag: isRedFlag, ageOn: ageOn, goingHere: goingHere, setFind: function(f){ Object.assign(find, f); } };
+applyTheme();
+renderAll();
+showView("home");
+</script>
+</body>
+</html>
