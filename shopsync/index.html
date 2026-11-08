@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShopSync</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f6f8; color: #1c2733; min-height: 100vh; }
+  header { background: #0f766e; color: #fff; padding: 14px 16px 10px; position: sticky; top: 0; z-index: 20; }
+  .brand { font-size: 23px; font-weight: 900; }
+  .tagline { font-size: 12px; opacity: .85; margin-top: 2px; }
+  nav { display: flex; gap: 6px; margin-top: 12px; overflow-x: auto; padding-bottom: 4px; }
+  nav button { flex: 1 0 auto; background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  nav button.active { background: #fff; color: #0f766e; }
+  main { padding: 16px; max-width: 760px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+  h1 { font-size: 22px; font-weight: 900; margin-bottom: 6px; }
+  h2 { font-size: 13px; font-weight: 800; letter-spacing: 1.2px; color: #0f766e; margin: 20px 0 8px; text-transform: uppercase; }
+  .sub { color: #5b6b7a; font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
+  .card { background: #fff; border: 1px solid #dde4ea; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .bigcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+  .bigcard { border-radius: 14px; padding: 14px 10px; color: #fff; cursor: pointer; text-align: center; border: none; width: 100%; }
+  .bigcard .n { font-size: 24px; font-weight: 900; display: block; }
+  .bigcard .l { font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; opacity: .95; }
+  .teal { background: #0d9488; } .green { background: #16a34a; } .orange { background: #ea580c; }
+  input[type=text], input[type=email], select, textarea { width: 100%; background: #fff; border: 1px solid #c4cfd9; border-radius: 10px; color: #1c2733; padding: 10px; font-size: 14px; margin-bottom: 8px; }
+  label { display: block; font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #5b6b7a; text-transform: uppercase; margin: 8px 0 4px; }
+  .btn { display: inline-block; background: #0f766e; color: #fff; border: none; border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 800; cursor: pointer; text-decoration: none; text-align: center; }
+  .btn.ghost { background: #eef2f5; color: #33424f; border: 1px solid #c4cfd9; }
+  .btn.small { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+  .btn.wa { background: #25d366; color: #063; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+  .chip { background: #eef2f5; border: 1px solid #c4cfd9; color: #33424f; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .chip.on { background: #0f766e; border-color: #0f766e; color: #fff; }
+  .chip.tag { cursor: default; background: #e0f2f1; border-color: #b2dfdb; color: #0f766e; }
+  .item { display: flex; gap: 10px; align-items: flex-start; background: #fff; border: 1px solid #dde4ea; border-radius: 12px; padding: 11px 12px; margin-bottom: 8px; }
+  .item input[type=checkbox] { width: 20px; height: 20px; margin-top: 1px; flex: 0 0 auto; accent-color: #0f766e; }
+  .item .imain { flex: 1; min-width: 0; }
+  .item .iname { font-weight: 700; font-size: 15px; }
+  .item.done .iname { text-decoration: line-through; color: #8595a5; }
+  .item .imeta { font-size: 12px; color: #8595a5; margin-top: 3px; }
+  .iconbtn { background: none; border: none; cursor: pointer; font-size: 15px; padding: 2px 4px; }
+  .note { font-size: 12px; color: #5b6b7a; line-height: 1.55; }
+  .hidden { display: none !important; }
+  footer { text-align: center; color: #8595a5; font-size: 11px; padding: 18px 10px 30px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">🛒 ShopSync</div>
+  <div class="tagline">Your shopping list, synced across your stores.</div>
+  <nav id="topnav">
+    <button data-view="home" class="active">Home</button>
+    <button data-view="purchase">What to Purchase</button>
+    <button data-view="atstore">At Store</button>
+    <button data-view="deals">Good Deals</button>
+  </nav>
+</header>
+<main>
+  <section id="view-home" class="view active">
+    <h1>Shopping List</h1>
+    <input type="text" id="homeSearch" placeholder="Search items or stores...">
+    <div class="bigcards">
+      <button class="bigcard teal" id="cardPurchase"><span class="n" id="statToBuy">0</span><span class="l">What to Purchase</span></button>
+      <button class="bigcard green" id="cardAtStore"><span class="n" id="statStores">0</span><span class="l">Stores with items</span></button>
+      <button class="bigcard orange" id="cardDeals"><span class="n">→</span><span class="l">Good Deals</span></button>
+    </div>
+    <p class="sub" id="statsStrip"></p>
+    <h2>Latest additions</h2>
+    <div id="latestList"></div>
+    <h2>Recent items — you've bought</h2>
+    <div id="recentBought"></div>
+    <h2>Backup</h2>
+    <div class="card">
+      <p class="sub">Your list is stored only on this device/browser. Export a backup file and keep it (e.g. in Google Drive); import it on another device to move your list there. Import replaces what's on the receiving device.</p>
+      <div class="row">
+        <button class="btn ghost" id="exportBtn">⬇ Export backup</button>
+        <button class="btn ghost" id="importBtn">⬆ Import backup</button>
+        <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+      </div>
+      <p class="note" id="backupMsg" style="margin-top:8px"></p>
+    </div>
+  </section>
+
+  <section id="view-purchase" class="view">
+    <h1>What to Purchase</h1>
+    <div class="card">
+      <label>Item</label>
+      <div class="row">
+        <input type="text" id="addName" placeholder="Type item name..." style="flex:1;min-width:160px">
+        <button class="btn ghost hidden" id="micBtn" title="Speak item name">🎤</button>
+      </div>
+      <label>Where to buy</label>
+      <div class="chips" id="addStores"></div>
+      <div class="row">
+        <input type="text" id="newStoreName" placeholder="Add new store" style="flex:1;min-width:140px">
+        <button class="btn ghost small" id="addStoreBtn">Add store</button>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="btn" id="saveItemBtn">Save</button></div>
+      <p class="note" id="addMsg"></p>
+    </div>
+    <div class="row">
+      <input type="text" id="listSearch" placeholder="Search items..." style="flex:1;min-width:150px">
+      <button class="btn ghost small" id="togglePurchasedBtn">Hide purchased</button>
+    </div>
+    <div id="fullList" style="margin-top:10px"></div>
+  </section>
+
+  <section id="view-atstore" class="view">
+    <h1>At Store</h1>
+    <label>Select a store</label>
+    <div class="chips" id="storePicker"></div>
+    <div id="storePanel"></div>
+  </section>
+
+  <section id="view-deals" class="view">
+    <h1>Good Deals</h1>
+    <p class="sub">The original's deals were written by Base44's AI — not a real price feed — so this page links to each store's own weekly ad and deals pages instead. Tap a store to check its current offers against your list.</p>
+    <div id="dealsList"></div>
+  </section>
+</main>
+<footer>Your list never leaves this device except in backups you export.<br>Deals links go to each store's own site.</footer>
+
+<script>
+"use strict";
+/* ---------- Failure-proof storage ---------- */
+var MemStore = {};
+function lsGet(k){ try { return window.localStorage.getItem(k); } catch(e){ return (k in MemStore) ? MemStore[k] : null; } }
+function lsSet(k,v){ try { window.localStorage.setItem(k,v); } catch(e){} MemStore[k]=v; }
+var DBKEY = "shopSyncV1", SEEDFLAG = "shopSyncSeededV1";
+var STORE_DEAL_URLS = {
+  "Amazon": "https://www.amazon.com/deals",
+  "Costco": "https://www.costco.com/coupons.html",
+  "Home Depot": "https://www.homedepot.com/c/Savings_Center",
+  "Kroger": "https://www.kroger.com/weeklyad",
+  "Publix": "https://www.publix.com/savings/weekly-ad",
+  "Target": "https://www.target.com/circle/offers",
+  "Walmart": "https://www.walmart.com/cp/deals",
+  "Whole Foods": "https://www.wholefoodsmarket.com/sales-flyer"
+};
+/* Seed: [name, "Store|Store", purchased 1/0, created ISO date] — all 90 records captured from the original's data, newest first. */
+var SEED_ITEMS = [
+["Jalapeño cheese","Kroger|Publix",0,"2026-11-01"],
+["Cabbage","Hmart|Kroger|Publix",1,"2026-11-01"],
+["Bread","Kroger|Publix",1,"2026-10-23"],
+["Yogurt","Kroger|Publix",1,"2026-10-23"],
+["Carrot","Kroger|Publix",1,"2026-10-23"],
+["Milk","Kroger|Publix",1,"2026-10-23"],
+["Kids school snacks","Kroger|Publix",1,"2026-10-21"],
+["Yogurt","Kroger|Publix",1,"2026-10-21"],
+["Fruits","Kroger|Publix",1,"2026-10-21"],
+["Tortillas","Kroger|Publix",1,"2026-10-21"],
+["Green onions","Hmart|Kroger|Publix",1,"2026-10-11"],
+["Eggs","Costco|Kroger|Publix",1,"2026-10-11"],
+["Phone stand for a car","Amazon",1,"2026-10-09"],
+["Hand axe","Amazon|Home Depot",0,"2026-10-09"],
+["Peanut butter","Kroger|Publix",1,"2026-10-05"],
+["Eggs","Kroger|Publix",1,"2026-10-04"],
+["Mac and cheese","Kroger|Publix",1,"2026-10-04"],
+["Pancake powder","Kroger|Publix",1,"2026-10-04"],
+["Sweets for tea","Kroger|Publix",1,"2026-10-04"],
+["Grapes or mandarins","Kroger|Publix",1,"2026-10-04"],
+["Apples","Kroger",1,"2026-10-04"],
+["Potatoes","Kroger|Publix",1,"2026-09-28"],
+["Pasta","Kroger|Publix",1,"2026-09-28"],
+["Parmasean cheese","Kroger|Publix",1,"2026-09-28"],
+["Pasta sauce","Kroger|Publix",1,"2026-09-28"],
+["Straw","Kroger|Publix",1,"2026-09-09"],
+["sparkling water","Kroger|Publix|Costco",1,"2026-09-09"],
+["Eggs","Kroger|Publix|Costco",1,"2026-09-08"],
+["Carrots","Kroger",1,"2026-09-01"],
+["Ham","Kroger",1,"2026-09-01"],
+["Apples","Kroger",1,"2026-09-01"],
+["Tofu","Hmart|Kroger|Publix|Target",1,"2026-08-30"],
+["Sesame oil","Hmart|Kroger|Publix|Target",1,"2026-08-30"],
+["Mini van garbage bag for the car","Amazon",1,"2026-08-29"],
+["Vitamins for men","Target",1,"2026-08-29"],
+["Korean tea","Hmart",1,"2026-08-26"],
+["Beer","Kroger|Publix|Costco",1,"2026-08-23"],
+["Milk","Kroger|Publix",1,"2026-08-23"],
+["Potatoes","Kroger|Publix",1,"2026-08-23"],
+["Eggs","Costco|Publix|Kroger",1,"2026-08-23"],
+["Multivitamins","Costco",0,"2026-08-22"],
+["Sparkling water","Publix",1,"2026-08-20"],
+["Chicken","Publix",1,"2026-08-20"],
+["Cabbage","Publix",1,"2026-08-20"],
+["Bananas","Publix",1,"2026-08-20"],
+["Salad","Publix",1,"2026-08-20"],
+["Milk","Publix",1,"2026-08-20"],
+["Drain opener","Amazon|Publix|Home Depot",1,"2026-08-14"],
+["Onions","Costco|Publix",1,"2026-08-13"],
+["Febreeze for clothes","Amazon|Publix|Target",1,"2026-08-13"],
+["맛술 미림","Hmart",1,"2026-08-13"],
+["Hand axe","Home Depot",0,"2026-08-11"],
+["Bananas","Costco",0,"2026-08-09"],
+["Almond flour or peanut powder","Hmart|Target",0,"2026-08-05"],
+["Kids shampoo","Amazon|Target",0,"2026-07-29"],
+["맛술","Hmart",1,"2026-07-29"],
+["Olive oil","Target",1,"2026-07-27"],
+["Mexican soup","Amazon|Hmart",1,"2026-07-26"],
+["Lucky food","Pet store|Target",1,"2026-07-26"],
+["AAA batteries","Amazon|Home Depot|Walmart",1,"2026-07-26"],
+["Super glue","Home Depot|Amazon",1,"2026-07-26"],
+["Cream soup powder","Hmart",1,"2026-07-18"],
+["Green onions","Hmart",1,"2026-07-18"],
+["Wall repair paste","Amazon|Home Depot",1,"2026-06-30"],
+["Second monitor for laptop","Amazon",1,"2026-06-29"],
+["Rubber gloves","Hmart",1,"2026-06-21"],
+["초고추장","Hmart",1,"2026-06-17"],
+["Top soil","Home Depot",0,"2026-06-14"],
+["Sod","Home Depot",0,"2026-06-14"],
+["Lucky leash","Pet store",1,"2026-06-14"],
+["Peanut butter","Target",1,"2026-06-06"],
+["Cream soup","Hmart",1,"2026-06-01"],
+["Red wines","Target",1,"2026-05-16"],
+["Birthday gifts for Nathalie friends","Target",1,"2026-05-16"],
+["Soil for planting","Target|Home Depot",0,"2026-05-16"],
+["Green onions","Hmart|Target",1,"2026-05-16"],
+["초고추장","Hmart",1,"2026-05-15"],
+["Gum","Costco",0,"2026-05-11"],
+["Kimchi","Hmart",1,"2026-05-11"],
+["White vibegar","Hmart|Target|Walmart",1,"2026-05-11"],
+["Spam","Hmart",1,"2026-05-07"],
+["맛술 미림","Hmart",1,"2026-05-06"],
+["Dog treat","Costco|Pet store",0,"2026-05-04"],
+["Black shoes for Nathalie","Amazon|Target",1,"2026-04-29"],
+["Energy bars","Target",0,"2026-04-27"],
+["Cheese for quesadillas","Target",0,"2026-04-26"],
+["Totillas","Target",1,"2026-04-26"],
+["Conditioner for men","Amazon|Target",1,"2026-04-26"],
+["Head and shoulder bourbon shampoo","Amazon|Target",1,"2026-04-26"],
+["Dog shower brush","Pet store",1,"2026-04-25"]
+];
+var SEED_STORES = ["Amazon","Costco","Hmart","Home Depot","Kroger","Pet store","Publix","Target","Walmart","Whole Foods"];
+function seedDB(){
+  return { stores: SEED_STORES.slice(), items: SEED_ITEMS.map(function(r, i){
+    return { id: "seed"+i, name: r[0], stores: r[1].split("|"), purchased: !!r[2], created: r[3] };
+  }) };
+}
+function loadDB(){
+  var db = null;
+  try { var raw = lsGet(DBKEY); if (raw) db = JSON.parse(raw); } catch(e){ db = null; }
+  if (!db || !Array.isArray(db.items) || !Array.isArray(db.stores)) { db = seedDB(); lsSet(SEEDFLAG,"1"); saveDB(db); }
+  return db;
+}
+function saveDB(db){ try { lsSet(DBKEY, JSON.stringify(db)); } catch(e){} }
+var DB = seedDB();
+try { DB = loadDB(); } catch(e) { /* keep seed */ }
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtDate(iso){ if (!iso) return ""; var p=iso.split("-"); var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return months[parseInt(p[1],10)-1]+" "+parseInt(p[2],10)+", "+p[0]; }
+function findItem(id){ return DB.items.filter(function(x){ return x.id===id; })[0] || null; }
+function toBuy(){ return DB.items.filter(function(x){ return !x.purchased; }); }
+function remainingFor(store){ return DB.items.filter(function(x){ return !x.purchased && x.stores.indexOf(store)>=0; }); }
+
+var currentView = "home", hidePurchased = false, currentStore = "", addStoreSel = [];
+function showView(v){
+  currentView = v;
+  document.querySelectorAll(".view").forEach(function(s){ s.classList.remove("active"); });
+  var el = document.getElementById("view-"+v); if (el) el.classList.add("active");
+  document.querySelectorAll("#topnav button").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-view")===v); });
+  window.scrollTo(0,0);
+}
+function itemRowHtml(it, opts){
+  opts = opts || {};
+  var h = '<div class="item'+(it.purchased?" done":"")+'" data-item="'+esc(it.id)+'">' +
+    '<input type="checkbox" data-toggle="'+esc(it.id)+'"'+(it.purchased?" checked":"")+' aria-label="purchased">' +
+    '<div class="imain"><div class="iname">'+esc(it.name)+'</div><div class="imeta">' +
+    it.stores.map(function(s){ return '<span class="chip tag">'+esc(s)+'</span>'; }).join(" ") +
+    ' <span style="margin-left:4px">'+esc(fmtDate(it.created))+'</span></div>';
+  if (opts.editing) h += editFormHtml(it);
+  h += '</div>' +
+    (opts.noedit ? "" : '<button class="iconbtn" data-edit="'+esc(it.id)+'" title="Edit">✏️</button>') +
+    '<button class="iconbtn" data-del="'+esc(it.id)+'" title="Delete">🗑️</button></div>';
+  return h;
+}
+function editFormHtml(it){
+  return '<div style="margin-top:8px"><input type="text" id="edit-name-'+esc(it.id)+'" value="'+esc(it.name)+'">' +
+  '<div class="chips" id="edit-stores-'+esc(it.id)+'">' + DB.stores.map(function(s){ return '<button class="chip'+(it.stores.indexOf(s)>=0?" on":"")+'" data-es="'+esc(s)+'">'+esc(s)+'</button>'; }).join("") + '</div>' +
+  '<div class="row"><button class="btn small" data-saveedit="'+esc(it.id)+'">Save changes</button><button class="btn ghost small" data-canceledit="1">Cancel</button></div></div>';
+}
+var editingId = null;
+function bindItemRows(container){
+  if (!container) return;
+  container.querySelectorAll("[data-toggle]").forEach(function(cb){ cb.addEventListener("change", function(){
+    var it = findItem(cb.getAttribute("data-toggle")); if (it) { it.purchased = cb.checked; saveDB(DB); renderAll(); }
+  }); });
+  container.querySelectorAll("[data-del]").forEach(function(b){ b.addEventListener("click", function(){
+    var it = findItem(b.getAttribute("data-del")); if (it && confirm("Delete \""+it.name+"\"?")) { DB.items = DB.items.filter(function(x){ return x.id!==it.id; }); saveDB(DB); renderAll(); }
+  }); });
+  container.querySelectorAll("[data-edit]").forEach(function(b){ b.addEventListener("click", function(){ editingId = b.getAttribute("data-edit"); renderAll(); }); });
+  container.querySelectorAll("[data-saveedit]").forEach(function(b){ b.addEventListener("click", function(){
+    var it = findItem(b.getAttribute("data-saveedit")); if (!it) return;
+    var nameEl = document.getElementById("edit-name-"+it.id); if (nameEl && nameEl.value.trim()) it.name = nameEl.value.trim();
+    var chips = document.querySelectorAll("#edit-stores-"+CSS.escape(it.id)+" [data-es]");
+    var sel = []; chips.forEach(function(c){ if (c.classList.contains("on")) sel.push(c.getAttribute("data-es")); });
+    if (sel.length) it.stores = sel;
+    editingId = null; saveDB(DB); renderAll();
+  }); });
+  container.querySelectorAll("[data-canceledit]").forEach(function(b){ b.addEventListener("click", function(){ editingId = null; renderAll(); }); });
+  container.querySelectorAll("[data-es]").forEach(function(c){ c.addEventListener("click", function(){ c.classList.toggle("on"); }); });
+}
+
+/* ---------- Home ---------- */
+function renderHome(){
+  document.getElementById("statToBuy").textContent = toBuy().length;
+  document.getElementById("statStores").textContent = DB.stores.filter(function(s){ return remainingFor(s).length>0; }).length;
+  document.getElementById("statsStrip").textContent = DB.items.length+" items · "+DB.stores.length+" stores · "+DB.items.filter(function(x){ return x.purchased; }).length+" purchased";
+  var sorted = DB.items.slice().sort(function(a,b){ return (b.created||"").localeCompare(a.created||""); });
+  var latest = document.getElementById("latestList");
+  latest.innerHTML = sorted.slice(0,5).map(function(it){ return itemRowHtml(it, { editing: editingId===it.id }); }).join("");
+  bindItemRows(latest);
+  var bought = document.getElementById("recentBought");
+  var recent = sorted.filter(function(x){ return x.purchased; }).slice(0,8);
+  bought.innerHTML = recent.length ? recent.map(function(it){ return itemRowHtml(it, { editing: editingId===it.id }); }).join("") : '<p class="sub">Nothing purchased yet.</p>';
+  bindItemRows(bought);
+}
+
+/* ---------- Purchase ---------- */
+function renderAddStores(){
+  var box = document.getElementById("addStores");
+  box.innerHTML = DB.stores.map(function(s){ return '<button class="chip'+(addStoreSel.indexOf(s)>=0?" on":"")+'" data-as="'+esc(s)+'">'+esc(s)+'</button>'; }).join("");
+  box.querySelectorAll("[data-as]").forEach(function(b){ b.addEventListener("click", function(){
+    var s = b.getAttribute("data-as"), i = addStoreSel.indexOf(s);
+    if (i>=0) addStoreSel.splice(i,1); else addStoreSel.push(s);
+    renderAddStores();
+  }); });
+}
+function renderFullList(){
+  var q = (document.getElementById("listSearch").value || "").toLowerCase();
+  var items = DB.items.slice().sort(function(a,b){ return (b.created||"").localeCompare(a.created||""); });
+  if (hidePurchased) items = items.filter(function(x){ return !x.purchased; });
+  if (q) items = items.filter(function(x){ return x.name.toLowerCase().indexOf(q)>=0 || x.stores.some(function(s){ return s.toLowerCase().indexOf(q)>=0; }); });
+  var box = document.getElementById("fullList");
+  box.innerHTML = items.length ? items.map(function(it){ return itemRowHtml(it, { editing: editingId===it.id }); }).join("") : '<p class="sub">No items match.</p>';
+  bindItemRows(box);
+}
+
+/* ---------- At Store ---------- */
+function renderStorePicker(){
+  var box = document.getElementById("storePicker");
+  box.innerHTML = DB.stores.map(function(s){ return '<button class="chip'+(currentStore===s?" on":"")+'" data-store="'+esc(s)+'">'+esc(s)+' ('+remainingFor(s).length+')</button>'; }).join("");
+  box.querySelectorAll("[data-store]").forEach(function(b){ b.addEventListener("click", function(){ currentStore = b.getAttribute("data-store"); renderAtStore(); }); });
+}
+function shareText(store){
+  var items = remainingFor(store);
+  var lines = items.map(function(it){ return "• "+it.name; });
+  return "Shopping list for "+store+" ("+items.length+" remaining):\n"+(lines.join("\n") || "(nothing left)");
+}
+function renderAtStore(){
+  renderStorePicker();
+  var panel = document.getElementById("storePanel");
+  if (!currentStore) { panel.innerHTML = '<p class="sub">Please select a store.</p>'; return; }
+  var rem = remainingFor(currentStore);
+  var done = DB.items.filter(function(x){ return x.purchased && x.stores.indexOf(currentStore)>=0; });
+  var text = encodeURIComponent(shareText(currentStore));
+  var h = '<div class="card"><div class="row" style="justify-content:space-between"><strong>'+esc(currentStore)+' — '+rem.length+' remaining</strong></div>' +
+    '<div class="row" style="margin-top:10px"><a class="btn wa small" target="_blank" rel="noopener" href="https://wa.me/?text='+text+'">WhatsApp</a>' +
+    '<a class="btn ghost small" href="sms:?&body='+text+'">Text message</a>' +
+    '<a class="btn ghost small" href="mailto:?subject='+encodeURIComponent("Shopping list — "+currentStore)+'&body='+text+'">Email</a></div></div>';
+  h += '<h2>'+rem.length+' items to buy</h2>' + (rem.length ? rem.map(function(it){ return itemRowHtml(it, {noedit:true}); }).join("") : '<p class="sub">Nothing left to buy here.</p>');
+  h += '<h2>'+done.length+' items checked off</h2>' + (done.length ? done.map(function(it){ return itemRowHtml(it, {noedit:true}); }).join("") : '<p class="sub">None yet.</p>');
+  panel.innerHTML = h;
+  bindItemRows(panel);
+}
+
+/* ---------- Deals ---------- */
+function renderDeals(){
+  var box = document.getElementById("dealsList");
+  box.innerHTML = DB.stores.map(function(s){
+    var n = remainingFor(s).length;
+    var url = STORE_DEAL_URLS[s];
+    return '<div class="card"><div class="row" style="justify-content:space-between"><strong>'+esc(s)+'</strong><span class="chip tag">'+n+' to buy</span></div>' +
+    '<div class="row" style="margin-top:8px">' +
+    (url ? '<a class="btn small" target="_blank" rel="noopener" href="'+url+'">Weekly ad / deals</a>' : '') +
+    '<a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent(s+" weekly ad deals")+'">Search current deals</a></div></div>';
+  }).join("");
+}
+
+/* ---------- Backup ---------- */
+function exportBackup(){
+  var blob = new Blob([JSON.stringify(DB, null, 2)], { type:"application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "shopsync-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  document.getElementById("backupMsg").textContent = "Backup exported — keep the file somewhere safe (e.g. Google Drive).";
+}
+function importBackup(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var data = JSON.parse(String(reader.result));
+      if (!data || !Array.isArray(data.items) || !Array.isArray(data.stores)) throw new Error("bad format");
+      if (!confirm("Import this backup? It replaces your current ShopSync list on this device.")) return;
+      DB = data; lsSet(SEEDFLAG,"1"); saveDB(DB); renderAll();
+      document.getElementById("backupMsg").textContent = "Backup imported.";
+    } catch(e){ document.getElementById("backupMsg").textContent = "That file is not a valid ShopSync backup."; }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Wiring & init ---------- */
+function renderAll(){ renderHome(); renderFullList(); renderAtStore(); renderDeals(); }
+document.querySelectorAll("#topnav button").forEach(function(b){ b.addEventListener("click", function(){ showView(b.getAttribute("data-view")); }); });
+document.getElementById("cardPurchase").addEventListener("click", function(){ showView("purchase"); });
+document.getElementById("cardAtStore").addEventListener("click", function(){ showView("atstore"); });
+document.getElementById("cardDeals").addEventListener("click", function(){ showView("deals"); });
+document.getElementById("homeSearch").addEventListener("input", function(){ document.getElementById("listSearch").value = this.value; renderFullList(); });
+document.getElementById("homeSearch").addEventListener("focus", function(){ showView("purchase"); });
+document.getElementById("listSearch").addEventListener("input", renderFullList);
+document.getElementById("togglePurchasedBtn").addEventListener("click", function(){ hidePurchased = !hidePurchased; this.textContent = hidePurchased ? "Show purchased" : "Hide purchased"; renderFullList(); });
+document.getElementById("addStoreBtn").addEventListener("click", function(){
+  var v = document.getElementById("newStoreName").value.trim(); if (!v) return;
+  if (DB.stores.indexOf(v)<0) { DB.stores.push(v); saveDB(DB); }
+  if (addStoreSel.indexOf(v)<0) addStoreSel.push(v);
+  document.getElementById("newStoreName").value = ""; renderAddStores(); renderAtStore(); renderDeals();
+});
+document.getElementById("saveItemBtn").addEventListener("click", function(){
+  var name = document.getElementById("addName").value.trim();
+  if (!name) { document.getElementById("addMsg").textContent = "Type an item name first."; return; }
+  DB.items.unshift({ id: "i"+Date.now(), name: name, stores: addStoreSel.slice(), purchased: false, created: todayStr() });
+  document.getElementById("addName").value = ""; document.getElementById("addMsg").textContent = "Added \""+name+"\".";
+  saveDB(DB); renderAll();
+});
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SR) {
+  var mic = document.getElementById("micBtn"); mic.classList.remove("hidden");
+  mic.addEventListener("click", function(){
+    try { var r = new SR(); r.lang = "en-US"; r.onresult = function(ev){ document.getElementById("addName").value = ev.results[0][0].transcript; }; r.start(); } catch(e){}
+  });
+}
+document.getElementById("exportBtn").addEventListener("click", exportBackup);
+document.getElementById("importBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+document.getElementById("importFile").addEventListener("change", function(){ if (this.files && this.files[0]) importBackup(this.files[0]); this.value=""; });
+
+renderAddStores();
+renderAll();
+</script>
+</body>
+</html>
