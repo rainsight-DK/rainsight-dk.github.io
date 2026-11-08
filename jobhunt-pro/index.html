@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1e3a5f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>JobHunt Pro — Job Search & Tracking</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💼</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💼</text></svg>">
+<style>
+  :root{ --ink:#1c2733; --muted:#68737d; --line:#e2e8ee; --brand:#1e3a5f; --teal:#0f766e; --blue:#2563eb; --amber:#b45309; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:#f6f8fa; color:var(--ink); font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
+  .wrap{max-width:760px; margin:0 auto; padding:0 14px 48px;}
+  header{background:linear-gradient(120deg,#1e3a5f,#274b73); color:#fff; margin:0 -14px; padding:22px 18px 16px;}
+  header h1{margin:0; font-size:1.45rem;}
+  header p{margin:4px 0 0; opacity:.85; font-size:.9rem;}
+  nav{display:flex; gap:6px; flex-wrap:wrap; margin:14px 0 4px;}
+  nav button{border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:999px; padding:8px 13px; font-size:.88rem; font-weight:600; cursor:pointer;}
+  nav button.on{background:var(--brand); color:#fff; border-color:var(--brand);}
+  .card{background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px; margin:12px 0; box-shadow:0 1px 4px rgba(20,40,30,.05);}
+  .card h2{font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 10px;}
+  .btn{background:var(--blue); color:#fff; border:0; border-radius:12px; padding:11px 15px; font-size:.93rem; font-weight:600; cursor:pointer;}
+  .btn.teal{background:var(--teal);} .btn.brand{background:var(--brand);}
+  .btn.ghost{background:#fff; color:var(--brand); border:1.5px solid var(--brand);}
+  .btn.small{padding:7px 11px; font-size:.83rem; border-radius:10px;}
+  .btn:disabled{opacity:.45;}
+  .muted{color:var(--muted);} .src{font-size:.72rem; color:var(--muted); margin-top:10px;}
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .stat{background:#eef3f8; border-radius:12px; padding:12px 8px; text-align:center;}
+  .stat b{display:block; font-size:1.35rem; color:var(--brand);}
+  .stat span{font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;}
+  input[type=text], input[type=url], input[type=number], input[type=date], input[type=time], select, textarea{width:100%; padding:11px 12px; font-size:.97rem; border:1.5px solid var(--line); border-radius:12px; background:#fff; margin:4px 0 10px;}
+  label{font-size:.82rem; font-weight:600; color:var(--muted); display:block; margin-top:6px;}
+  .jobrow{border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin:9px 0; background:#fff;}
+  .jobrow .t{font-weight:700; font-size:1.02rem;}
+  .jobrow .c{color:var(--brand); font-weight:600;}
+  .jobrow .m{color:var(--muted); font-size:.86rem; margin-top:3px; line-height:1.45;}
+  .jobrow .acts{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+  .pill{display:inline-block; background:#e6f4f1; color:var(--teal); font-size:.68rem; font-weight:700; padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em;}
+  .pill.watch{background:#fdf0dc; color:var(--amber);}
+  .tabs{display:flex; gap:6px; margin:4px 0 8px; flex-wrap:wrap;}
+  .tabs button{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:7px 12px; font-size:.85rem; font-weight:600; cursor:pointer;}
+  .tabs button.on{background:var(--brand); color:#fff; border-color:var(--brand);}
+  .siterow{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .stagehead{font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; color:var(--brand); font-weight:700; margin:16px 0 4px;}
+  .appcard{border:1px solid var(--line); border-left:4px solid var(--brand); border-radius:12px; padding:11px 13px; margin:8px 0; background:#fff;}
+  .kv{display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--line); font-size:.95rem;}
+  .kv:last-child{border-bottom:0;}
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 8px;}
+  .chip{border:1.5px solid var(--line); border-radius:999px; padding:6px 11px; font-size:.83rem; cursor:pointer; background:#fff; font-weight:600;}
+  .chip.on{background:var(--brand); color:#fff; border-color:var(--brand);}
+  .stageline{display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px dashed var(--line);}
+  .stageline:last-child{border-bottom:0;}
+  footer{color:var(--muted); font-size:.76rem; text-align:center; margin-top:28px; line-height:1.55;}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>💼 JobHunt Pro</h1>
+    <p>Job search &amp; application tracking — your data stays on this device.</p>
+  </header>
+
+  <nav id="topnav">
+    <button data-view="dashboard" class="on">Dashboard</button>
+    <button data-view="search">Search Jobs</button>
+    <button data-view="board">Job Board</button>
+    <button data-view="apps">Applications</button>
+    <button data-view="docs">Documents</button>
+    <button data-view="settings">Settings</button>
+  </nav>
+
+  <!-- Dashboard -->
+  <section id="view-dashboard">
+    <div class="card"><h2>Overview</h2>
+      <div class="stats">
+        <div class="stat"><b id="st-saved">0</b><span>Saved jobs</span></div>
+        <div class="stat"><b id="st-active">0</b><span>Active applications</span></div>
+        <div class="stat"><b id="st-interviews">0</b><span>Interviews</span></div>
+        <div class="stat"><b id="st-offers">0</b><span>Offers</span></div>
+      </div>
+      <div style="margin-top:12px"><button class="btn brand" onclick="showView('search')">New search</button></div>
+    </div>
+    <div class="card"><h2>Recent applications</h2><div id="recent-apps"></div>
+      <div style="margin-top:8px"><button class="btn ghost small" onclick="showView('apps')">View all</button></div>
+    </div>
+  </section>
+
+  <!-- Search -->
+  <section id="view-search" class="hidden">
+    <div class="card"><h2>Search profiles</h2>
+      <p class="muted" style="margin:0 0 6px; font-size:.9rem">Each profile opens real searches with its keywords and locations on the job sites — the independent version has no AI search engine, so results are the sites' own listings. Save the good ones to your Job Board below.</p>
+      <div id="profile-list"></div>
+      <button class="btn brand" onclick="openProfileForm()">New profile</button>
+    </div>
+    <div class="card hidden" id="profile-form-card"><h2 id="profile-form-title">New profile</h2>
+      <label>Profile name</label><input type="text" id="pf-name" placeholder="e.g. Directors">
+      <label>Keywords / job titles (comma-separated)</label><input type="text" id="pf-keywords" placeholder="e.g. R&D, metallurgy, director">
+      <label>Location</label><input type="text" id="pf-location" placeholder="e.g. United States">
+      <label>Remote preference</label>
+      <select id="pf-remote"><option>Any</option><option>Remote</option><option>On-site</option><option>Hybrid</option></select>
+      <label>Minimum salary</label><input type="text" id="pf-salary" placeholder="e.g. 200000">
+      <label>Currency</label><input type="text" id="pf-currency" value="USD">
+      <label>Target websites</label><div class="chips" id="pf-sites"></div>
+      <label>Additional conditions</label><input type="text" id="pf-conditions" placeholder="Optional">
+      <label>Exclude areas / keywords</label><input type="text" id="pf-exclude" placeholder="Optional">
+      <div style="display:flex; gap:8px; margin-top:6px">
+        <button class="btn brand" onclick="saveProfile()">Save profile</button>
+        <button class="btn ghost" onclick="closeProfileForm()">Cancel</button>
+      </div>
+    </div>
+    <div class="card"><h2>Add a job from a posting</h2>
+      <p class="muted" style="margin:0 0 6px; font-size:.9rem">Found a posting? Paste its URL and fill in the basics — it lands on your Job Board. (The original's one-click Extract was its AI; this version keeps it manual and accurate.)</p>
+      <label>Job posting URL</label><input type="url" id="aj-url" placeholder="https://...">
+      <label>Job title</label><input type="text" id="aj-title">
+      <label>Company</label><input type="text" id="aj-company">
+      <label>Location</label><input type="text" id="aj-location">
+      <label>Salary (as shown)</label><input type="text" id="aj-salary" placeholder="e.g. $230,000–$344,000">
+      <label>Source</label><input type="text" id="aj-source" placeholder="e.g. LinkedIn, company careers">
+      <label>Description / notes</label><textarea id="aj-desc" rows="3"></textarea>
+      <label>Save as</label>
+      <select id="aj-tier"><option value="interesting">Interesting (casual save)</option><option value="watchlist">Watchlist (monitor closely)</option></select>
+      <button class="btn teal" onclick="addJobFromForm()">Save to Job Board</button>
+    </div>
+  </section>
+
+  <!-- Job Board -->
+  <section id="view-board" class="hidden">
+    <div class="card"><h2>Saved jobs</h2>
+      <div class="tabs" id="board-tabs">
+        <button data-tab="all" class="on">All saved</button>
+        <button data-tab="interesting">Interesting</button>
+        <button data-tab="watchlist">Watchlist</button>
+      </div>
+      <div id="board-list"></div>
+    </div>
+    <div class="card hidden" id="job-detail-card"><h2>Job detail</h2><div id="job-detail"></div>
+      <div style="margin-top:10px"><button class="btn ghost small" onclick="$('job-detail-card').classList.add('hidden')">Close</button></div>
+    </div>
+  </section>
+
+  <!-- Applications -->
+  <section id="view-apps" class="hidden">
+    <div class="card"><h2>Applications</h2>
+      <p class="muted" style="margin:0; font-size:.9rem">Grouped by pipeline stage. Use the arrows or the stage picker on a card to move it. Track a job from the Job Board to start.</p>
+      <div id="apps-list"></div>
+    </div>
+    <div class="card hidden" id="app-form-card"><h2 id="app-form-title">Application</h2>
+      <label>Job title</label><input type="text" id="af-title">
+      <label>Company</label><input type="text" id="af-company">
+      <label>Stage</label><select id="af-stage"></select>
+      <label>Date applied</label><input type="date" id="af-applied">
+      <label>Interview date</label><input type="date" id="af-intdate">
+      <label>Interview time</label><input type="time" id="af-inttime">
+      <label>Notes</label><textarea id="af-notes" rows="3"></textarea>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px">
+        <button class="btn brand" onclick="saveApplication()">Save application</button>
+        <button class="btn ghost" onclick="closeAppForm()">Cancel</button>
+      </div>
+      <div class="src">Tip: after saving an interview date, the card gets an "Add to Google Calendar" link — it opens Google Calendar with the event pre-filled, the same approach the original app used.</div>
+    </div>
+  </section>
+
+  <!-- Documents -->
+  <section id="view-docs" class="hidden">
+    <div class="card"><h2>Documents</h2>
+      <p class="muted" style="margin:0 0 6px; font-size:.9rem">A list of your documents and where they live. This app stores the name and link only — keep the files themselves in Google Drive or on your PC, and paste the link here.</p>
+      <div id="doc-list"></div>
+      <label>Document name</label><input type="text" id="dc-name" placeholder="e.g. Base resume — 2026">
+      <label>Type</label>
+      <select id="dc-type"><option>Resume</option><option>Cover letter</option><option>Portfolio</option><option>Other</option></select>
+      <label>Link (Drive, etc.)</label><input type="url" id="dc-url" placeholder="https://...">
+      <label>Notes</label><input type="text" id="dc-notes" placeholder="Optional">
+      <button class="btn teal" onclick="addDocument()">Add document</button>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section id="view-settings" class="hidden">
+    <div class="card"><h2>Pipeline stages</h2>
+      <p class="muted" style="margin:0 0 6px; font-size:.9rem">The stages your applications move through, in order. Renaming or removing a stage that applications already use keeps those applications on the old stage name until you move them.</p>
+      <div id="stage-list"></div>
+      <label>New stage name</label>
+      <div style="display:flex; gap:8px"><input type="text" id="ns-name" placeholder="e.g. Final round" style="flex:1"><button class="btn brand" onclick="addStage()">Add</button></div>
+    </div>
+    <div class="card"><h2>Backup</h2>
+      <p class="muted" style="margin:0 0 10px; font-size:.9rem">Everything in this app — profiles, saved jobs, applications, documents, stages — lives only in this browser, on this device. Export a backup file (keep it in Google Drive or on your PC) and import it on another device or browser to move your data there. Import replaces what is here.</p>
+      <button class="btn ghost" onclick="exportBackup()">Export backup</button>
+      <button class="btn ghost" onclick="document.getElementById('impfile').click()">Import backup</button>
+      <input type="file" id="impfile" accept=".json,application/json" style="display:none" onchange="importBackup(this)">
+    </div>
+    <div class="card"><h2>About this rebuild</h2>
+      <p class="muted" style="margin:0; font-size:.9rem">Independent rebuild of your Base44 "NextRole / JobHunt Pro" app. The tracker, profiles, and pipeline work exactly on-device. Differences from the original: job searches open the real job sites with your profile's keywords (no AI search engine, no AI-estimated salaries), posting import is manual instead of AI Extract, and email summaries don't exist in a standalone app. Your Base44 data seeded here: 2 search profiles, your 7 pipeline stages, and your 1 saved job.</p>
+    </div>
+  </section>
+
+  <footer>JobHunt Pro (independent rebuild) — every job, application, and document here is one you saved.<br>Nothing is AI-generated.</footer>
+</div>
+
+<script>
+"use strict";
+const KEY = "jobHuntProV1";
+const SEEDFLAG = "jobHuntProSeededV1";
+const $ = id => document.getElementById(id);
+const esc = s => { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const DEFAULT_STAGES = ["Saved", "Applied", "Phone Screen", "Interview", "Offer", "Rejected", "Withdrawn"];
+const ALL_SITES = ["LinkedIn", "Indeed", "Glassdoor", "HigherEdJobs"];
+let DB = loadDB();
+
+function seedData(){
+  return {
+    profiles: [
+      { id: uid(), name: "Professor", keywords: "Professor, Materials science, metallurgy, mechanical engineering, alloy, aluminum, metals", location: "United States", remote: "Any", salary: "20000+", currency: "USD", sites: ["LinkedIn", "Glassdoor", "Indeed"], conditions: "", exclude: "" },
+      { id: uid(), name: "Directors", keywords: "R&D, metallurgy, materials science, director, Senior director, senior manager", location: "United States, Europe, South Korea", remote: "Any", salary: "20000+", currency: "USD", sites: ["LinkedIn", "Glassdoor", "Indeed"], conditions: "", exclude: "" }
+    ],
+    jobs: [
+      { id: uid(), title: "R&D Engineering, Director", company: "Synopsys", location: "Sunnyvale, California", salary: "$230,000–$344,000", date: "2026-08-18", source: "Synopsys Careers", url: "", desc: "", tier: "interesting" }
+    ],
+    applications: [],
+    documents: [],
+    stages: [...DEFAULT_STAGES]
+  };
+}
+function loadDB(){
+  try {
+    const raw = localStorage.getItem(KEY);
+    if(raw){ const d = JSON.parse(raw); if(d && Array.isArray(d.jobs)) return d; }
+  } catch(e){}
+  let d;
+  if(!localStorage.getItem(SEEDFLAG)){
+    d = seedData();
+    try { localStorage.setItem(SEEDFLAG, "1"); } catch(e){}
+  } else {
+    d = { profiles: [], jobs: [], applications: [], documents: [], stages: [...DEFAULT_STAGES] };
+  }
+  saveDB(d);
+  return d;
+}
+function saveDB(d){ DB = d || DB; try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch(e){} }
+
+/* ---------- Navigation ---------- */
+function showView(name){
+  for(const v of ["dashboard", "search", "board", "apps", "docs", "settings"]) $("view-" + v).classList.toggle("hidden", v !== name);
+  document.querySelectorAll("#topnav button").forEach(b => b.classList.toggle("on", b.dataset.view === name));
+  renderAll();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("#topnav button").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
+
+function renderAll(){
+  renderDashboard(); renderProfiles(); renderBoard(); renderApps(); renderDocs(); renderStages();
+}
+
+/* ---------- Dashboard ---------- */
+function activeApps(){ return DB.applications.filter(a => !["Rejected", "Withdrawn"].includes(a.stage)); }
+function renderDashboard(){
+  $("st-saved").textContent = DB.jobs.length;
+  $("st-active").textContent = activeApps().length;
+  $("st-interviews").textContent = DB.applications.filter(a => a.stage === "Interview").length;
+  $("st-offers").textContent = DB.applications.filter(a => a.stage === "Offer").length;
+  const recent = [...DB.applications].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "")).slice(0, 5);
+  $("recent-apps").innerHTML = recent.length
+    ? recent.map(a => '<div class="kv"><span><b>' + esc(a.title) + "</b> · " + esc(a.company) + '</span><span class="pill">' + esc(a.stage) + "</span></div>").join("")
+    : '<span class="muted">No applications yet. Search for jobs and start tracking!</span>';
+}
+
+/* ---------- Search profiles ---------- */
+let editingProfile = null;
+let formSites = new Set(["LinkedIn", "Indeed", "Glassdoor"]);
+
+function siteURL(site, p){
+  const kw = encodeURIComponent(p.keywords || "");
+  const kwPlus = encodeURIComponent((p.keywords || "").split(",")[0].trim() || p.keywords || "");
+  const loc = encodeURIComponent((p.location || "").split(",")[0].trim());
+  if(site === "LinkedIn") return "https://www.linkedin.com/jobs/search/?keywords=" + kw + "&location=" + loc;
+  if(site === "Indeed") return "https://www.indeed.com/jobs?q=" + kwPlus + "&l=" + loc;
+  if(site === "Glassdoor") return "https://www.glassdoor.com/Job/jobs.htm?sc.keyword=" + kwPlus + "&locKeyword=" + loc;
+  if(site === "HigherEdJobs") return "https://www.higheredjobs.com/search/advanced_action.cfm?Keyword=" + kwPlus;
+  return "https://www.google.com/search?q=" + kw + "+jobs+" + loc;
+}
+function renderProfiles(){
+  const el = $("profile-list");
+  if(!DB.profiles.length){ el.innerHTML = '<p class="muted">No profiles yet. Create one to search with.</p>'; return; }
+  el.innerHTML = DB.profiles.map(p =>
+    '<div class="jobrow"><div class="t">' + esc(p.name) + "</div>" +
+    '<div class="m">Keywords: ' + esc(p.keywords) + "<br>Location: " + esc(p.location) +
+    (p.remote && p.remote !== "Any" ? " · " + esc(p.remote) : "") +
+    (p.salary ? " · Min salary: " + esc(p.salary) + " " + esc(p.currency || "") : "") +
+    (p.exclude ? "<br>Exclude: " + esc(p.exclude) : "") +
+    (p.conditions ? "<br>Conditions: " + esc(p.conditions) : "") + "</div>" +
+    '<div class="siterow">' + (p.sites && p.sites.length ? p.sites : ALL_SITES).map(s =>
+      '<a class="btn ghost small" target="_blank" rel="noopener" href="' + siteURL(s, p) + '">' + esc(s) + " ↗</a>").join("") + "</div>" +
+    '<div class="acts"><button class="btn ghost small" onclick="openProfileForm(\'' + p.id + '\')">Edit</button>' +
+    '<button class="btn ghost small" onclick="deleteProfile(\'' + p.id + '\')">Delete</button></div></div>').join("");
+}
+function renderSiteChips(){
+  $("pf-sites").innerHTML = ALL_SITES.map(s =>
+    '<span class="chip' + (formSites.has(s) ? " on" : "") + '" onclick="toggleSite(\'' + s + '\')">' + s + "</span>").join("");
+}
+function toggleSite(s){ formSites.has(s) ? formSites.delete(s) : formSites.add(s); renderSiteChips(); }
+function openProfileForm(id){
+  editingProfile = id || null;
+  const p = id ? DB.profiles.find(x => x.id === id) : null;
+  $("profile-form-title").textContent = p ? "Edit profile" : "New profile";
+  $("pf-name").value = p ? p.name : "";
+  $("pf-keywords").value = p ? p.keywords : "";
+  $("pf-location").value = p ? p.location : "";
+  $("pf-remote").value = p ? (p.remote || "Any") : "Any";
+  $("pf-salary").value = p ? (p.salary || "") : "";
+  $("pf-currency").value = p ? (p.currency || "USD") : "USD";
+  $("pf-conditions").value = p ? (p.conditions || "") : "";
+  $("pf-exclude").value = p ? (p.exclude || "") : "";
+  formSites = new Set(p && p.sites ? p.sites : ["LinkedIn", "Indeed", "Glassdoor"]);
+  renderSiteChips();
+  $("profile-form-card").classList.remove("hidden");
+}
+function closeProfileForm(){ $("profile-form-card").classList.add("hidden"); editingProfile = null; }
+function saveProfile(){
+  const name = $("pf-name").value.trim();
+  if(!name){ alert("Give the profile a name first."); return; }
+  const data = { name, keywords: $("pf-keywords").value.trim(), location: $("pf-location").value.trim(),
+    remote: $("pf-remote").value, salary: $("pf-salary").value.trim(), currency: $("pf-currency").value.trim() || "USD",
+    sites: [...formSites], conditions: $("pf-conditions").value.trim(), exclude: $("pf-exclude").value.trim() };
+  if(editingProfile){ Object.assign(DB.profiles.find(x => x.id === editingProfile), data); }
+  else { DB.profiles.push({ id: uid(), ...data }); }
+  saveDB(); closeProfileForm(); renderProfiles();
+}
+function deleteProfile(id){
+  if(!confirm("Delete this search profile?")) return;
+  DB.profiles = DB.profiles.filter(x => x.id !== id); saveDB(); renderProfiles();
+}
+
+/* ---------- Job board ---------- */
+let boardTab = "all";
+document.querySelectorAll("#board-tabs button").forEach(b => b.addEventListener("click", () => {
+  boardTab = b.dataset.tab;
+  document.querySelectorAll("#board-tabs button").forEach(x => x.classList.toggle("on", x === b));
+  renderBoard();
+}));
+function renderBoard(){
+  const list = DB.jobs.filter(j => boardTab === "all" || j.tier === boardTab);
+  const counts = { all: DB.jobs.length, interesting: DB.jobs.filter(j => j.tier === "interesting").length, watchlist: DB.jobs.filter(j => j.tier === "watchlist").length };
+  document.querySelectorAll("#board-tabs button").forEach(b => { b.textContent = b.dataset.tab === "all" ? "All saved (" + counts.all + ")" : b.dataset.tab === "interesting" ? "Interesting (" + counts.interesting + ")" : "Watchlist (" + counts.watchlist + ")"; });
+  $("board-list").innerHTML = list.length ? list.map(j =>
+    '<div class="jobrow"><div class="t">' + esc(j.title) + "</div>" +
+    '<div class="c">' + esc(j.company) + '</div><div class="m">' + esc(j.location) +
+    (j.salary ? " · " + esc(j.salary) : "") + (j.date ? " · " + esc(j.date) : "") +
+    (j.source ? "<br>Source: " + esc(j.source) : "") + "</div>" +
+    '<div style="margin-top:6px"><span class="pill' + (j.tier === "watchlist" ? " watch" : "") + '">' + (j.tier === "watchlist" ? "⭐ Watchlist" : "Interesting") + "</span></div>" +
+    '<div class="acts">' +
+    '<button class="btn ghost small" onclick="viewJob(\'' + j.id + '\')">View</button>' +
+    (j.url ? '<a class="btn ghost small" target="_blank" rel="noopener" href="' + esc(j.url) + '">Posting ↗</a>' : "") +
+    '<button class="btn ghost small" onclick="toggleTier(\'' + j.id + '\')">' + (j.tier === "watchlist" ? "Move to Interesting" : "⭐ Watch") + "</button>" +
+    '<button class="btn teal small" onclick="trackJob(\'' + j.id + '\')">Track</button>' +
+    '<button class="btn ghost small" onclick="deleteJob(\'' + j.id + '\')">Delete</button>' +
+    "</div></div>").join("")
+    : '<p class="muted">Nothing here yet. Add jobs from the Search Jobs page.</p>';
+}
+function viewJob(id){
+  const j = DB.jobs.find(x => x.id === id); if(!j) return;
+  $("job-detail").innerHTML =
+    '<div class="kv"><span>Title</span><b>' + esc(j.title) + "</b></div>" +
+    '<div class="kv"><span>Company</span><b>' + esc(j.company) + "</b></div>" +
+    '<div class="kv"><span>Location</span><b>' + esc(j.location) + "</b></div>" +
+    (j.salary ? '<div class="kv"><span>Salary</span><b>' + esc(j.salary) + "</b></div>" : "") +
+    (j.date ? '<div class="kv"><span>Date posted</span><b>' + esc(j.date) + "</b></div>" : "") +
+    (j.source ? '<div class="kv"><span>Source</span><b>' + esc(j.source) + "</b></div>" : "") +
+    (j.url ? '<div class="kv"><span>Posting</span><b><a target="_blank" rel="noopener" href="' + esc(j.url) + '">Open ↗</a></b></div>' : "") +
+    (j.desc ? '<p style="margin:12px 0 0; font-size:.93rem; line-height:1.55">' + esc(j.desc) + "</p>" : "");
+  $("job-detail-card").classList.remove("hidden");
+  $("job-detail-card").scrollIntoView({ behavior: "smooth" });
+}
+function toggleTier(id){
+  const j = DB.jobs.find(x => x.id === id); if(!j) return;
+  j.tier = j.tier === "watchlist" ? "interesting" : "watchlist"; saveDB(); renderBoard();
+}
+function deleteJob(id){
+  if(!confirm("Delete this saved job?")) return;
+  DB.jobs = DB.jobs.filter(x => x.id !== id); saveDB(); renderBoard(); renderDashboard();
+}
+function trackJob(id){
+  const j = DB.jobs.find(x => x.id === id); if(!j) return;
+  if(DB.applications.some(a => a.jobId === id)){ alert("This job is already in your Applications."); showView("apps"); return; }
+  DB.applications.push({ id: uid(), jobId: id, title: j.title, company: j.company, stage: DB.stages[0] || "Saved", applied: "", intDate: "", intTime: "", notes: "", updatedAt: new Date().toISOString() });
+  saveDB(); showView("apps");
+}
+function addJobFromForm(){
+  const title = $("aj-title").value.trim(), company = $("aj-company").value.trim();
+  if(!title || !company){ alert("Title and company are needed to save a job."); return; }
+  DB.jobs.push({ id: uid(), title, company, location: $("aj-location").value.trim(), salary: $("aj-salary").value.trim(),
+    date: new Date().toISOString().slice(0, 10), source: $("aj-source").value.trim(), url: $("aj-url").value.trim(),
+    desc: $("aj-desc").value.trim(), tier: $("aj-tier").value });
+  saveDB();
+  for(const f of ["aj-url", "aj-title", "aj-company", "aj-location", "aj-salary", "aj-source", "aj-desc"]) $(f).value = "";
+  showView("board");
+}
+
+/* ---------- Applications ---------- */
+let editingApp = null;
+function gcalLink(a){
+  if(!a.intDate) return "";
+  const d = a.intDate.replace(/-/g, "");
+  const t = (a.intTime || "10:00").replace(":", "");
+  const start = d + "T" + t + "00";
+  const endH = String(Math.min(23, parseInt((a.intTime || "10:00").slice(0, 2), 10) + 1)).padStart(2, "0");
+  const end = d + "T" + endH + (a.intTime || "10:00").slice(3) + "00";
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent("Interview — " + a.title + " at " + a.company) + "&dates=" + start + "/" + end;
+}
+function renderApps(){
+  const el = $("apps-list");
+  if(!DB.applications.length){ el.innerHTML = '<p class="muted">No applications yet. Save jobs from your searches and track them here.</p>'; return; }
+  const stagesInUse = [...DB.stages];
+  for(const a of DB.applications) if(!stagesInUse.includes(a.stage)) stagesInUse.push(a.stage);
+  el.innerHTML = stagesInUse.map(st => {
+    const cards = DB.applications.filter(a => a.stage === st);
+    if(!cards.length) return "";
+    return '<div class="stagehead">' + esc(st) + " (" + cards.length + ")</div>" + cards.map(a => {
+      const i = DB.stages.indexOf(a.stage);
+      return '<div class="appcard"><b>' + esc(a.title) + "</b> · " + esc(a.company) +
+        (a.applied ? '<div class="m muted" style="font-size:.85rem; margin-top:2px">Applied ' + esc(a.applied) + "</div>" : "") +
+        (a.intDate ? '<div class="m muted" style="font-size:.85rem">Interview ' + esc(a.intDate) + (a.intTime ? " " + esc(a.intTime) : "") + "</div>" : "") +
+        (a.notes ? '<div style="font-size:.88rem; margin-top:4px">' + esc(a.notes) + "</div>" : "") +
+        '<div class="acts" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:9px">' +
+        (i > 0 ? '<button class="btn ghost small" onclick="moveApp(\'' + a.id + '\',-1)">← ' + esc(DB.stages[i - 1]) + "</button>" : "") +
+        (i >= 0 && i < DB.stages.length - 1 ? '<button class="btn ghost small" onclick="moveApp(\'' + a.id + '\',1)">' + esc(DB.stages[i + 1]) + " →</button>" : "") +
+        '<button class="btn ghost small" onclick="openAppForm(\'' + a.id + '\')">Edit</button>' +
+        (a.intDate ? '<a class="btn ghost small" target="_blank" rel="noopener" href="' + gcalLink(a) + '">Add to Google Calendar ↗</a>' : "") +
+        '<button class="btn ghost small" onclick="deleteApp(\'' + a.id + '\')">Delete</button>' +
+        "</div></div>";
+    }).join("");
+  }).join("");
+}
+function moveApp(id, dir){
+  const a = DB.applications.find(x => x.id === id); if(!a) return;
+  const i = DB.stages.indexOf(a.stage); const n = i + dir;
+  if(i < 0 || n < 0 || n >= DB.stages.length) return;
+  a.stage = DB.stages[n]; a.updatedAt = new Date().toISOString(); saveDB(); renderApps(); renderDashboard();
+}
+function openAppForm(id){
+  const a = DB.applications.find(x => x.id === id); if(!a) return;
+  editingApp = id;
+  $("app-form-title").textContent = "Edit application";
+  $("af-title").value = a.title; $("af-company").value = a.company;
+  $("af-stage").innerHTML = DB.stages.map(s => '<option' + (s === a.stage ? " selected" : "") + ">" + esc(s) + "</option>").join("") + (DB.stages.includes(a.stage) ? "" : '<option selected>' + esc(a.stage) + "</option>");
+  $("af-applied").value = a.applied || ""; $("af-intdate").value = a.intDate || ""; $("af-inttime").value = a.intTime || ""; $("af-notes").value = a.notes || "";
+  $("app-form-card").classList.remove("hidden");
+  $("app-form-card").scrollIntoView({ behavior: "smooth" });
+}
+function closeAppForm(){ $("app-form-card").classList.add("hidden"); editingApp = null; }
+function saveApplication(){
+  const a = DB.applications.find(x => x.id === editingApp); if(!a) return;
+  a.title = $("af-title").value.trim() || a.title; a.company = $("af-company").value.trim() || a.company;
+  a.stage = $("af-stage").value; a.applied = $("af-applied").value; a.intDate = $("af-intdate").value; a.intTime = $("af-inttime").value; a.notes = $("af-notes").value.trim();
+  a.updatedAt = new Date().toISOString();
+  saveDB(); closeAppForm(); renderApps(); renderDashboard();
+}
+function deleteApp(id){
+  if(!confirm("Delete this application?")) return;
+  DB.applications = DB.applications.filter(x => x.id !== id); saveDB(); renderApps(); renderDashboard();
+}
+
+/* ---------- Documents ---------- */
+function renderDocs(){
+  $("doc-list").innerHTML = DB.documents.length ? DB.documents.map(d =>
+    '<div class="kv"><span><b>' + esc(d.name) + '</b> <span class="pill">' + esc(d.type) + "</span>" +
+    (d.notes ? '<div class="muted" style="font-size:.83rem">' + esc(d.notes) + "</div>" : "") + "</span>" +
+    '<span style="white-space:nowrap">' + (d.url ? '<a target="_blank" rel="noopener" href="' + esc(d.url) + '">Open ↗</a> ' : "") +
+    '<button class="btn ghost small" onclick="deleteDoc(\'' + d.id + '\')">Delete</button></span></div>').join("")
+    : '<p class="muted">No documents yet.</p>';
+}
+function addDocument(){
+  const name = $("dc-name").value.trim(); if(!name){ alert("Give the document a name first."); return; }
+  DB.documents.push({ id: uid(), name, type: $("dc-type").value, url: $("dc-url").value.trim(), notes: $("dc-notes").value.trim() });
+  saveDB();
+  for(const f of ["dc-name", "dc-url", "dc-notes"]) $(f).value = "";
+  renderDocs();
+}
+function deleteDoc(id){
+  if(!confirm("Remove this document entry? (The file itself, wherever it lives, is not touched.)")) return;
+  DB.documents = DB.documents.filter(x => x.id !== id); saveDB(); renderDocs();
+}
+
+/* ---------- Settings: stages ---------- */
+function renderStages(){
+  $("stage-list").innerHTML = DB.stages.map((s, i) =>
+    '<div class="stageline"><span style="flex:1"><b>' + (i + 1) + ".</b> " + esc(s) + "</span>" +
+    '<button class="btn ghost small" onclick="moveStage(' + i + ',-1)"' + (i === 0 ? " disabled" : "") + ">↑</button>" +
+    '<button class="btn ghost small" onclick="moveStage(' + i + ',1)"' + (i === DB.stages.length - 1 ? " disabled" : "") + ">↓</button>" +
+    '<button class="btn ghost small" onclick="deleteStage(' + i + ')">Delete</button></div>').join("");
+}
+function moveStage(i, dir){
+  const n = i + dir; if(n < 0 || n >= DB.stages.length) return;
+  [DB.stages[i], DB.stages[n]] = [DB.stages[n], DB.stages[i]]; saveDB(); renderStages(); renderApps();
+}
+function addStage(){
+  const name = $("ns-name").value.trim(); if(!name) return;
+  if(DB.stages.includes(name)){ alert("That stage already exists."); return; }
+  DB.stages.push(name); $("ns-name").value = ""; saveDB(); renderStages(); renderApps();
+}
+function deleteStage(i){
+  if(DB.stages.length <= 1){ alert("Keep at least one stage."); return; }
+  if(!confirm("Remove the stage \"" + DB.stages[i] + "\"? Applications on it keep the old stage name until moved.")) return;
+  DB.stages.splice(i, 1); saveDB(); renderStages(); renderApps();
+}
+
+/* ---------- Backup ---------- */
+function exportBackup(){
+  const payload = JSON.stringify({ app: "JobHunt Pro", version: 1, exportedAt: new Date().toISOString(), data: DB }, null, 1);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
+  a.download = "jobhunt-pro-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function importBackup(input){
+  const file = input.files && input.files[0]; if(!file) return;
+  file.text().then(t => { try {
+    const data = JSON.parse(t);
+    const d = data && data.data;
+    if(!d || !Array.isArray(d.jobs) || !Array.isArray(d.applications) || !Array.isArray(d.profiles)) throw new Error("shape");
+    if(!confirm("Replace everything in this app (profiles, jobs, applications, documents, stages) with the backup?")) return;
+    d.documents = Array.isArray(d.documents) ? d.documents : [];
+    d.stages = Array.isArray(d.stages) && d.stages.length ? d.stages : [...DEFAULT_STAGES];
+    saveDB(d); renderAll(); alert("Backup imported.");
+  } catch(e){ alert("That file doesn't look like a JobHunt Pro backup."); } });
+  input.value = "";
+}
+
+renderAll();
+</script>
+</body>
+</html>
