@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Music Story — Discover lyrics, chords, meaning & stories behind every song</title>
+<meta name="description" content="Search any song and open its story: real lyrics, the Wikipedia background, real release data, artist profile, chords links, and a playable preview.">
+<style>
+:root{
+  --bg:#0b0620; --bg2:#2a1065; --card:#1b1440; --cardline:#3b2d75; --ink:#f3f0ff; --sub:#b9aede;
+  --accent:#8b5cf6; --accent2:#d946ef; --danger:#f87171; --light:#f8f7ff; --lightink:#241b4d;
+}
+[data-theme="bright"]{ --bg:#f4f1ff; --bg2:#e6defc; --card:#ffffff; --cardline:#ddd2fa; --ink:#241b4d; --sub:#6b5ca8; }
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(160deg,var(--bg),var(--bg2) 55%,var(--bg));color:var(--ink);min-height:100vh;-webkit-text-size-adjust:100%}
+body[data-fontsize="small"]{font-size:14px}
+body[data-fontsize="large"]{font-size:18px}
+.wrap{max-width:768px;margin:0 auto;padding:0 16px 40px}
+header.site{display:flex;justify-content:flex-end;padding:14px 2px 0}
+.gearbtn{background:var(--card);border:1px solid var(--cardline);color:var(--ink);width:40px;height:40px;border-radius:50%;font-size:17px;cursor:pointer}
+h1.title{font-size:42px;font-weight:900;text-align:center;margin:8px 0 2px;background:linear-gradient(90deg,#fff,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+[data-theme="bright"] h1.title{background:linear-gradient(90deg,var(--accent2),var(--accent));-webkit-background-clip:text;background-clip:text}
+.subtitle{text-align:center;color:var(--sub);font-size:15px;margin:0 0 6px}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--accent);color:#fff}
+.view{display:none}.view.active{display:block}
+.searchrow{display:flex;gap:8px;margin:16px 0 6px}
+.searchbox{flex:1;display:flex;align-items:center;background:var(--card);border:1px solid var(--cardline);border-radius:999px;padding:0 8px 0 18px}
+.searchbox input{flex:1;background:transparent;border:none;outline:none;color:var(--ink);font-size:16.5px;padding:13px 0;min-width:0}
+.searchbox input::placeholder{color:var(--sub)}
+.iconbtn{background:none;border:none;color:var(--sub);font-size:17px;cursor:pointer;padding:6px}
+.btn{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:999px;padding:13px 22px;font-size:15.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:var(--card);border:1px solid var(--cardline);color:var(--ink);font-weight:600}
+.btn.small{padding:8px 14px;font-size:13.5px}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.sub{color:var(--sub);font-size:14px;line-height:1.55}
+.note{color:var(--sub);font-size:12.5px;line-height:1.55}
+.card{background:var(--card);border:1px solid var(--cardline);border-radius:14px;padding:15px;margin:10px 0}
+.result{display:flex;gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--cardline);border-radius:13px;padding:10px;margin:8px 0;cursor:pointer;color:var(--ink);align-items:center}
+.result img{width:58px;height:58px;border-radius:9px;object-fit:cover;flex:0 0 auto;background:var(--bg2)}
+.result .t{font-weight:800;font-size:16px}
+.result .m{color:var(--sub);font-size:13px;margin-top:1px}
+.recent{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--cardline);border-radius:11px;padding:10px 13px;margin:7px 0;cursor:pointer;width:100%;text-align:left;color:var(--ink)}
+.heroCard{background:linear-gradient(120deg,#4c1d95,#86198f);border-radius:16px;padding:18px;display:flex;gap:15px;align-items:center;color:#fff;margin:12px 0}
+.heroCard img{width:80px;height:80px;border-radius:11px;object-fit:cover;background:rgba(255,255,255,.15)}
+.heroCard .t{font-size:23px;font-weight:900;line-height:1.2}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.tile{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:13px;padding:16px 12px;font-size:15px;font-weight:800;cursor:pointer;text-align:left}
+.tile.active{outline:3px solid #fff3}
+.panel{background:var(--light);color:var(--lightink);border-radius:13px;padding:16px;margin:4px 0 12px;line-height:1.65;font-size:15px}
+.panel h3{margin:14px 0 6px;font-size:16px}
+.panel h3:first-child{margin-top:0}
+.panel p{margin:0 0 10px}
+.panel a{color:#7c3aed}
+.lyricline{padding:2px 4px;border-radius:5px}
+.lyricline.reading{background:#ede9fe}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0}
+.stat{background:#ede9fe;border-radius:10px;padding:11px}
+.stat .n{font-size:19px;font-weight:900;color:#6d28d9}
+.stat .l{font-size:12px;color:#5b21b6}
+.chipp{background:#ede9fe;color:#5b21b6;border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:700}
+select,input[type=text]{background:var(--card);border:1px solid var(--cardline);border-radius:9px;color:var(--ink);font-size:14.5px;padding:9px}
+footer{color:var(--sub);font-size:12.5px;text-align:center;padding:20px 10px 4px;line-height:1.6}
+dialog{background:var(--card);color:var(--ink);border:1px solid var(--cardline);border-radius:14px;max-width:92vw;width:380px;padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+audio{width:100%;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site"><button class="gearbtn" id="settingsBtn" title="Settings">⚙️</button></header>
+
+  <!-- HOME -->
+  <section class="view active" id="view-home">
+    <div style="text-align:center"><span class="pill">✨ Featured today</span></div>
+    <h1 class="title">🎵 Music Story</h1>
+    <p class="subtitle">Discover lyrics, chords, meaning &amp; stories behind every song</p>
+    <div class="searchrow">
+      <div class="searchbox">
+        <input type="text" id="q" placeholder="Artist name or song title...">
+        <button class="iconbtn" id="micBtn" title="Voice typing" style="display:none">🎤</button>
+        <button class="iconbtn" id="clearBtn" title="Clear" style="display:none">✕</button>
+      </div>
+      <button class="btn" id="deepBtn">✨ Deep Dive</button>
+    </div>
+    <p class="note" id="homeMsg" style="text-align:center">Search runs against the real iTunes catalog. The original app's "listen &amp; identify" isn't here — real song recognition needs a paid fingerprinting service, and the original faked it with AI.</p>
+    <div id="results"></div>
+    <div id="recentsWrap"></div>
+  </section>
+
+  <!-- STORY -->
+  <section class="view" id="view-story">
+    <button class="btn ghost small" id="backBtn">← Back</button>
+    <div id="storyHead"></div>
+    <h2 style="font-size:17px">What do you want to know?</h2>
+    <p class="note">Choose what you want to know — tap a card to expand. Content loads from real sources when you tap.</p>
+    <div class="tiles" id="tiles"></div>
+    <div id="panelWrap"></div>
+  </section>
+
+  <footer>Made with ♥ for music lovers everywhere<br>Music Story — rebuilt as an independent app. Data: iTunes, lyrics.ovh, MusicBrainz, Wikipedia.</footer>
+</div>
+
+<dialog id="settingsDialog">
+  <h2 style="margin-top:0">Settings</h2>
+  <label style="display:block;font-size:13px;color:var(--sub);margin:10px 0 5px">Color theme</label>
+  <select id="setTheme" style="width:100%">
+    <option value="dark">Dark</option>
+    <option value="bright">Bright</option>
+    <option value="system">System (match device)</option>
+  </select>
+  <label style="display:block;font-size:13px;color:var(--sub);margin:12px 0 5px">Font size</label>
+  <select id="setFont" style="width:100%">
+    <option value="small">Small</option>
+    <option value="medium">Medium</option>
+    <option value="large">Large</option>
+  </select>
+  <h3 style="margin:18px 0 6px">Backup</h3>
+  <p class="note">Recent searches and settings live only on this device/browser. Export a backup and keep it safe (e.g. Google Drive); import restores it elsewhere. Importing replaces current data after you confirm.</p>
+  <div class="row"><button class="btn small" id="exportBtn">Export backup</button><button class="btn ghost small" id="importBackupBtn">Import backup</button>
+  <input type="file" id="importFile" accept=".json,application/json" style="display:none"></div>
+  <p class="note" id="backupMsg"></p>
+  <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn ghost small" id="settingsClose">Close</button></div>
+</dialog>
+
+<script>
+"use strict";
+/* Failure-proof storage (works even where localStorage is restricted). */
+var MemStore = {};
+function lsGet(k){ try { return window.localStorage.getItem(k); } catch(e){ return (k in MemStore) ? MemStore[k] : null; } }
+function lsSet(k,v){ try { window.localStorage.setItem(k,v); } catch(e){ MemStore[k]=v; } }
+
+var DBKEY = "musicStoryV1", SEEDFLAG = "musicStorySeededV1";
+function seedDB(){ return { recents: [], settings: { theme: "dark", fontSize: "medium" } }; }
+function loadDB(){
+  var db = null;
+  try { var raw = lsGet(DBKEY); if (raw) db = JSON.parse(raw); } catch(e){ db = null; }
+  if (!db || !Array.isArray(db.recents) || !db.settings) { db = seedDB(); lsSet(SEEDFLAG,"1"); saveDB(db); }
+  return db;
+}
+function saveDB(db){ try { lsSet(DBKEY, JSON.stringify(db)); } catch(e){} }
+var DB = seedDB();
+try { DB = loadDB(); } catch(e){ /* keep seed */ }
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtDate(iso){ var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString(undefined, { year:"numeric", month:"short", day:"numeric" }); }
+function fmtLen(ms){ if (!ms) return ""; var s = Math.round(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+
+/* ---------- Settings ---------- */
+function applySettings(){
+  var s = DB.settings;
+  var theme = s.theme;
+  if (theme === "system") theme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "bright" : "dark";
+  document.documentElement.setAttribute("data-theme", theme);
+  document.body.setAttribute("data-fontsize", s.fontSize || "medium");
+  document.getElementById("setTheme").value = s.theme;
+  document.getElementById("setFont").value = s.fontSize || "medium";
+}
+
+/* ---------- Views ---------- */
+function showView(v){
+  stopSpeaking();
+  document.querySelectorAll(".view").forEach(function(x){ x.classList.remove("active"); });
+  document.getElementById("view-"+v).classList.add("active");
+  window.scrollTo(0,0);
+}
+
+/* ---------- iTunes search ---------- */
+var lastResults = [];
+function itunesSearch(term){
+  return fetch("https://itunes.apple.com/search?media=music&entity=song&limit=12&term="+encodeURIComponent(term))
+    .then(function(r){ return r.json(); })
+    .then(function(j){ return (j.results || []).map(normalizeTrack); });
+}
+function normalizeTrack(t){
+  return { song: t.trackName, artist: t.artistName, year: t.releaseDate ? new Date(t.releaseDate).getFullYear() : null,
+    album: t.collectionName || "", artwork: (t.artworkUrl100 || "").replace("100x100bb", "600x600bb"),
+    preview: t.previewUrl || "", genre: t.primaryGenreName || "", trackNumber: t.trackNumber || null,
+    trackCount: t.trackCount || null, lengthMs: t.trackTimeMillis || null, releaseDate: t.releaseDate || "",
+    explicit: t.trackExplicitness === "explicit", appleUrl: t.trackViewUrl || "", artistId: t.artistId || null, collectionId: t.collectionId || null };
+}
+function doSearch(){
+  var q = document.getElementById("q").value.trim(); if (!q) return;
+  var btn = document.getElementById("deepBtn"), msg = document.getElementById("homeMsg"), box = document.getElementById("results");
+  btn.disabled = true; btn.textContent = "Searching…"; box.innerHTML = "";
+  document.getElementById("recentsWrap").innerHTML = "";
+  itunesSearch(q).then(function(list){
+    lastResults = list;
+    btn.disabled = false; btn.textContent = "✨ Deep Dive";
+    if (!list.length) { msg.textContent = "No results found. Try a different name."; return; }
+    msg.textContent = list.length + " result(s) from the iTunes catalog:";
+    box.innerHTML = list.map(function(t, i){
+      return '<button class="result" data-open="'+i+'">'+(t.artwork ? '<img src="'+esc(t.artwork)+'" alt="">' : '<img alt="">')+
+        '<span><span class="t">'+esc(t.song)+'</span><div class="m">'+esc(t.artist)+(t.year ? ' · '+t.year : '')+(t.album ? ' · 💿 '+esc(t.album) : '')+'</div></span></button>';
+    }).join("");
+    box.querySelectorAll("[data-open]").forEach(function(b){ b.addEventListener("click", function(){ openStory(lastResults[parseInt(b.getAttribute("data-open"),10)]); }); });
+  }).catch(function(){ btn.disabled = false; btn.textContent = "✨ Deep Dive"; msg.textContent = "Couldn't search — check your connection."; });
+}
+
+/* ---------- Recents ---------- */
+function addRecent(t){
+  DB.recents = DB.recents.filter(function(r){ return !(r.song === t.song && r.artist === t.artist); });
+  DB.recents.unshift({ song: t.song, artist: t.artist, year: t.year, album: t.album, artwork: t.artwork, track: t });
+  DB.recents = DB.recents.slice(0, 8);
+  saveDB(DB);
+}
+var clearArmed = false;
+function renderRecents(){
+  var w = document.getElementById("recentsWrap");
+  if (!DB.recents.length) { w.innerHTML = ""; return; }
+  w.innerHTML = '<div class="row" style="justify-content:space-between;margin-top:16px"><h2 style="margin:0;font-size:16px">🕐 Recent</h2><button class="btn ghost small" id="clearRecents">'+(clearArmed ? "Confirm clear" : "🗑 Clear")+'</button></div>' +
+    DB.recents.map(function(r, i){
+      return '<button class="recent" data-recent="'+i+'"><span>🕐</span><span style="flex:1"><b>'+esc(r.song)+'</b><div class="note">'+esc(r.artist)+(r.year ? ' · '+r.year : '')+'</div></span><span class="iconbtn" data-delrecent="'+i+'">✕</span></button>';
+    }).join("");
+  w.querySelectorAll("[data-recent]").forEach(function(b){ b.addEventListener("click", function(e){
+    if (e.target.hasAttribute("data-delrecent")) return;
+    openStory(DB.recents[parseInt(b.getAttribute("data-recent"),10)].track);
+  }); });
+  w.querySelectorAll("[data-delrecent]").forEach(function(x){ x.addEventListener("click", function(e){
+    e.stopPropagation();
+    DB.recents.splice(parseInt(x.getAttribute("data-delrecent"),10), 1); saveDB(DB); clearArmed = false; renderRecents();
+  }); });
+  document.getElementById("clearRecents").addEventListener("click", function(){
+    if (!clearArmed) { clearArmed = true; renderRecents(); return; }
+    DB.recents = []; saveDB(DB); clearArmed = false; renderRecents();
+  });
+}
+
+/* ---------- Story ---------- */
+var cur = null, activeTile = null, panelCache = {};
+var TILES = [
+  { id: "lyrics", icon: "🎤", label: "Lyrics" }, { id: "meaning", icon: "📖", label: "Meaning" },
+  { id: "making", icon: "🎬", label: "Making Story" }, { id: "result", icon: "🏆", label: "Result" },
+  { id: "chords", icon: "🎸", label: "Guitar Chord" }, { id: "facts", icon: "⭐", label: "Fun Facts" },
+  { id: "artist", icon: "👤", label: "About Artist" }, { id: "share", icon: "📤", label: "Share" },
+  { id: "listen", icon: "▶️", label: "Listen" }
+];
+function openStory(track){
+  cur = track; activeTile = null; panelCache = {};
+  addRecent(track); renderRecents();
+  document.getElementById("storyHead").innerHTML =
+    '<div class="heroCard">'+(track.artwork ? '<img src="'+esc(track.artwork)+'" alt="">' : '')+
+    '<div><div class="t">'+esc(track.song)+'</div><div style="opacity:.9">'+esc(track.artist)+(track.year ? ' · '+track.year : '')+'</div>'+
+    (track.album ? '<div style="opacity:.85">💿 '+esc(track.album)+'</div>' : '')+'</div></div>';
+  document.getElementById("tiles").innerHTML = TILES.map(function(t){
+    return '<button class="tile" data-tile="'+t.id+'">'+t.icon+' '+t.label+'</button>';
+  }).join("");
+  document.getElementById("panelWrap").innerHTML = "";
+  document.querySelectorAll("[data-tile]").forEach(function(b){ b.addEventListener("click", function(){ toggleTile(b.getAttribute("data-tile")); }); });
+  showView("story");
+}
+function toggleTile(id){
+  if (activeTile === id) { activeTile = null; document.getElementById("panelWrap").innerHTML = ""; markTiles(); return; }
+  activeTile = id; markTiles();
+  var wrap = document.getElementById("panelWrap");
+  if (panelCache[id]) { wrap.innerHTML = panelCache[id]; afterPanelRender(id); return; }
+  wrap.innerHTML = '<div class="panel">Loading…</div>';
+  loadPanel(id).then(function(html){ panelCache[id] = html; if (activeTile === id) { wrap.innerHTML = html; afterPanelRender(id); } })
+    .catch(function(){ if (activeTile === id) wrap.innerHTML = '<div class="panel">Couldn\'t load this — check your connection.</div>'; });
+}
+function markTiles(){ document.querySelectorAll("[data-tile]").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-tile") === activeTile); }); }
+
+/* ---------- Wikipedia helpers ---------- */
+function wikiArticle(title){
+  var qs = "action=query&prop=extracts|info&explaintext=1&inprop=url&titles="+encodeURIComponent(title)+"&format=json&origin=*";
+  return fetch("https://en.wikipedia.org/w/api.php?"+qs).then(function(r){ return r.json(); }).then(function(j){
+    var pages = j.query.pages; var p = pages[Object.keys(pages)[0]];
+    if (!p || p.missing != null || !p.extract) return null;
+    return { title: p.title, text: p.extract, url: p.fullurl };
+  }).catch(function(){ return null; });
+}
+function wikiSearchTitles(q){
+  return fetch("https://en.wikipedia.org/w/api.php?action=opensearch&namespace=0&limit=5&format=json&origin=*&search="+encodeURIComponent(q))
+    .then(function(r){ return r.json(); }).then(function(j){ return j[1] || []; }).catch(function(){ return []; });
+}
+function splitParas(text){ return String(text || "").split(/\n+/).map(function(p){ return p.trim(); }).filter(function(p){ return p && !/^=+\s/.test(p); }); }
+function findSection(text, titleRegex){
+  var lines = String(text || "").split("\n");
+  var out = [], on = false;
+  for (var i = 0; i < lines.length; i++) {
+    var t = lines[i].trim();
+    if (/^==\s*[^=]+\s*==$/.test(t)) { if (on) break; if (titleRegex.test(t.replace(/=/g,"").trim())) on = true; continue; }
+    if (/^===/.test(t) && on) continue;
+    if (on) out.push(lines[i]);
+  }
+  return out.join("\n").trim();
+}
+function parasHtml(text, limit){
+  var paras = splitParas(text).slice(0, limit || 6);
+  return paras.map(function(p){ return '<p>'+esc(p)+'</p>'; }).join("");
+}
+function songWikiCandidates(){
+  return [cur.song + " (" + cur.artist + " song)", cur.song + " (song)", cur.song];
+}
+function loadSongWiki(){
+  var titles = songWikiCandidates(); var chain = Promise.resolve(null);
+  titles.forEach(function(t){ chain = chain.then(function(found){ return found || wikiArticle(t); }); });
+  return chain;
+}
+
+/* ---------- Panels ---------- */
+function loadPanel(id){
+  if (id === "lyrics") return loadLyrics();
+  if (id === "meaning") return loadWikiPanel("meaning");
+  if (id === "making") return loadWikiPanel("making");
+  if (id === "result") return loadResult();
+  if (id === "chords") return Promise.resolve(loadChords());
+  if (id === "facts") return loadFacts();
+  if (id === "artist") return loadArtist();
+  if (id === "share") return Promise.resolve(loadShare());
+  if (id === "listen") return Promise.resolve(loadListen());
+  return Promise.resolve('<div class="panel">—</div>');
+}
+var lyricLines = [];
+function loadLyrics(){
+  return fetch("https://api.lyrics.ovh/v1/"+encodeURIComponent(cur.artist)+"/"+encodeURIComponent(cur.song))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j.lyrics) throw new Error("none");
+      lyricLines = String(j.lyrics).split("\n");
+      return '<div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">🎤 Lyrics</h3><button class="btn small" id="lyricsRead">🔊 Read Aloud</button></div>' +
+        '<div style="margin-top:10px">' + lyricLines.map(function(l, i){ return '<div class="lyricline" data-line="'+i+'">'+esc(l || " ") + '</div>'; }).join("") + '</div>' +
+        '<p style="font-size:12.5px;color:#6b5ca8;margin-top:10px">Lyrics via lyrics.ovh. Want the story behind this song? Tap Making Story. Questions about wording? <a target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent(cur.song+" "+cur.artist+" meaning")+'">Search the web</a>.</p></div>';
+    })
+    .catch(function(){
+      return '<div class="panel"><h3>🎤 Lyrics</h3><p>Lyrics for this song aren\'t available from lyrics.ovh. You can <a target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent(cur.song+" "+cur.artist+" lyrics")+'">search the web for the lyrics</a> instead — this app won\'t invent them.</p></div>';
+    });
+}
+function loadWikiPanel(kind){
+  return loadSongWiki().then(function(art){
+    var label = kind === "meaning" ? "📖 Meaning" : "🎬 Making Story";
+    if (!art) {
+      var msg = kind === "meaning" ? "interpretation" : "making-of story";
+      return '<div class="panel"><h3>'+label+'</h3><p>Wikipedia has no article for this song, so there\'s no sourced '+msg+' to show. Try the <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/'+encodeURIComponent(cur.artist.replace(/ /g,"_"))+'">'+esc(cur.artist)+' article</a>, or a <a target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent(cur.song+" "+cur.artist+" "+(kind==="meaning" ? "meaning" : "story behind"))+'">web search</a>. Nothing here is AI-written.</p></div>';
+    }
+    var regex = kind === "meaning" ? /(background|composition|meaning|lyrics|interpretation|writing)/i : /(background|writing|recording|production|development|making|history)/i;
+    var section = findSection(art.text, regex);
+    var body = section ? parasHtml(section, 6) : parasHtml(art.text, 4);
+    return '<div class="panel"><h3>'+label+'</h3>' + body +
+      '<p style="font-size:12.5px;color:#6b5ca8">From the Wikipedia article “'+esc(art.title)+'”. <a target="_blank" rel="noopener" href="'+esc(art.url)+'">Read the full article</a>.</p></div>';
+  });
+}
+function loadResult(){
+  var stats = [];
+  if (cur.releaseDate) stats.push({ n: fmtDate(cur.releaseDate), l: "Release date" });
+  if (cur.album) stats.push({ n: cur.album, l: "Album" });
+  if (cur.trackNumber) stats.push({ n: cur.trackNumber + (cur.trackCount ? " of " + cur.trackCount : ""), l: "Track number" });
+  if (cur.lengthMs) stats.push({ n: fmtLen(cur.lengthMs), l: "Length" });
+  if (cur.genre) stats.push({ n: cur.genre, l: "Genre" });
+  if (cur.explicit) stats.push({ n: "Explicit", l: "Advisory" });
+  return loadSongWiki().then(function(art){
+    var reception = art ? findSection(art.text, /(reception|chart|commercial|critical|accolades|legacy)/i) : "";
+    return '<div class="panel"><h3>🏆 Result — the real data</h3>' +
+      '<div class="statgrid">' + stats.map(function(s){ return '<div class="stat"><div class="n">'+esc(s.n)+'</div><div class="l">'+esc(s.l)+'</div></div>'; }).join("") + '</div>' +
+      (reception ? '<h3>Reception &amp; charts (from Wikipedia)</h3>' + parasHtml(reception, 5) : '<p>No chart or reception data is shown: the original app filled this panel with AI-estimated figures. Only verified data appears here — release facts above from iTunes.</p>') +
+      '<p style="font-size:12.5px;color:#6b5ca8">Sources: iTunes catalog' + (art ? ' · Wikipedia “'+esc(art.title)+'”' : '') + '. <a target="_blank" rel="noopener" href="'+esc(cur.appleUrl)+'">View on Apple Music</a></p></div>';
+  });
+}
+function loadChords(){
+  var q = encodeURIComponent(cur.song + " " + cur.artist + " chords");
+  return '<div class="panel"><h3>🎸 Guitar Chords</h3><p>Chords live on dedicated chord sites — no free database offers them to apps, and this app won\'t fabricate a chord sheet. Open the song on:</p>' +
+    '<p><a target="_blank" rel="noopener" href="https://www.ultimate-guitar.com/search.php?search_type=title&value='+q+'">Ultimate Guitar — '+esc(cur.song)+' chords</a></p>' +
+    '<p><a target="_blank" rel="noopener" href="https://www.chordie.com/?q='+q+'">Chordie — '+esc(cur.song)+'</a></p>' +
+    '<p><a target="_blank" rel="noopener" href="https://www.google.com/search?q='+q+'">Google — '+esc(cur.song)+' '+esc(cur.artist)+' chords</a></p></div>';
+}
+function loadFacts(){
+  var facts = [];
+  if (cur.releaseDate) facts.push({ e:"📅", t:"Released " + fmtDate(cur.releaseDate), d:"“"+cur.song+"” was released on "+fmtDate(cur.releaseDate)+(cur.album ? ", on the album “"+cur.album+"”" : "")+"." });
+  if (cur.trackNumber) facts.push({ e:"💿", t:"Track " + cur.trackNumber, d:"It's track "+cur.trackNumber+(cur.trackCount ? " of "+cur.trackCount : "")+" on “"+cur.album+"”." });
+  if (cur.lengthMs) facts.push({ e:"⏱", t:"Runs " + fmtLen(cur.lengthMs), d:"The recording is "+fmtLen(cur.lengthMs)+" long." });
+  if (cur.genre) facts.push({ e:"🎧", t:cur.genre, d:"iTunes classifies it as "+cur.genre+"." });
+  return musicBrainzArtist(cur.artist).then(function(mb){
+    if (mb) {
+      if (mb.beginArea) facts.push({ e:"🌍", t:"From " + mb.beginArea, d:cur.artist + " comes from " + mb.beginArea + " (MusicBrainz)." });
+      if (mb.lifeBegin) facts.push({ e:"📆", t:"Active since " + mb.lifeBegin.slice(0,4), d:cur.artist + "'s career began in " + mb.lifeBegin.slice(0,4) + (mb.lifeEnd ? ", ending " + mb.lifeEnd.slice(0,4) : "") + " (MusicBrainz)." });
+      if (mb.type) facts.push({ e:"👤", t:mb.type, d:"MusicBrainz lists " + cur.artist + " as a " + mb.type.toLowerCase() + "." });
+    }
+    if (!facts.length) return '<div class="panel"><h3>⭐ Fun Facts</h3><p>No verified facts could be assembled for this song from iTunes/MusicBrainz. The original app invented 7–8 "facts" with AI — this one won\'t.</p></div>';
+    return '<div class="panel"><h3>⭐ Fun Facts — all from real data</h3>' + facts.map(function(f, i){
+      return '<p><b>'+(i+1)+'. '+f.e+' '+esc(f.t)+'</b><br>'+esc(f.d)+'</p>';
+    }).join("") + '<p style="font-size:12.5px;color:#6b5ca8">Assembled from iTunes and MusicBrainz records — no AI-generated facts.</p></div>';
+  });
+}
+function musicBrainzArtist(name){
+  return fetch("https://musicbrainz.org/ws/2/artist/?limit=1&fmt=json&query="+encodeURIComponent('artist:"'+name+'"'))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      var a = (j.artists || [])[0]; if (!a) return null;
+      return { type: a.type || "", beginArea: (a["begin-area"] && a["begin-area"].name) || (a.area && a.area.name) || "",
+        lifeBegin: (a["life-span"] && a["life-span"].begin) || "", lifeEnd: (a["life-span"] && a["life-span"].ended ? a["life-span"].end : "") || "" };
+    }).catch(function(){ return null; });
+}
+function loadArtist(){
+  return Promise.all([wikiArticle(cur.artist), musicBrainzArtist(cur.artist)]).then(function(res){
+    var art = res[0], mb = res[1];
+    var quick = [];
+    if (cur.genre) quick.push(["Genre", cur.genre]);
+    if (mb && mb.beginArea) quick.push(["Origin", mb.beginArea]);
+    if (mb && mb.lifeBegin) quick.push(["Active Since", mb.lifeBegin.slice(0,4) + (mb.lifeEnd ? "–" + mb.lifeEnd.slice(0,4) : "–now")]);
+    if (mb && mb.type) quick.push(["Type", mb.type]);
+    quick.push(["Known For", "“" + cur.song + "”" + (cur.album ? " · " + cur.album : "")]);
+    return '<div class="panel"><h3>👤 About ' + esc(cur.artist) + '</h3>' +
+      (art ? parasHtml(art.text, 4) : '<p>No Wikipedia biography found for this artist.</p>') +
+      '<h3>Quick Facts</h3>' + quick.map(function(q){ return '<p style="margin:4px 0"><span class="chipp">'+esc(q[0])+'</span> '+esc(q[1])+'</p>'; }).join("") +
+      (art ? '<p style="font-size:12.5px;color:#6b5ca8">Biography from <a target="_blank" rel="noopener" href="'+esc(art.url)+'">Wikipedia</a> · Quick facts from MusicBrainz/iTunes.</p>' : '') + '</div>';
+  });
+}
+var SHARE_CATS = [ ["lyrics","Lyrics"], ["making","Making Story"], ["result","Result"], ["chords","Guitar Chord"], ["facts","Fun Facts"], ["artist","About Artist"] ];
+function loadShare(){
+  return '<div class="panel"><h3>📤 Share</h3><p>Pick what to include — the summary is compiled from the real panels you\'ve loaded (open a tile first to include its content; unloaded ones link out instead).</p>' +
+    SHARE_CATS.map(function(c){ return '<label style="display:flex;gap:8px;align-items:center;margin:6px 0;color:var(--lightink)"><input type="checkbox" data-share="'+c[0]+'" checked style="width:17px;height:17px;accent-color:#7c3aed"> '+c[1]+'</label>'; }).join("") +
+    '<div class="row" style="margin-top:10px"><button class="btn small" id="shareCopy">Copy compiled summary</button><span class="note" id="shareMsg" style="color:#6b5ca8"></span></div></div>';
+}
+function loadListen(){
+  var q = encodeURIComponent(cur.song + " " + cur.artist);
+  return '<div class="panel"><h3>▶️ Listen to this song</h3>' +
+    (cur.preview ? '<p><b>30-second preview (iTunes):</b></p><audio controls src="'+esc(cur.preview)+'"></audio>' : '<p>No preview available for this track.</p>') +
+    '<p style="margin-top:12px"><a target="_blank" rel="noopener" href="https://music.youtube.com/search?q='+q+'">YouTube Music — Search &amp; stream</a></p>' +
+    '<p><a target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query='+q+'+official">YouTube — Watch &amp; listen</a></p>' +
+    '<p><a target="_blank" rel="noopener" href="'+esc(cur.appleUrl)+'">Apple Music — open this track</a></p></div>';
+}
+function afterPanelRender(id){
+  if (id === "lyrics") {
+    var b = document.getElementById("lyricsRead");
+    if (b) b.addEventListener("click", function(){ speakLines(lyricLines); });
+  }
+  if (id === "share") {
+    var c = document.getElementById("shareCopy");
+    if (c) c.addEventListener("click", function(){
+      var chosen = SHARE_CATS.filter(function(cat){ var cb = document.querySelector('[data-share="'+cat[0]+'"]'); return cb && cb.checked; });
+      var parts = ["🎵 " + cur.song + " — " + cur.artist + (cur.year ? " (" + cur.year + ")" : ""), cur.album ? "💿 " + cur.album : ""];
+      chosen.forEach(function(cat){
+        var html = panelCache[cat[0]];
+        if (html) { var tmp = document.createElement("div"); tmp.innerHTML = html; parts.push("\n— " + cat[1] + " —\n" + tmp.textContent.trim().replace(/\n{3,}/g, "\n\n")); }
+        else parts.push("\n— " + cat[1] + " — open the " + cat[1] + " tile in Music Story to load it.");
+      });
+      var text = parts.filter(Boolean).join("\n");
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(function(){ document.getElementById("shareMsg").textContent = "Copied!"; });
+      else document.getElementById("shareMsg").textContent = "Copy isn't available in this browser.";
+    });
+  }
+}
+
+/* ---------- Read aloud ---------- */
+var speaking = false;
+function stopSpeaking(){ try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch(e){} speaking = false;
+  document.querySelectorAll(".lyricline.reading").forEach(function(el){ el.classList.remove("reading"); }); }
+function speakLines(lines){
+  if (!("speechSynthesis" in window)) return;
+  stopSpeaking(); speaking = true;
+  var idx = 0;
+  function next(){
+    if (!speaking || idx >= lines.length) { stopSpeaking(); return; }
+    var line = lines[idx].trim();
+    document.querySelectorAll(".lyricline.reading").forEach(function(el){ el.classList.remove("reading"); });
+    var el = document.querySelector('[data-line="'+idx+'"]');
+    if (el) { el.classList.add("reading"); el.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+    idx++;
+    if (!line) { next(); return; }
+    var u = new SpeechSynthesisUtterance(line); u.lang = "en-US"; u.rate = 0.95;
+    u.onend = next; u.onerror = function(){};
+    speechSynthesis.speak(u);
+  }
+  next();
+}
+
+/* ---------- Backup ---------- */
+function exportBackup(){
+  var blob = new Blob([JSON.stringify(DB, null, 2)], { type:"application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "musicstory-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  document.getElementById("backupMsg").textContent = "Backup exported.";
+}
+function importBackup(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var data = JSON.parse(String(reader.result));
+      if (!data || !Array.isArray(data.recents) || !data.settings) throw new Error("bad format");
+      if (!confirm("Import this backup? It replaces your current Music Story data on this device.")) return;
+      DB = data; lsSet(SEEDFLAG,"1"); saveDB(DB); applySettings(); renderRecents();
+      document.getElementById("backupMsg").textContent = "Backup imported.";
+    } catch(e){ document.getElementById("backupMsg").textContent = "That file is not a valid Music Story backup."; }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Featured today ---------- */
+var FEATURED = ["Yesterday — The Beatles", "Hotel California — Eagles", "Imagine — John Lennon", "Bohemian Rhapsody — Queen", "What a Wonderful World — Louis Armstrong", "Hallelujah — Leonard Cohen", "Let It Be — The Beatles"];
+(function(){
+  var dayIdx = Math.floor(Date.now() / 86400000) % FEATURED.length;
+  var pill = document.querySelector(".pill");
+  if (pill) pill.textContent = "✨ Featured today: " + FEATURED[dayIdx];
+  if (pill) pill.addEventListener("click", function(){
+    document.getElementById("q").value = FEATURED[dayIdx].split(" — ")[0];
+    doSearch();
+  });
+})();
+
+/* ---------- Wiring & init ---------- */
+document.getElementById("deepBtn").addEventListener("click", doSearch);
+document.getElementById("q").addEventListener("keydown", function(e){ if (e.key === "Enter") doSearch(); });
+document.getElementById("q").addEventListener("input", function(){
+  document.getElementById("clearBtn").style.display = this.value ? "" : "none";
+});
+document.getElementById("clearBtn").addEventListener("click", function(){
+  document.getElementById("q").value = ""; document.getElementById("clearBtn").style.display = "none"; document.getElementById("q").focus();
+});
+document.getElementById("backBtn").addEventListener("click", function(){ showView("home"); renderRecents(); });
+document.getElementById("settingsBtn").addEventListener("click", function(){ document.getElementById("settingsDialog").showModal(); });
+document.getElementById("settingsClose").addEventListener("click", function(){ document.getElementById("settingsDialog").close(); });
+document.getElementById("setTheme").addEventListener("change", function(){ DB.settings.theme = this.value; saveDB(DB); applySettings(); });
+document.getElementById("setFont").addEventListener("change", function(){ DB.settings.fontSize = this.value; saveDB(DB); applySettings(); });
+document.getElementById("exportBtn").addEventListener("click", exportBackup);
+document.getElementById("importBackupBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+document.getElementById("importFile").addEventListener("change", function(){ if (this.files && this.files[0]) importBackup(this.files[0]); this.value=""; });
+(function(){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) {
+    var mic = document.getElementById("micBtn"); mic.style.display = "";
+    mic.addEventListener("click", function(){
+      var rec = new SR(); rec.lang = "en-US";
+      rec.onresult = function(e){ document.getElementById("q").value = e.results[0][0].transcript; doSearch(); };
+      rec.onerror = function(){ document.getElementById("homeMsg").textContent = "Couldn't hear anything. Try again."; };
+      rec.start();
+    });
+  }
+})();
+window.MS2 = { getDB: function(){ return DB; }, normalizeTrack: normalizeTrack, openStory: openStory, findSection: findSection, fmtLen: fmtLen };
+applySettings();
+renderRecents();
+</script>
+</body>
+</html>
