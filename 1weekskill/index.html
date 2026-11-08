@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>1WeekSkill — Learn a New Skill in 1 Week</title>
+<meta name="description" content="Enter any skill and get a focused 7-day learning plan with daily 5-10 minute reading sessions — built from real Wikipedia articles.">
+<style>
+:root{
+  --bg:#f5f7ff; --card:#ffffff; --line:#dbe2f5; --ink:#1a2340; --sub:#5d6a8c;
+  --accent:#4f46e5; --accent2:#7c6cf0; --good:#15803d; --gold:#f59e0b;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 44px}
+header.site{text-align:center;padding:26px 10px 4px}
+.logo{font-size:30px;font-weight:800}
+.tagline{color:var(--sub);font-size:14.5px;margin-top:2px}
+.view{display:none}.view.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:11px 0}
+.modecard{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:14px;padding:18px;margin:11px 0;cursor:pointer;background:var(--card);color:var(--ink)}
+.modecard h2{margin:0 0 4px;font-size:18px}
+.modecard p{margin:0;color:var(--sub);font-size:13.5px}
+.modecard:disabled{opacity:.5;cursor:default}
+.infobox{background:#e3ebff;border:1px solid #b9ccff;border-radius:12px;padding:13px 15px;margin:11px 0;font-size:14px;line-height:1.55}
+h1{font-size:22px;margin:16px 0 6px;text-align:center}
+h2{font-size:16px;margin:16px 0 8px}
+.sub{color:var(--sub);font-size:14px;line-height:1.55}
+.note{color:var(--sub);font-size:12.5px;line-height:1.55}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:15px;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:600}
+.btn.good{background:var(--good)}
+.btn.small{padding:7px 12px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+input[type=text]{width:100%;background:#fff;border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:16px;padding:12px;outline:none}
+label{display:block;font-size:13px;color:var(--sub);margin:11px 0 5px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:13.5px;cursor:pointer}
+.chip.on{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}
+.dayrow{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0}
+.daynum{background:var(--accent);color:#fff;font-weight:800;border-radius:50%;width:32px;height:32px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.daynum.done{background:var(--good)}
+.dayrow .t{font-weight:700}
+.dayrow .s{color:var(--sub);font-size:13px;line-height:1.5}
+.reading{font-size:16.5px;line-height:1.75}
+.reading p{margin:0 0 14px}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
+.progressWrap{text-align:center;padding:8px 0}
+.stars{font-size:30px;letter-spacing:4px;color:var(--gold);text-align:center}
+footer{color:var(--sub);font-size:12.5px;text-align:center;padding:20px 10px 6px;line-height:1.6}
+a.ext{color:var(--accent)}
+#printArea{display:none}
+@media print{
+  .wrap, header.site { display:none !important; }
+  #printArea{ display:block !important; color:#000; font-size:12.5px; line-height:1.6; padding:10px; }
+  #printArea h2{ page-break-before:always; }
+  #printArea h2:first-child{ page-break-before:auto; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div style="font-size:34px">⏳</div>
+    <div class="logo">1WeekSkill</div>
+    <div class="tagline">Learn a New Skill in 1 Week</div>
+  </header>
+
+  <!-- HOME -->
+  <section class="view" id="view-home">
+    <div class="infobox">Looking to learn something specific? Use the <b>Learning Planner</b> for multi-week plans.</div>
+    <div id="continueTile"></div>
+    <button class="modecard" id="homeNew"><h2>🎯 New Skill</h2><p>Learn a new skill in 1 week — get a 7-day structured learning plan for any skill</p><p id="newSkillState" style="margin-top:6px"></p></button>
+    <button class="modecard" data-nav="planner"><h2>🗓 Learning Planner</h2><p>Plan bigger goals — create a multi-week roadmap for larger skills and long-term learning</p></button>
+    <button class="modecard" data-nav="history"><h2>📖 Learning History</h2><p>View your completed skills and learning journey</p></button>
+    <p class="note" style="text-align:center">Finish your 7-day plan to see your learning history. 🎉</p>
+  </section>
+
+  <!-- NEW SKILL -->
+  <section class="view" id="view-new">
+    <h1>New Skill</h1>
+    <div id="newBody"></div>
+    <div class="row" style="justify-content:center;margin-top:8px"><button class="btn ghost" data-nav="home">Home</button></div>
+  </section>
+
+  <!-- PLANNER -->
+  <section class="view" id="view-planner">
+    <h1>Learning Planner</h1>
+    <p class="sub" style="text-align:center">Build focused programs that fit your goal ✓<br>Start with a narrow skill — "Plant-based meals" beats "Cooking."</p>
+    <label>What do you want to plan?</label>
+    <input type="text" id="plannerTopic" placeholder="Type a topic...">
+    <label>Length</label>
+    <div class="chips" id="weeksChips">
+      <button class="chip" data-weeks="4">4 weeks</button>
+      <button class="chip on" data-weeks="6">6 weeks</button>
+      <button class="chip" data-weeks="8">8 weeks</button>
+      <button class="chip" data-weeks="12">12 weeks</button>
+    </div>
+    <div class="row" style="margin-top:14px"><button class="btn" id="plannerGo">Plan It!</button><button class="btn ghost" id="plannerSavedBtn">Saved Plans</button><button class="btn ghost" data-nav="home">Home</button></div>
+    <p class="note" id="plannerMsg"></p>
+    <div id="plannerResults"></div>
+  </section>
+
+  <!-- SAVED PLANS -->
+  <section class="view" id="view-saved">
+    <h1>Saved Plans</h1>
+    <div id="savedBody"></div>
+    <div class="row" style="justify-content:center"><button class="btn ghost" data-nav="home">Home</button></div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="view" id="view-history">
+    <h1>🌟 Learning History</h1>
+    <div id="historyBody"></div>
+    <div class="card">
+      <h2 style="margin-top:0">Backup</h2>
+      <p class="note">Your sessions, plans, and history live only on this device/browser. Export a backup file and keep it somewhere safe (e.g. Google Drive); import restores it on another device. Importing replaces current data after you confirm.</p>
+      <div class="row"><button class="btn" id="exportBtn">Export backup</button><button class="btn ghost" id="importBackupBtn">Import backup</button>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none"></div>
+      <p class="note" id="backupMsg"></p>
+    </div>
+    <div class="row" style="justify-content:center"><button class="btn ghost" data-nav="home">Home</button></div>
+  </section>
+
+  <!-- CONTINUE -->
+  <section class="view" id="view-continue">
+    <h1>Continue Learning</h1>
+    <div id="continueBody"></div>
+  </section>
+
+  <!-- SESSION -->
+  <section class="view" id="view-session">
+    <div id="sessionBody"></div>
+  </section>
+
+  <!-- COMPLETION -->
+  <section class="view" id="view-complete">
+    <div style="text-align:center;font-size:52px;padding-top:16px">🏆</div>
+    <h1>Congratulations! 🎉</h1>
+    <p class="sub" style="text-align:center">You have mastered</p>
+    <h1 id="completeSkill" style="margin-top:0"></h1>
+    <div class="stars">★★★★★★★</div>
+    <div class="row" style="justify-content:center;margin-top:18px">
+      <button class="btn ghost" id="completePrint">Download full 7-day content (print / PDF)</button>
+      <button class="btn" id="completeFinish">Finish</button>
+    </div>
+  </section>
+
+  <footer>1WeekSkill — rebuilt as an independent app.<br>All reading content comes from Wikipedia (CC BY-SA). Plans are built from the article's own structure — nothing is AI-written.</footer>
+</div>
+<div id="printArea"></div>
+
+<script>
+"use strict";
+/* Failure-proof storage (works even where localStorage is restricted). */
+var MemStore = {};
+function lsGet(k){ try { return window.localStorage.getItem(k); } catch(e){ return (k in MemStore) ? MemStore[k] : null; } }
+function lsSet(k,v){ try { window.localStorage.setItem(k,v); } catch(e){ MemStore[k]=v; } }
+
+var DBKEY = "oneWeekSkillV1", SEEDFLAG = "oneWeekSkillSeededV1";
+function seedDB(){ return { activeSession: null, savedPlans: [], roadmaps: [], completedSkills: [] }; }
+function loadDB(){
+  var db = null;
+  try { var raw = lsGet(DBKEY); if (raw) db = JSON.parse(raw); } catch(e){ db = null; }
+  if (!db || !Array.isArray(db.savedPlans) || !Array.isArray(db.completedSkills)) { db = seedDB(); lsSet(SEEDFLAG,"1"); saveDB(db); }
+  if (!Array.isArray(db.roadmaps)) db.roadmaps = [];
+  return db;
+}
+function saveDB(db){ try { lsSet(DBKEY, JSON.stringify(db)); } catch(e){} }
+var DB = seedDB();
+try { DB = loadDB(); } catch(e){ /* keep seed */ }
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtDate(iso){ var d = new Date(iso+"T00:00:00"); return isNaN(d) ? iso : d.toLocaleDateString(undefined, { year:"numeric", month:"short", day:"numeric" }); }
+
+/* ---------- Text helpers ---------- */
+function splitSentences(text){
+  return String(text || "").split(/(?<=[.!?])\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
+}
+function trimToWords(text, maxWords){
+  var words = String(text || "").split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return { text: String(text||"").trim(), words: words.length, truncated: false };
+  var sliced = words.slice(0, maxWords).join(" ");
+  var cut = Math.max(sliced.lastIndexOf(". "), sliced.lastIndexOf("? "), sliced.lastIndexOf("! "));
+  var out = cut > 200 ? sliced.slice(0, cut + 1) : sliced;
+  return { text: out, words: out.split(/\s+/).length, truncated: true };
+}
+var PROMPTS = [
+  "In your own words, write 3 sentences explaining today's idea to a friend.",
+  "Name one real situation where you could use what you read today.",
+  "What was the most surprising point in today's reading? Why?",
+  "Teach-back: say out loud how today's topic connects to yesterday's.",
+  "Write down one question today's reading left unanswered — and where you would look it up.",
+  "List 3 terms from today you'd put on flashcards, with a one-line meaning for each.",
+  "Final reflection: what can you now explain or do that you couldn't a week ago?"
+];
+
+/* Build a 7-day course from a real article: lead + sections (pure; testable). */
+function buildCourse(article){
+  var skip = /^(see also|references|external links|notes|further reading|bibliography|sources|works cited)$/i;
+  var units = [];
+  if (article.lead && article.lead.split(/\s+/).length >= 30) units.push({ title: "Introduction", text: article.lead });
+  (article.sections || []).forEach(function(s){
+    if (skip.test(s.title)) return;
+    if (s.text && s.text.split(/\s+/).length >= 40) units.push({ title: s.title, text: s.text });
+  });
+  if (!units.length && article.lead) units = [{ title: "Introduction", text: article.lead }];
+  /* Split the longest unit (at a sentence midpoint) until we have 6 units. */
+  var guard = 0;
+  while (units.length < 6 && guard++ < 8) {
+    var li = -1, lw = 0;
+    units.forEach(function(u, i){ var w = u.text.split(/\s+/).length; if (w > lw) { lw = w; li = i; } });
+    if (li < 0 || lw < 240) break;
+    var sents = splitSentences(units[li].text);
+    if (sents.length < 4) break;
+    var mid = Math.floor(sents.length / 2);
+    var a = sents.slice(0, mid).join(" "), b = sents.slice(mid).join(" ");
+    units.splice(li, 1, { title: units[li].title, text: a }, { title: units[li].title + " (continued)", text: b });
+  }
+  units = units.slice(0, 6);
+  var days = units.map(function(u, i){
+    var trimmed = trimToWords(u.text, 1400);
+    var sents = splitSentences(trimmed.text);
+    return { day: i + 1, title: u.title, summary: trimmed.text.slice(0, 170) + (trimmed.text.length > 170 ? "…" : ""),
+      content: trimmed.text, keyTakeaways: sents.slice(0, 3).map(function(s){ return s.length > 150 ? s.slice(0, 147) + "…" : s; }),
+      practicePrompt: PROMPTS[i % PROMPTS.length], words: trimmed.words, minutes: Math.max(1, Math.round(trimmed.words / 140)),
+      sourceUrl: article.url, short: trimmed.words < 300 };
+  });
+  var leadTrim = trimToWords(article.lead || (units[0] ? units[0].text : ""), 900);
+  days.push({ day: 7, title: "Review & Consolidate", summary: "Re-read the introduction, revisit the week's key points, and reflect on what you can now explain.",
+    content: "Use today to consolidate the week. Re-read this introduction, skim each day's key points, and notice how the pieces fit together.\n\n" + leadTrim.text,
+    keyTakeaways: days.map(function(d){ return "Day " + d.day + ": " + d.title; }), practicePrompt: PROMPTS[6],
+    words: leadTrim.words, minutes: Math.max(1, Math.round(leadTrim.words / 140)), sourceUrl: article.url, short: false });
+  return days;
+}
+
+/* ---------- Wikipedia ---------- */
+var WIKI = "https://en.wikipedia.org/w/api.php";
+function wikiGet(params){
+  params.format = "json"; params.origin = "*";
+  var qs = Object.keys(params).map(function(k){ return encodeURIComponent(k)+"="+encodeURIComponent(params[k]); }).join("&");
+  return fetch(WIKI + "?" + qs).then(function(r){ return r.json(); });
+}
+function wikiSearch(query, limit){
+  return wikiGet({ action: "opensearch", search: query, limit: limit || 8, namespace: 0 }).then(function(j){
+    return (j && j[1] || []).map(function(t, i){ return { title: t, url: j[3][i], snippet: j[2][i] || "" }; });
+  });
+}
+function fetchArticle(title){
+  return Promise.all([
+    wikiGet({ action: "parse", page: title, prop: "sections" }),
+    wikiGet({ action: "query", prop: "extracts", explaintext: 1, titles: title, exsectionformat: "plain" })
+  ]).then(function(res){
+    var secJson = res[0], extJson = res[1];
+    if (!secJson.parse) throw new Error("no article");
+    var pages = extJson.query.pages;
+    var text = pages[Object.keys(pages)[0]].extract || "";
+    var l2 = secJson.parse.sections.filter(function(s){ return s.toclevel === 1; }).map(function(s){ return s.line; });
+    var lines = text.split("\n");
+    var leadLines = [], sections = [], current = null;
+    lines.forEach(function(line){
+      var t = line.trim();
+      if (l2.indexOf(t) !== -1) { current = { title: t, text: "" }; sections.push(current); }
+      else if (current) current.text += line + "\n";
+      else leadLines.push(line);
+    });
+    sections.forEach(function(s){ s.text = s.text.trim(); });
+    return { title: secJson.parse.title, url: "https://en.wikipedia.org/wiki/" + encodeURIComponent(secJson.parse.title.replace(/ /g, "_")), lead: leadLines.join("\n").trim(), sections: sections };
+  });
+}
+function wikiSummary(title){
+  return fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")))
+    .then(function(r){ return r.json(); }).then(function(j){ return { title: j.title, summary: j.extract || "", url: (j.content_urls && j.content_urls.desktop && j.content_urls.desktop.page) || ("https://en.wikipedia.org/wiki/" + encodeURIComponent(title.replace(/ /g,"_"))) }; })
+    .catch(function(){ return { title: title, summary: "", url: "https://en.wikipedia.org/wiki/" + encodeURIComponent(title.replace(/ /g,"_")) }; });
+}
+
+/* ---------- Views ---------- */
+var currentView = "home";
+function showView(v){
+  stopReading();
+  currentView = v;
+  document.querySelectorAll(".view").forEach(function(s){ s.classList.remove("active"); });
+  var el = document.getElementById("view-"+v); if (el) el.classList.add("active");
+  window.scrollTo(0,0);
+}
+
+/* ---------- Home ---------- */
+function renderHome(){
+  var s = DB.activeSession;
+  document.getElementById("continueTile").innerHTML = s ?
+    '<button class="modecard" id="tileContinue" style="border-color:var(--accent)"><h2>🎯 Let\'s finish Week 1!</h2><p>'+esc(s.skill)+' — Day '+s.currentDay+' of 7 · Click to resume your current week\'s course</p></button>' : "";
+  var tile = document.getElementById("tileContinue");
+  if (tile) tile.addEventListener("click", function(){ renderContinue(); showView("continue"); });
+  document.getElementById("newSkillState").textContent = s ? "Finish or quit your active session first" : "No active learning sessions";
+  document.getElementById("homeNew").disabled = !!s;
+}
+
+/* ---------- New Skill flow ---------- */
+var draft = null;
+function renderNewInput(msg){
+  document.getElementById("newBody").innerHTML =
+    '<p class="sub" style="text-align:center">What do you want to learn?</p>' +
+    '<input type="text" id="skillInput" placeholder="Type Your Skill... e.g. Thai cooking, Coding">' +
+    (msg ? '<p class="note" style="text-align:center">'+esc(msg)+'</p>' : '') +
+    '<div id="skillChoices"></div>' +
+    '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" id="genBtn">Generate My Plan</button></div>' +
+    '<p class="note" style="text-align:center">The plan is built from the topic\'s real Wikipedia article — its introduction and section structure become your 7 days.</p>';
+  document.getElementById("genBtn").addEventListener("click", function(){
+    var q = document.getElementById("skillInput").value.trim(); if (!q) return;
+    generateFor(q, null);
+  });
+  document.getElementById("skillInput").addEventListener("keydown", function(e){ if (e.key === "Enter") document.getElementById("genBtn").click(); });
+}
+function generateFor(query, chosenTitle){
+  var body = document.getElementById("newBody");
+  body.innerHTML = '<p class="sub" style="text-align:center">- Creating your 7-day plan<br>- Building all 7 days from Wikipedia…</p>';
+  var resolveP = chosenTitle ? Promise.resolve(chosenTitle) :
+    wikiSearch(query, 8).then(function(results){
+      if (!results.length) throw new Error("none");
+      var exact = results.filter(function(r){ return r.title.toLowerCase() === query.toLowerCase(); })[0];
+      if (exact) return exact.title;
+      if (results.length === 1) return results[0].title;
+      /* let the user pick */
+      renderNewInput("");
+      document.getElementById("skillInput").value = query;
+      document.getElementById("skillChoices").innerHTML = '<p class="sub">Pick the article that matches what you mean:</p>' +
+        results.map(function(r, i){ return '<button class="modecard" data-choice="'+i+'"><h2 style="font-size:16px">'+esc(r.title)+'</h2><p>'+esc(r.snippet.slice(0,140))+'</p></button>'; }).join("");
+      document.querySelectorAll("[data-choice]").forEach(function(b){ b.addEventListener("click", function(){ generateFor(query, results[parseInt(b.getAttribute("data-choice"),10)].title); }); });
+      throw new Error("choosing");
+    });
+  resolveP.then(function(title){
+    return fetchArticle(title).then(function(article){
+      return wikiSearch(query, 8).catch(function(){ return []; }).then(function(related){
+        draft = { skill: query, articleTitle: article.title, url: article.url, dailyContent: buildCourse(article), suggestions: related.map(function(r){ return r.title; }).filter(function(t){ return t !== article.title; }).slice(0, 5) };
+        draft.plan = draft.dailyContent.map(function(d){ return { day: d.day, title: d.title, summary: d.summary }; });
+        renderPlanPreview();
+      });
+    });
+  }).catch(function(e){
+    if (e && e.message === "choosing") return;
+    renderNewInput("No Wikipedia article found for that topic. Try a broader or differently worded skill — plans are built from real articles, so a topic needs one.");
+  });
+}
+function renderPlanPreview(){
+  var shortNote = draft.dailyContent.some(function(d){ return d.short; });
+  document.getElementById("newBody").innerHTML =
+    '<h2 style="text-align:center">Suggested 1 Week Learning Plan</h2>' +
+    '<p class="sub" style="text-align:center"><b>'+esc(draft.skill)+'</b> — from Wikipedia: <a class="ext" target="_blank" rel="noopener" href="'+esc(draft.url)+'">'+esc(draft.articleTitle)+'</a></p>' +
+    draft.dailyContent.map(function(d){
+      return '<div class="dayrow"><span class="daynum">'+d.day+'</span><span><span class="t">Day '+d.day+': '+esc(d.title)+'</span><div class="s">'+esc(d.summary)+' <i>(~'+d.minutes+' min read'+(d.short ? ", a shorter day — the article is brief here" : "")+')</i></div></span></div>';
+    }).join("") +
+    (shortNote ? '<p class="note">Some days are shorter than 5 minutes because the source article itself is brief — the app won\'t pad them with invented text.</p>' : '') +
+    (draft.suggestions.length ? '<p class="sub">💡 Or try a more focused topic:</p><div class="chips">' + draft.suggestions.map(function(s, i){ return '<button class="chip" data-sugg="'+i+'">'+esc(s)+'</button>'; }).join("") + '</div>' : '') +
+    '<h2 style="text-align:center">Do you like the plan?</h2>' +
+    '<div class="row" style="justify-content:center"><button class="btn" id="planYes">Yes!</button><button class="btn ghost" id="planAgain">Plan Again</button></div>';
+  document.querySelectorAll("[data-sugg]").forEach(function(b){ b.addEventListener("click", function(){ generateFor(draft.suggestions[parseInt(b.getAttribute("data-sugg"),10)], null); }); });
+  document.getElementById("planAgain").addEventListener("click", function(){ renderNewInput(""); document.getElementById("skillInput").value = draft.skill; });
+  document.getElementById("planYes").addEventListener("click", renderStartConfirm);
+}
+function renderStartConfirm(){
+  document.getElementById("newBody").innerHTML =
+    '<h2 style="text-align:center">Ready to Start?</h2>' +
+    '<p class="sub" style="text-align:center">You\'re about to start <b>'+esc(draft.skill)+'</b> — 7 days, one short reading a day.</p>' +
+    draft.plan.map(function(p){ return '<div class="dayrow"><span class="daynum">'+p.day+'</span><span><span class="t">Day '+p.day+': '+esc(p.title)+'</span></span></div>'; }).join("") +
+    '<h2 style="text-align:center">Start now?</h2>' +
+    '<div class="row" style="justify-content:center"><button class="btn" id="startNow">Start Now</button><button class="btn ghost" id="startLater">Later</button></div>';
+  document.getElementById("startNow").addEventListener("click", function(){
+    DB.activeSession = { skill: draft.skill, articleTitle: draft.articleTitle, plan: draft.plan, dailyContent: draft.dailyContent, currentDay: 1, startDate: todayStr(), completedDays: [] };
+    saveDB(DB); draft = null; renderAll(); renderContinue(); showView("continue");
+  });
+  document.getElementById("startLater").addEventListener("click", function(){
+    DB.savedPlans = DB.savedPlans.filter(function(p){ return p.skill.toLowerCase() !== draft.skill.toLowerCase(); });
+    DB.savedPlans.unshift({ skill: draft.skill, articleTitle: draft.articleTitle, plan: draft.plan, dailyContent: draft.dailyContent, currentDay: 1, startedAt: null, savedAt: todayStr(), isSaved: true });
+    saveDB(DB); draft = null; renderSaved(); showView("saved");
+  });
+}
+
+/* ---------- Continue / Session / Completion ---------- */
+function renderContinue(){
+  var s = DB.activeSession; var body = document.getElementById("continueBody");
+  if (!s) { body.innerHTML = '<p class="sub" style="text-align:center">No active session.</p><div class="row" style="justify-content:center"><button class="btn ghost" data-nav="home">Home</button></div>'; bindNav(body); return; }
+  var done = s.completedDays.length;
+  var pct = Math.round(done / 7 * 100);
+  var remainingMin = s.dailyContent.filter(function(d){ return s.completedDays.indexOf(d.day) === -1; }).reduce(function(a, d){ return a + d.minutes; }, 0);
+  var circ = 2 * Math.PI * 40;
+  body.innerHTML =
+    '<div class="progressWrap"><svg width="110" height="110"><circle cx="55" cy="55" r="40" stroke="var(--line)" stroke-width="9" fill="none"/><circle cx="55" cy="55" r="40" stroke="var(--accent)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="'+circ+'" stroke-dashoffset="'+(circ - circ * done / 7)+'" transform="rotate(-90 55 55)"/><text x="55" y="60" text-anchor="middle" font-size="17" font-weight="800" fill="var(--ink)">'+pct+'%</text></svg>' +
+    '<div class="sub">'+esc(s.skill)+' · Time remaining: ~'+remainingMin+' min</div></div>' +
+    s.dailyContent.map(function(d){
+      var isDone = s.completedDays.indexOf(d.day) !== -1;
+      return '<div class="dayrow"><span class="daynum'+(isDone ? " done" : "")+'">'+(isDone ? "✓" : d.day)+'</span><span><span class="t">Day '+d.day+': '+esc(d.title)+'</span><div class="s">~'+d.minutes+' min read</div></span></div>';
+    }).join("") +
+    '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" id="contBtn">Day '+s.currentDay+' of 7 — Continue Learning</button></div>' +
+    '<div class="row" style="justify-content:center;margin-top:8px"><button class="btn ghost" id="printBtn">Download full 7-day content (print / PDF)</button><button class="btn ghost" id="quitBtn">Quit (Give Up)</button><button class="btn ghost" data-nav="home">Home</button></div>';
+  bindNav(body);
+  document.getElementById("contBtn").addEventListener("click", function(){ renderSession(); showView("session"); });
+  document.getElementById("printBtn").addEventListener("click", function(){ printCourse(s); });
+  document.getElementById("quitBtn").addEventListener("click", function(){
+    if (confirm("Give up this skill? You can download the full 7-day content first (use the print button). The session will be cleared.")) {
+      DB.activeSession = null; saveDB(DB); renderAll(); showView("home");
+    }
+  });
+}
+var lastCompleted = null;
+function completeDay(){
+  var s = DB.activeSession; if (!s) return false;
+  if (s.completedDays.indexOf(s.currentDay) === -1) s.completedDays.push(s.currentDay);
+  if (s.currentDay >= 7) {
+    DB.completedSkills.unshift({ skill: s.skill, startDate: s.startDate, endDate: todayStr(), plannedDays: 7, daysCompleted: s.completedDays.length });
+    lastCompleted = s; DB.activeSession = null; saveDB(DB);
+    document.getElementById("completeSkill").textContent = s.skill;
+    renderAll(); showView("complete");
+    return true;
+  }
+  s.currentDay += 1; saveDB(DB); renderAll(); renderContinue(); showView("continue");
+  return true;
+}
+function renderSession(){
+  var s = DB.activeSession; if (!s) return;
+  var d = s.dailyContent.filter(function(x){ return x.day === s.currentDay; })[0]; if (!d) return;
+  var paras = d.content.split(/\n+/).map(function(p){ return p.trim(); }).filter(Boolean);
+  document.getElementById("sessionBody").innerHTML =
+    '<div class="row"><button class="btn ghost small" id="sessBack">← Back</button><span class="pill">Day '+d.day+' of 7</span><span class="pill">~'+d.minutes+' min</span></div>' +
+    '<h1 style="text-align:left">'+esc(d.title)+'</h1>' +
+    '<p class="note">'+esc(s.skill)+' · Source: <a class="ext" target="_blank" rel="noopener" href="'+esc(d.sourceUrl)+'">Wikipedia</a></p>' +
+    (("speechSynthesis" in window) ? '<div class="card"><b>🔊 Listen</b><div class="row" style="margin-top:8px"><button class="btn small" id="readBtn">▶ Read aloud</button><button class="btn ghost small" id="pauseBtn">⏸ Pause</button><button class="btn ghost small" id="stopBtn">⏹ Stop</button></div></div>' : '') +
+    '<div class="reading">' + paras.map(function(p){ return '<p>'+esc(p)+'</p>'; }).join("") + '</div>' +
+    '<div class="card"><b>Key points (the day\'s opening lines)</b><ul style="margin:8px 0 0;padding-left:18px;line-height:1.6">' + d.keyTakeaways.map(function(k){ return '<li>'+esc(k)+'</li>'; }).join("") + '</ul></div>' +
+    '<div class="card"><b>Practice</b><p class="sub" style="margin:6px 0 0">'+esc(d.practicePrompt)+'</p></div>' +
+    '<div class="row" style="justify-content:center;margin:14px 0"><button class="btn good" id="doneBtn">That\'s Done ✓</button></div>';
+  document.getElementById("sessBack").addEventListener("click", function(){ renderContinue(); showView("continue"); });
+  document.getElementById("doneBtn").addEventListener("click", completeDay);
+  var rb = document.getElementById("readBtn");
+  if (rb) {
+    rb.addEventListener("click", function(){ speakText(d.content); });
+    document.getElementById("pauseBtn").addEventListener("click", function(){ try { if (speechSynthesis.speaking && !speechSynthesis.paused) speechSynthesis.pause(); else speechSynthesis.resume(); } catch(e){} });
+    document.getElementById("stopBtn").addEventListener("click", stopReading);
+  }
+}
+function speakText(text){
+  stopReading();
+  if (!("speechSynthesis" in window)) return;
+  var sents = splitSentences(String(text).replace(/\n+/g, " "));
+  var idx = 0;
+  function next(){
+    if (idx >= sents.length) return;
+    var u = new SpeechSynthesisUtterance(sents[idx]); idx++;
+    u.onend = next; u.onerror = function(){}; speechSynthesis.speak(u);
+  }
+  next();
+}
+function stopReading(){ try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch(e){} }
+function printCourse(course){
+  var s = course || DB.activeSession || lastCompleted; if (!s) return;
+  document.getElementById("printArea").innerHTML = '<h1>'+esc(s.skill)+' — full 7-day content</h1><p>Source: Wikipedia ('+esc(s.articleTitle || "")+')</p>' +
+    s.dailyContent.map(function(d){ return '<h2>Day '+d.day+': '+esc(d.title)+'</h2>' + d.content.split(/\n+/).filter(Boolean).map(function(p){ return '<p>'+esc(p)+'</p>'; }).join("") + '<p><i>Practice: '+esc(d.practicePrompt)+'</i></p>'; }).join("");
+  window.print();
+}
+
+/* ---------- Planner ---------- */
+var plannerWeeks = 6;
+function runPlanner(){
+  var topic = document.getElementById("plannerTopic").value.trim(); if (!topic) return;
+  var msg = document.getElementById("plannerMsg"), box = document.getElementById("plannerResults");
+  msg.textContent = "Building your roadmap from real Wikipedia articles…"; box.innerHTML = "";
+  wikiSearch(topic, 12).then(function(results){
+    if (!results.length) { msg.textContent = "No Wikipedia articles found for that topic."; return; }
+    var main = results[0];
+    return wikiGet({ action: "query", prop: "links", titles: main.title, pllimit: 120, plnamespace: 0 }).then(function(j){
+      var pages = j.query.pages; var links = ((pages[Object.keys(pages)[0]].links) || []).map(function(l){ return l.title; })
+        .filter(function(t){ return !/^(List of|Index of|Outline of)/.test(t) && t.indexOf(":") === -1 && !/disambiguation/i.test(t); });
+      var titles = [main.title];
+      results.slice(1).forEach(function(r){ if (titles.indexOf(r.title) === -1) titles.push(r.title); });
+      links.forEach(function(t){ if (titles.indexOf(t) === -1) titles.push(t); });
+      titles = titles.slice(0, plannerWeeks);
+      return Promise.all(titles.map(function(t){ return wikiSummary(t); })).then(function(weeks){
+        var roadmap = { id: "rm-"+Date.now(), skill: topic, createdAt: todayStr(), weeks: weeks.map(function(w, i){ return { week: i + 1, title: w.title, summary: w.summary, url: w.url }; }), weeksDone: [] };
+        renderRoadmap(roadmap, box, true);
+        msg.textContent = "Each week is one real article to read. Save the roadmap to mark weeks done as you go.";
+      });
+    });
+  }).catch(function(){ msg.textContent = "Planner failed — check your connection."; });
+}
+function renderRoadmap(rm, box, withSave){
+  box.innerHTML = '<h2>'+esc(rm.skill)+' — '+rm.weeks.length+'-week roadmap</h2>' +
+    rm.weeks.map(function(w){
+      var done = (rm.weeksDone || []).indexOf(w.week) !== -1;
+      return '<div class="dayrow"><span class="daynum'+(done ? " done" : "")+'">'+(done ? "✓" : w.week)+'</span><span><span class="t">Week '+w.week+': <a class="ext" target="_blank" rel="noopener" href="'+esc(w.url)+'">'+esc(w.title)+'</a></span><div class="s">'+esc((w.summary || "").slice(0, 200))+'</div></span></div>';
+    }).join("") +
+    (withSave ? '<div class="row"><button class="btn" id="saveRoadmap">Save this roadmap</button></div>' : '');
+  var sb = document.getElementById("saveRoadmap");
+  if (sb) sb.addEventListener("click", function(){ DB.roadmaps.unshift(rm); saveDB(DB); sb.textContent = "Saved ✓"; renderSaved(); });
+}
+
+/* ---------- Saved Plans ---------- */
+function renderSaved(){
+  var body = document.getElementById("savedBody");
+  var html = "";
+  if (!DB.savedPlans.length && !DB.roadmaps.length) html += '<div class="card"><p class="sub" style="margin:0">No saved plans yet.</p></div>';
+  DB.savedPlans.forEach(function(p, i){
+    html += '<div class="card"><b>🎯 '+esc(p.skill)+'</b> <span class="pill">7-day plan</span><div class="note">Saved '+esc(fmtDate(p.savedAt))+' · from Wikipedia: '+esc(p.articleTitle || "")+'</div>' +
+      '<div class="row" style="margin-top:8px"><button class="btn small" data-startplan="'+i+'"'+(DB.activeSession ? " disabled" : "")+'>Start</button><button class="btn ghost small" data-printplan="'+i+'">Print / PDF</button><button class="btn ghost small" data-delplan="'+i+'">Delete</button></div>' +
+      (DB.activeSession ? '<p class="note">Finish or quit the active session to start this one.</p>' : '') + '</div>';
+  });
+  DB.roadmaps.forEach(function(rm, i){
+    html += '<div class="card"><b>🗓 '+esc(rm.skill)+'</b> <span class="pill">'+rm.weeks.length+'-week roadmap</span><div class="note">Saved '+esc(fmtDate(rm.createdAt))+' · '+(rm.weeksDone || []).length+' of '+rm.weeks.length+' weeks done</div>' +
+      rm.weeks.map(function(w){
+        var done = (rm.weeksDone || []).indexOf(w.week) !== -1;
+        return '<label style="display:flex;gap:9px;align-items:flex-start;margin:7px 0;color:var(--ink);font-size:14.5px"><input type="checkbox" data-rmweek="'+i+':'+w.week+'"'+(done ? " checked" : "")+' style="width:17px;height:17px;margin-top:2px;accent-color:var(--good)"><span>Week '+w.week+': <a class="ext" target="_blank" rel="noopener" href="'+esc(w.url)+'">'+esc(w.title)+'</a></span></label>';
+      }).join("") +
+      '<div class="row"><button class="btn ghost small" data-delrm="'+i+'">Delete roadmap</button></div></div>';
+  });
+  body.innerHTML = html;
+  body.querySelectorAll("[data-startplan]").forEach(function(b){ b.addEventListener("click", function(){
+    var p = DB.savedPlans[parseInt(b.getAttribute("data-startplan"),10)];
+    DB.activeSession = { skill: p.skill, articleTitle: p.articleTitle, plan: p.plan, dailyContent: p.dailyContent, currentDay: 1, startDate: todayStr(), completedDays: [] };
+    DB.savedPlans.splice(parseInt(b.getAttribute("data-startplan"),10), 1);
+    saveDB(DB); renderAll(); renderContinue(); showView("continue");
+  }); });
+  body.querySelectorAll("[data-printplan]").forEach(function(b){ b.addEventListener("click", function(){ printCourse(DB.savedPlans[parseInt(b.getAttribute("data-printplan"),10)]); }); });
+  body.querySelectorAll("[data-delplan]").forEach(function(b){ b.addEventListener("click", function(){ DB.savedPlans.splice(parseInt(b.getAttribute("data-delplan"),10),1); saveDB(DB); renderSaved(); }); });
+  body.querySelectorAll("[data-delrm]").forEach(function(b){ b.addEventListener("click", function(){ DB.roadmaps.splice(parseInt(b.getAttribute("data-delrm"),10),1); saveDB(DB); renderSaved(); }); });
+  body.querySelectorAll("[data-rmweek]").forEach(function(cb){ cb.addEventListener("change", function(){
+    var parts = cb.getAttribute("data-rmweek").split(":"); var rm = DB.roadmaps[parseInt(parts[0],10)]; var wk = parseInt(parts[1],10);
+    rm.weeksDone = rm.weeksDone || [];
+    if (cb.checked) { if (rm.weeksDone.indexOf(wk) === -1) rm.weeksDone.push(wk); }
+    else rm.weeksDone = rm.weeksDone.filter(function(x){ return x !== wk; });
+    saveDB(DB); renderSaved();
+  }); });
+}
+
+/* ---------- History ---------- */
+function renderHistory(){
+  document.getElementById("historyBody").innerHTML =
+    '<p class="sub" style="text-align:center">'+DB.completedSkills.length+' skills completed</p>' +
+    (DB.completedSkills.length ?
+      '<div class="card"><table><tr><th>Skill</th><th>Start</th><th>End</th></tr>' +
+      DB.completedSkills.map(function(c){ return '<tr><td>'+esc(c.skill)+'</td><td>'+esc(fmtDate(c.startDate))+'</td><td>'+esc(fmtDate(c.endDate))+'</td></tr>'; }).join("") + '</table></div>' :
+      '<div class="card"><p class="sub" style="margin:0;text-align:center">No completed skills yet!<br>Start by creating a new skill</p></div>');
+}
+
+/* ---------- Backup ---------- */
+function exportBackup(){
+  var blob = new Blob([JSON.stringify(DB, null, 2)], { type:"application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "1weekskill-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  document.getElementById("backupMsg").textContent = "Backup exported — keep the file somewhere safe (e.g. Google Drive).";
+}
+function importBackup(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var data = JSON.parse(String(reader.result));
+      if (!data || !Array.isArray(data.savedPlans) || !Array.isArray(data.completedSkills)) throw new Error("bad format");
+      if (!confirm("Import this backup? It replaces your current 1WeekSkill data on this device.")) return;
+      DB = data; if (!Array.isArray(DB.roadmaps)) DB.roadmaps = [];
+      lsSet(SEEDFLAG,"1"); saveDB(DB); renderAll();
+      document.getElementById("backupMsg").textContent = "Backup imported.";
+    } catch(e){ document.getElementById("backupMsg").textContent = "That file is not a valid 1WeekSkill backup."; }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Wiring & init ---------- */
+function bindNav(root){
+  (root || document).querySelectorAll("[data-nav]").forEach(function(b){
+    if (b.__bound) return; b.__bound = true;
+    b.addEventListener("click", function(){ showView(b.getAttribute("data-nav")); });
+  });
+}
+function renderAll(){ renderHome(); renderSaved(); renderHistory(); }
+document.getElementById("homeNew").addEventListener("click", function(){ if (!DB.activeSession) { renderNewInput(""); showView("new"); } });
+document.querySelectorAll("#weeksChips .chip").forEach(function(c){ c.addEventListener("click", function(){
+  document.querySelectorAll("#weeksChips .chip").forEach(function(x){ x.classList.remove("on"); });
+  c.classList.add("on"); plannerWeeks = parseInt(c.getAttribute("data-weeks"),10);
+}); });
+document.getElementById("plannerGo").addEventListener("click", runPlanner);
+document.getElementById("plannerSavedBtn").addEventListener("click", function(){ renderSaved(); showView("saved"); });
+document.getElementById("completePrint").addEventListener("click", function(){ printCourse(lastCompleted); });
+document.getElementById("completeFinish").addEventListener("click", function(){ lastCompleted = null; renderAll(); showView("home"); });
+document.getElementById("exportBtn").addEventListener("click", exportBackup);
+document.getElementById("importBackupBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+document.getElementById("importFile").addEventListener("change", function(){ if (this.files && this.files[0]) importBackup(this.files[0]); this.value=""; });
+bindNav(document);
+window.OWS = { getDB: function(){ return DB; }, buildCourse: buildCourse, completeDay: completeDay,
+  startDraft: function(d){ draft = d; renderStartConfirm(); showView("new"); } };
+renderAll();
+showView("home");
+</script>
+</body>
+</html>
