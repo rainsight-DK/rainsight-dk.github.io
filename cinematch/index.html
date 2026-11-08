@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineMatch</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0a0a0f; color: #eceaf2; min-height: 100vh; }
+  header { background: #10101a; border-bottom: 1px solid #26263a; padding: 14px 16px 10px; position: sticky; top: 0; z-index: 20; }
+  .brand { font-size: 24px; font-weight: 900; letter-spacing: 2px; }
+  .brand span { color: #a78bfa; }
+  .tagline { color: #9a97ad; font-size: 12px; margin-top: 2px; }
+  nav { display: flex; gap: 6px; margin-top: 12px; overflow-x: auto; padding-bottom: 4px; }
+  nav button { flex: 1 0 auto; background: #1a1a2b; color: #c9c6da; border: 1px solid #2e2e47; border-radius: 999px; padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  nav button.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+  main { padding: 16px; max-width: 880px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+  h1 { font-size: 24px; font-weight: 900; letter-spacing: .5px; margin-bottom: 6px; }
+  h2 { font-size: 15px; font-weight: 800; letter-spacing: 1.5px; color: #c4b5fd; margin: 22px 0 10px; text-transform: uppercase; }
+  .sub { color: #9a97ad; font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
+  .card { background: #12121e; border: 1px solid #262640; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  input[type=text], input[type=number], input[type=url], input[type=date], select, textarea { width: 100%; background: #0d0d16; border: 1px solid #33334f; border-radius: 10px; color: #eceaf2; padding: 10px; font-size: 14px; margin-bottom: 8px; }
+  textarea { min-height: 60px; resize: vertical; }
+  label { display: block; font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #9a97ad; text-transform: uppercase; margin: 8px 0 4px; }
+  .btn { display: inline-block; background: #7c3aed; color: #fff; border: none; border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 800; cursor: pointer; text-decoration: none; text-align: center; }
+  .btn.ghost { background: #1c1c2e; color: #c9c6da; border: 1px solid #37375a; }
+  .btn.gold { background: #b8860b; }
+  .btn.small { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+  .btn:disabled { opacity: .45; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+  .chip { background: #1a1a2b; border: 1px solid #33334f; color: #c9c6da; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .chip.on { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+  .chip.static { cursor: default; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .shelf { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+  .shelf .pcard { flex: 0 0 132px; }
+  .pcard { background: #12121e; border: 1px solid #262640; border-radius: 12px; overflow: hidden; cursor: pointer; }
+  .pcard img { width: 100%; height: 190px; object-fit: cover; display: block; background: #1c1c2e; }
+  .noposter { width: 100%; height: 190px; background: linear-gradient(160deg, #241b3a, #14101f); display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; font-weight: 800; font-size: 14px; color: #c4b5fd; }
+  .pcard .pinfo { padding: 8px 10px; }
+  .pcard .ptitle { font-size: 13px; font-weight: 800; line-height: 1.3; }
+  .pcard .pmeta { font-size: 11px; color: #9a97ad; margin-top: 3px; }
+  .score { color: #f5c518; font-weight: 800; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 1px; padding: 2px 7px; border-radius: 6px; background: #2b2140; color: #c4b5fd; text-transform: uppercase; }
+  .badge.film { background: #14342b; color: #6ee7b7; }
+  .entry { display: flex; gap: 12px; background: #12121e; border: 1px solid #262640; border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+  .entry img { width: 54px; height: 78px; object-fit: cover; border-radius: 8px; background: #1c1c2e; flex: 0 0 auto; cursor: pointer; }
+  .entry .noposter { width: 54px; height: 78px; font-size: 9px; border-radius: 8px; flex: 0 0 auto; cursor: pointer; }
+  .entry .emain { flex: 1; min-width: 0; }
+  .entry .etitle { font-weight: 800; font-size: 15px; cursor: pointer; }
+  .entry .emeta { color: #9a97ad; font-size: 12px; margin-top: 2px; }
+  .memo { font-size: 13px; color: #d8d5e6; font-style: italic; margin-top: 6px; line-height: 1.45; }
+  .stars { display: inline-flex; gap: 2px; }
+  .stars button { background: none; border: none; font-size: 20px; color: #3d3d55; cursor: pointer; padding: 0 1px; line-height: 1; }
+  .stars button.on { color: #f5c518; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 6px; }
+  .stat { background: #12121e; border: 1px solid #262640; border-radius: 14px; padding: 14px; text-align: center; }
+  .stat .n { font-size: 26px; font-weight: 900; color: #c4b5fd; }
+  .stat .l { font-size: 11px; letter-spacing: 1.5px; color: #9a97ad; font-weight: 800; margin-top: 2px; }
+  .detail img.poster { width: 150px; border-radius: 12px; float: right; margin: 0 0 10px 14px; background: #1c1c2e; }
+  .detail .noposter { width: 150px; height: 220px; float: right; margin: 0 0 10px 14px; border-radius: 12px; }
+  .syn { font-size: 14px; line-height: 1.6; color: #d8d5e6; margin: 10px 0; }
+  .note { font-size: 12px; color: #9a97ad; line-height: 1.55; }
+  .warn { background: #241a08; border: 1px solid #6b5310; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #f3d27a; margin-bottom: 12px; line-height: 1.5; }
+  .hidden { display: none !important; }
+  .seg { display: flex; gap: 6px; }
+  .seg button { flex: 1; background: #1a1a2b; border: 1px solid #33334f; color: #c9c6da; border-radius: 10px; padding: 9px; font-weight: 700; cursor: pointer; font-size: 13px; }
+  .seg button.on { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+  a.ext { color: #a78bfa; }
+  footer { text-align: center; color: #55536e; font-size: 11px; padding: 18px 10px 30px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">CINE<span>MATCH</span></div>
+  <div class="tagline">Find the film you're actually in the mood for.</div>
+  <nav id="topnav">
+    <button data-view="home" class="active">Home</button>
+    <button data-view="discover">Discover</button>
+    <button data-view="watched">Watched</button>
+    <button data-view="watchlist">Watchlist</button>
+    <button data-view="library">My Library</button>
+  </nav>
+</header>
+<main>
+  <section id="view-home" class="view active">
+    <h1>FIND THE FILM YOU'RE ACTUALLY IN THE MOOD FOR</h1>
+    <p class="sub">Recommendations below are real series data from TVmaze, matched to your taste profile. Your watched log and watchlist live on this device.</p>
+    <div class="row" style="margin-bottom:6px"><button class="btn" id="homeDiscoverBtn">Start discovering</button><button class="btn ghost" id="surpriseBtn">🎲 Surprise me</button></div>
+    <h2>Recommended for you</h2>
+    <p class="sub" id="recNote">Based on your taste profile.</p>
+    <div class="shelf" id="recShelf"><p class="sub">Loading recommendations…</p></div>
+    <h2>Your watchlist</h2>
+    <div id="homeWatchlist"></div>
+  </section>
+
+  <section id="view-discover" class="view">
+    <h1>FIND YOUR NEXT GREAT WATCH.</h1>
+    <p class="sub">Search real series data (posters, ratings, cast) from TVmaze. Films: no free film database exists without an API key, so use the film links under the results — or add a film manually and it joins your library like any title.</p>
+    <div class="row">
+      <input type="text" id="searchInput" placeholder="Search a series title… e.g. Reacher" style="flex:1;min-width:180px">
+      <button class="btn" id="searchBtn">Find</button>
+    </div>
+    <label>Filter results by genre</label>
+    <div class="chips" id="discoverGenres"></div>
+    <div id="discoverResults"><p class="sub">Your taste-matched recommendations will appear here — or search above.</p></div>
+    <h2>Browse films</h2>
+    <div class="card">
+      <p class="sub" style="margin-bottom:8px">Real film browsing and streaming availability live on these services (free to browse):</p>
+      <div class="row">
+        <a class="btn ghost small" href="https://www.justwatch.com/us" target="_blank" rel="noopener">JustWatch — where to watch</a>
+        <a class="btn ghost small" href="https://www.themoviedb.org/discover/movie" target="_blank" rel="noopener">TMDB — discover films</a>
+        <a class="btn ghost small" href="https://www.imdb.com/chart/top/" target="_blank" rel="noopener">IMDb Top 250</a>
+      </div>
+      <p class="note" style="margin-top:8px">Found a film you like there? Add it with the manual form on the Watched or Watchlist page.</p>
+    </div>
+  </section>
+
+  <section id="view-watched" class="view">
+    <h1>YOUR WATCHED LIST.</h1>
+    <p class="sub" id="watchedCount"></p>
+    <div class="card">
+      <label>Add a title you've watched</label>
+      <div class="row">
+        <input type="text" id="watchedSearchInput" placeholder="Search a series on TVmaze…" style="flex:1;min-width:160px">
+        <button class="btn ghost" id="watchedSearchBtn">Find</button>
+        <button class="btn ghost" id="watchedManualBtn">Add manually</button>
+      </div>
+      <div id="watchedSearchResults"></div>
+      <div id="watchedManualForm" class="hidden"></div>
+    </div>
+    <div id="watchedList"></div>
+  </section>
+
+  <section id="view-watchlist" class="view">
+    <h1>YOUR WATCHLIST.</h1>
+    <p class="sub">Films and shows you want to watch later. <span id="watchlistCount"></span></p>
+    <div class="card">
+      <div class="row">
+        <button class="btn ghost" id="watchlistManualBtn">＋ Add a title manually</button>
+        <button class="btn ghost" id="watchlistDiscoverBtn">Browse Discover</button>
+      </div>
+      <div id="watchlistManualForm" class="hidden"></div>
+    </div>
+    <div id="watchlistList"></div>
+  </section>
+
+  <section id="view-library" class="view">
+    <h1>MY LIBRARY.</h1>
+    <p class="sub">All your films and shows in one place.</p>
+    <div class="stats">
+      <div class="stat"><div class="n" id="statWatchlist">0</div><div class="l">WATCHLIST</div></div>
+      <div class="stat"><div class="n" id="statWatched">0</div><div class="l">WATCHED</div></div>
+      <div class="stat"><div class="n" id="statReviews">0</div><div class="l">REVIEWS</div></div>
+    </div>
+    <h2>Your platforms</h2>
+    <div class="chips" id="libPlatforms"></div>
+    <h2>Your favorite genres</h2>
+    <div class="chips" id="libGenres"></div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="editPrefsBtn">Edit preferences</button></div>
+    <div id="prefsForm" class="hidden" style="margin-top:14px"></div>
+    <h2>Backup</h2>
+    <div class="card">
+      <p class="sub">Your library is stored only on this device/browser. Export a backup file and keep it (e.g. in Google Drive); import it on another device to move your data there. Import replaces what's on the receiving device.</p>
+      <div class="row">
+        <button class="btn ghost" id="exportBtn">⬇ Export backup</button>
+        <button class="btn ghost" id="importBtn">⬆ Import backup</button>
+        <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+      </div>
+      <p class="note" id="backupMsg" style="margin-top:8px"></p>
+    </div>
+  </section>
+
+  <section id="view-detail" class="view">
+    <button class="btn ghost small" id="detailBack">← Back</button>
+    <div class="detail" id="detailBody" style="margin-top:12px"></div>
+  </section>
+</main>
+<footer>Series data: TVmaze (free, no account needed). Availability links: JustWatch.<br>Your data never leaves this device except in backups you export.</footer>
+
+<script>
+"use strict";
+/* ---------- Failure-proof storage (same pattern as JobHunt Pro) ---------- */
+var MemStore = {};
+function lsGet(k){ try { return window.localStorage.getItem(k); } catch(e){ return (k in MemStore) ? MemStore[k] : null; } }
+function lsSet(k,v){ try { window.localStorage.setItem(k,v); } catch(e){} MemStore[k]=v; }
+function lsDel(k){ try { window.localStorage.removeItem(k); } catch(e){} delete MemStore[k]; }
+
+var DBKEY = "cineMatchV1", SEEDFLAG = "cineMatchSeededV1";
+var GENRES = ["Action","Adventure","Animation","Comedy","Crime","Documentary","Drama","Family","Fantasy","History","Horror","Music","Mystery","Romance","Science Fiction","Thriller","War","Western"];
+var LANGS = ["English","Korean","Japanese","Spanish","French","German","Italian","Portuguese","Hindi","Mandarin","Cantonese","Russian","Arabic","Turkish","Thai","Vietnamese","Indonesian","Dutch","Swedish","Polish"];
+var COUNTRIES = ["US","UK","South Korea","Japan","Canada","Australia","France","Germany","Spain","Italy","India","China","Mexico","Brazil","Russia","Turkey","Thailand","Vietnam","Netherlands","Sweden","Denmark"];
+var PLATFORMS = ["Netflix","Prime Video","Disney+","Apple TV+","Hulu","In Cinemas"];
+
+function seedPrefs(){
+  var p = {}; PLATFORMS.forEach(function(x){ p[x]=false; });
+  p["Netflix"]=true; p["Prime Video"]=true; p["Disney+"]=true; p["In Cinemas"]=true;
+  return { genres:["Action","Documentary","Drama","Thriller"], languages:["English","Korean","Japanese"],
+    countries:["US","UK","South Korea","Japan","Canada","Australia"], contentType:"Films",
+    yearFrom:2020, yearTo:2026, platforms:p, customServices:[] };
+}
+function mkEntry(o){ return { id:o.id||("e"+Date.now()+Math.floor(Math.random()*99999)), tvmazeId:o.tvmazeId||null,
+  title:o.title||"", type:o.type||"film", year:o.year||null, director:o.director||"", genres:o.genres||[],
+  rating10:(o.rating10==null?null:o.rating10), poster:o.poster||"", platform:o.platform||"",
+  synopsis:o.synopsis||"", cast:o.cast||[], language:o.language||"", country:o.country||"",
+  source:o.source||"manual", myRating:o.myRating||0, memo:o.memo||"", dateLogged:o.dateLogged||"" }; }
+function seedDB(){
+  var w = [
+    mkEntry({title:"Weapons", type:"film", dateLogged:"2025-11-07", myRating:4, memo:"I like this kind of horror, not a full bloodbath, not a gore, but making me interesting and intrigued.", source:"seed"}),
+    mkEntry({title:"The Beekeeper", type:"film", dateLogged:"2025-10-25", myRating:3, memo:"Action is more intense in comparison to the equalizer. But acting is more or less than Jason Statham's usual acting", source:"seed"}),
+    mkEntry({title:"Elizabethtown", type:"film", dateLogged:"2025-10-18", myRating:2, memo:"I don't like the relationship between those that just fell in love emotionally in a short period", source:"seed"}),
+    mkEntry({title:"Reacher", type:"series", dateLogged:"2025-08-20", myRating:4, memo:"Action + swag + brain", source:"seed"}),
+    mkEntry({title:"Top Gun: Maverick", type:"film", dateLogged:"2025-08-01", myRating:4, memo:"Fun & diverse action + veterans + human likeliness", source:"seed"}),
+    mkEntry({title:"The Equalizer 3", type:"film", dateLogged:"2025-07-25", myRating:3, source:"seed"}),
+    mkEntry({title:"Wind River", type:"film", dateLogged:"2025-07-16", myRating:4, source:"seed"}),
+    mkEntry({title:"Josee, the Tiger and the Fish", type:"film", dateLogged:"2025-07-16", myRating:5, source:"seed"}),
+    mkEntry({title:"Civil War", type:"film", dateLogged:"", myRating:5, source:"seed"})
+  ];
+  var wl = [
+    mkEntry({title:"Fight or Flight", type:"film", year:2024, rating10:6.4, platform:"Prime Video", genres:["Action","Thriller"], source:"seed"}),
+    mkEntry({title:"The Alabama Solution", type:"film", year:2024, rating10:7.8, platform:"In Cinemas", genres:["Documentary","Drama"], source:"seed"})
+  ];
+  return { watched:w, watchlist:wl, prefs:seedPrefs() };
+}
+function loadDB(){
+  var db = null;
+  try { var raw = lsGet(DBKEY); if (raw) db = JSON.parse(raw); } catch(e){ db = null; }
+  if (!db || !db.watched || !db.watchlist || !db.prefs) {
+    if (lsGet(SEEDFLAG) && db) { /* keep partial db rather than reseeding over user data */ }
+    db = seedDB(); lsSet(SEEDFLAG,"1"); saveDB(db);
+  }
+  return db;
+}
+function saveDB(db){ try { lsSet(DBKEY, JSON.stringify(db)); } catch(e){} }
+var DB = seedDB();
+try { DB = loadDB(); } catch(e) { /* DB stays a fresh seed; page must still run */ }
+
+/* ---------- Helpers ---------- */
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function stripHtml(s){ var d=document.createElement("div"); d.innerHTML=s||""; return d.textContent||""; }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function inWatched(title){ title=String(title).toLowerCase(); return DB.watched.some(function(e){ return e.title.toLowerCase()===title; }); }
+function inWatchlist(title){ title=String(title).toLowerCase(); return DB.watchlist.some(function(e){ return e.title.toLowerCase()===title; }); }
+function findWatched(title){ title=String(title).toLowerCase(); return DB.watched.filter(function(e){ return e.title.toLowerCase()===title; })[0]||null; }
+function posterHtml(e, cls){ if (e.poster) return '<img class="'+(cls||"")+'" src="'+esc(e.poster)+'" alt="">'; return '<div class="noposter '+(cls||"")+'">'+esc(e.title)+'</div>'; }
+function starsHtml(rating, entryId){
+  var h='<span class="stars" data-stars="'+esc(entryId)+'">';
+  for (var i=1;i<=5;i++) h+='<button data-star="'+i+'" class="'+(i<=rating?"on":"")+'">★</button>';
+  return h+"</span>";
+}
+function justwatchUrl(e){ return "https://www.justwatch.com/us/search?q="+encodeURIComponent(e.title); }
+
+/* ---------- TVmaze ---------- */
+var hasFetch = (typeof fetch === "function");
+function tvFetch(path){ if (!hasFetch) return Promise.reject(new Error("no fetch")); return fetch("https://api.tvmaze.com"+path).then(function(r){ if(!r.ok) throw new Error("tvmaze "+r.status); return r.json(); }); }
+function mapShow(s){
+  return mkEntry({ tvmazeId:s.id, title:s.name, type:"series",
+    year: s.premiered ? parseInt(String(s.premiered).slice(0,4),10) : null,
+    genres: s.genres||[], rating10: (s.rating && s.rating.average) || null,
+    poster: (s.image && (s.image.medium||s.image.original)) || "",
+    synopsis: stripHtml(s.summary||""), language: s.language||"",
+    country: (s.network && s.network.country && s.network.country.name) || (s.webChannel && s.webChannel.country && s.webChannel.country.name) || "",
+    source:"tvmaze" });
+}
+var COUNTRY_ALIASES = { "US":["United States"], "UK":["United Kingdom"], "South Korea":["Korea, Republic of","South Korea"], "Japan":["Japan"], "Canada":["Canada"], "Australia":["Australia"] };
+function countryMatches(showCountry){
+  if (!showCountry) return false;
+  return DB.prefs.countries.some(function(c){ var names = COUNTRY_ALIASES[c] || [c]; return names.indexOf(showCountry) >= 0; });
+}
+var poolCache = null;
+function loadPool(){
+  if (poolCache) return Promise.resolve(poolCache);
+  if (!hasFetch) { poolCache = []; return Promise.resolve(poolCache); }
+  return Promise.all([ tvFetch("/shows?page=0").catch(function(){ return []; }), tvFetch("/shows?page=1").catch(function(){ return []; }) ])
+  .then(function(pages){
+    var all = []; pages.forEach(function(p){ if (Array.isArray(p)) all = all.concat(p); });
+    var prefs = DB.prefs;
+    var scored = all.map(mapShow).filter(function(e){ return e.rating10 && e.rating10 >= 6.8 && e.poster; })
+    .map(function(e){
+      var s = e.rating10;
+      if (e.genres.some(function(g){ return prefs.genres.indexOf(g)>=0; })) s += 1.2;
+      if (countryMatches(e.country)) s += 0.6;
+      if (prefs.languages.indexOf(e.language) >= 0) s += 0.4;
+      if (e.year && prefs.yearFrom && e.year >= prefs.yearFrom) s += 0.3;
+      if (inWatched(e.title) || inWatchlist(e.title)) s = -1;
+      return { e:e, s:s };
+    }).filter(function(x){ return x.s >= 0; });
+    scored.sort(function(a,b){ return b.s - a.s; });
+    poolCache = scored.map(function(x){ return x.e; });
+    return poolCache;
+  }).catch(function(){ poolCache = []; return poolCache; });
+}
+/* Attach TVmaze posters/details to seeded series entries (e.g. Reacher). */
+function enrichSeeds(){
+  if (!hasFetch) return;
+  var changed = false, jobs = [];
+  DB.watched.concat(DB.watchlist).forEach(function(e){
+    if (e.type === "series" && !e.tvmazeId) {
+      jobs.push(tvFetch("/search/shows?q="+encodeURIComponent(e.title)).then(function(res){
+        var hit = (res||[]).filter(function(r){ return r.show && r.show.name.toLowerCase() === e.title.toLowerCase(); })[0];
+        if (hit) { var m = mapShow(hit.show); e.tvmazeId = m.tvmazeId; e.poster = m.poster; e.rating10 = m.rating10; e.genres = m.genres; e.synopsis = m.synopsis; e.year = m.year; e.language = m.language; e.country = m.country; changed = true; }
+      }).catch(function(){}));
+    }
+  });
+  Promise.all(jobs).then(function(){ if (changed) { saveDB(DB); renderAll(); } });
+}
+
+/* ---------- Rendering ---------- */
+var currentView = "home", lastView = "home", detailEntry = null, discoverGenre = "";
+function showView(v){
+  lastView = currentView; currentView = v;
+  document.querySelectorAll(".view").forEach(function(s){ s.classList.remove("active"); });
+  var el = document.getElementById("view-"+v); if (el) el.classList.add("active");
+  document.querySelectorAll("#topnav button").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-view")===v); });
+  window.scrollTo(0,0);
+}
+function pcardHtml(e){
+  return '<div class="pcard" data-open="'+esc(e.id)+'" data-title="'+esc(e.title)+'">' + posterHtml(e) +
+    '<div class="pinfo"><div class="ptitle">'+esc(e.title)+'</div><div class="pmeta">' +
+    (e.rating10 ? '<span class="score">★ '+e.rating10.toFixed(1)+'</span> · ' : '') + (e.year||"") +
+    (e.genres && e.genres.length ? ' · '+esc(e.genres.slice(0,2).join("/")) : '') + '</div></div></div>';
+}
+var cardPool = {}; /* id -> entry for transient (TVmaze) cards */
+function renderHome(){
+  document.getElementById("homeWatchlist").innerHTML = DB.watchlist.length
+    ? DB.watchlist.map(function(e){ return entryRowHtml(e, "wl"); }).join("")
+    : '<p class="sub">Nothing saved yet — add titles from Discover.</p>';
+  bindEntryRows(document.getElementById("homeWatchlist"));
+  loadPool().then(function(pool){
+    var shelf = document.getElementById("recShelf");
+    if (!pool.length) { shelf.innerHTML = '<p class="sub">Recommendations need an internet connection (TVmaze). Your library below works offline.</p>'; return; }
+    cardPool = {}; pool.slice(0,12).forEach(function(e){ cardPool[e.id]=e; });
+    shelf.innerHTML = pool.slice(0,12).map(pcardHtml).join("");
+    bindCards(shelf);
+  });
+}
+function entryRowHtml(e, ctx){
+  var h = '<div class="entry" data-entry="'+esc(e.id)+'">' + posterHtml(e) + '<div class="emain">' +
+    '<div class="etitle" data-open="'+esc(e.id)+'">'+esc(e.title)+'</div>' +
+    '<div class="emeta"><span class="badge'+(e.type==="film"?" film":"")+'">'+(e.type==="series"?"Series":"Film")+'</span> ' +
+    (e.year ? esc(e.year)+" · " : "") + (e.director ? esc(e.director)+" · " : "") +
+    (e.rating10 ? '<span class="score">★ '+Number(e.rating10).toFixed(1)+'</span>' : "") +
+    (e.platform ? ' · '+esc(e.platform) : "") + '</div>';
+  if (ctx === "watched") {
+    h += '<div style="margin-top:6px">'+starsHtml(e.myRating, e.id)+'</div>';
+    if (e.memo) h += '<div class="memo">&ldquo;'+esc(e.memo)+'&rdquo;</div>';
+    h += '<div class="emeta" style="margin-top:6px">'+(e.dateLogged ? "Logged "+esc(e.dateLogged) : "Date not recorded")+'</div>';
+    h += '<div class="row" style="margin-top:8px"><button class="btn ghost small" data-act="edit" data-id="'+esc(e.id)+'">Edit</button><button class="btn ghost small" data-act="delwatched" data-id="'+esc(e.id)+'">Delete</button></div>';
+  } else {
+    if (e.genres && e.genres.length) h += '<div class="emeta" style="margin-top:4px">'+esc(e.genres.join(" · "))+'</div>';
+    h += '<div class="row" style="margin-top:8px"><button class="btn small" data-act="logwatched" data-id="'+esc(e.id)+'">✓ Log as watched</button><button class="btn ghost small" data-act="delwl" data-id="'+esc(e.id)+'">Remove</button></div>';
+  }
+  return h + '</div></div>';
+}
+function bindEntryRows(container){
+  if (!container) return;
+  container.querySelectorAll("[data-open]").forEach(function(el){ el.addEventListener("click", function(){ openDetailById(el.getAttribute("data-open")); }); });
+  container.querySelectorAll("[data-act]").forEach(function(b){ b.addEventListener("click", function(){ entryAction(b.getAttribute("data-act"), b.getAttribute("data-id")); }); });
+  container.querySelectorAll("[data-stars] button").forEach(function(b){ b.addEventListener("click", function(){
+    var wrap = b.closest("[data-stars]"); var e = findWatchedById(wrap.getAttribute("data-stars"));
+    if (e) { e.myRating = parseInt(b.getAttribute("data-star"),10); saveDB(DB); renderAll(); }
+  }); });
+}
+function bindCards(container){
+  if (!container) return;
+  container.querySelectorAll("[data-open]").forEach(function(el){ el.addEventListener("click", function(){
+    var id = el.getAttribute("data-open"); var e = cardPool[id] || findAnyById(id);
+    if (e) openDetail(e);
+  }); });
+}
+function findAnyById(id){ return DB.watched.concat(DB.watchlist).filter(function(e){ return e.id===id; })[0] || null; }
+function findWatchedById(id){ return DB.watched.filter(function(e){ return e.id===id; })[0] || null; }
+function findWatchlistById(id){ return DB.watchlist.filter(function(e){ return e.id===id; })[0] || null; }
+function openDetailById(id){ var e = findAnyById(id) || cardPool[id]; if (e) openDetail(e); }
+
+function entryAction(act, id){
+  if (act === "delwatched") { var e = findWatchedById(id); if (e && confirm("Remove \""+e.title+"\" from your watched list?")) { DB.watched = DB.watched.filter(function(x){ return x.id!==id; }); saveDB(DB); renderAll(); } }
+  else if (act === "delwl") { DB.watchlist = DB.watchlist.filter(function(x){ return x.id!==id; }); saveDB(DB); renderAll(); }
+  else if (act === "logwatched") { var w = findWatchlistById(id); if (w) { logAsWatched(w); DB.watchlist = DB.watchlist.filter(function(x){ return x.id!==id; }); saveDB(DB); renderAll(); showView("watched"); } }
+  else if (act === "edit") { var we = findWatchedById(id); if (we) openDetail(we); }
+}
+function logAsWatched(src){
+  if (inWatched(src.title)) return findWatched(src.title);
+  var e = mkEntry({ tvmazeId:src.tvmazeId, title:src.title, type:src.type, year:src.year, director:src.director, genres:src.genres,
+    rating10:src.rating10, poster:src.poster, platform:src.platform, synopsis:src.synopsis, cast:src.cast, language:src.language, country:src.country,
+    source:src.source, dateLogged: todayStr() });
+  DB.watched.unshift(e); return e;
+}
+function addToWatchlist(src){
+  if (inWatchlist(src.title) || inWatched(src.title)) return;
+  DB.watchlist.unshift(mkEntry({ tvmazeId:src.tvmazeId, title:src.title, type:src.type, year:src.year, director:src.director, genres:src.genres,
+    rating10:src.rating10, poster:src.poster, platform:src.platform, synopsis:src.synopsis, language:src.language, country:src.country, source:src.source }));
+}
+
+/* ---------- Detail ---------- */
+function openDetail(e){
+  detailEntry = e;
+  var watched = findWatched(e.title);
+  var inWl = inWatchlist(e.title);
+  var h = posterHtml(e) + '<span class="badge'+(e.type==="film"?" film":"")+'">'+(e.type==="series"?"Series":"Film")+'</span>' +
+    '<h1 style="margin-top:8px">'+esc(e.title)+'</h1><div class="emeta" style="color:#9a97ad;font-size:13px">' +
+    (e.year ? esc(e.year)+" · " : "") + (e.director ? "Dir. "+esc(e.director)+" · " : "") +
+    (e.rating10 ? '<span class="score">★ '+Number(e.rating10).toFixed(1)+'</span> · ' : "") +
+    (e.country ? esc(e.country)+" · " : "") + (e.language ? esc(e.language) : "") + '</div>';
+  if (e.genres && e.genres.length) h += '<div class="chips" style="margin-top:10px">' + e.genres.map(function(g){ return '<span class="chip static">'+esc(g)+'</span>'; }).join("") + '</div>';
+  if (e.synopsis) h += '<p class="syn">'+esc(e.synopsis)+'</p>';
+  h += '<div id="castBox"></div>';
+  h += '<div class="row" style="margin:12px 0"><a class="btn ghost small" target="_blank" rel="noopener" href="'+justwatchUrl(e)+'">Where to watch (JustWatch)</a>' +
+    (e.platform ? '<span class="note">Your note: '+esc(e.platform)+'</span>' : "") + '</div>';
+  if (watched) {
+    h += '<h2>Your rating</h2><div id="detailStars">'+starsHtml(watched.myRating, watched.id)+'</div>' +
+      '<label>Your memo</label><textarea id="detailMemo" placeholder="How was it? Share your thoughts…">'+esc(watched.memo)+'</textarea>' +
+      '<div class="row"><button class="btn" id="detailSaveMemo">Save</button>' +
+      '<button class="btn ghost" id="detailRemoveWatched">Remove from watched</button></div>';
+  } else {
+    h += '<div class="row" style="margin-top:12px">' +
+      (inWl ? '<button class="btn gold" id="detailInWl" disabled>In your watchlist</button>' : '<button class="btn" id="detailAddWl">＋ Add to watchlist</button>') +
+      '<button class="btn ghost" id="detailLog">✓ Log as watched</button></div>';
+  }
+  document.getElementById("detailBody").innerHTML = h;
+  showView("detail");
+  if (watched) {
+    document.querySelectorAll("#detailStars button").forEach(function(b){ b.addEventListener("click", function(){ watched.myRating = parseInt(b.getAttribute("data-star"),10); saveDB(DB); openDetail(e); renderAll(false); }); });
+    document.getElementById("detailSaveMemo").addEventListener("click", function(){ watched.memo = document.getElementById("detailMemo").value.trim(); saveDB(DB); renderAll(false); alert("Saved."); });
+    document.getElementById("detailRemoveWatched").addEventListener("click", function(){ if (confirm("Remove from watched?")) { DB.watched = DB.watched.filter(function(x){ return x.id!==watched.id; }); saveDB(DB); renderAll(); showView("watched"); } });
+  } else {
+    var aw = document.getElementById("detailAddWl"); if (aw) aw.addEventListener("click", function(){ addToWatchlist(e); saveDB(DB); openDetail(e); renderAll(false); });
+    document.getElementById("detailLog").addEventListener("click", function(){ var w = logAsWatched(e); saveDB(DB); openDetail(w); renderAll(false); });
+  }
+  if (e.type === "series" && e.tvmazeId && hasFetch) {
+    tvFetch("/shows/"+e.tvmazeId+"/cast").then(function(cast){
+      var names = (cast||[]).slice(0,6).map(function(c){ return c.person && c.person.name; }).filter(Boolean);
+      var box = document.getElementById("castBox");
+      if (box && names.length) box.innerHTML = '<p class="note" style="margin-top:6px">Cast: '+esc(names.join(", "))+'</p>';
+    }).catch(function(){});
+  }
+}
+
+/* ---------- Discover ---------- */
+function renderDiscoverGenres(){
+  var box = document.getElementById("discoverGenres");
+  box.innerHTML = GENRES.map(function(g){ return '<button class="chip'+(discoverGenre===g?" on":"")+'" data-g="'+esc(g)+'">'+esc(g)+'</button>'; }).join("");
+  box.querySelectorAll("[data-g]").forEach(function(b){ b.addEventListener("click", function(){ discoverGenre = (discoverGenre===b.getAttribute("data-g")) ? "" : b.getAttribute("data-g"); renderDiscoverGenres(); runDiscoverSearch(false); }); });
+}
+function showResults(entries, note){
+  var box = document.getElementById("discoverResults");
+  cardPool = {}; entries.forEach(function(e){ cardPool[e.id]=e; });
+  box.innerHTML = (note ? '<p class="sub">'+esc(note)+'</p>' : '') +
+    (entries.length ? '<div class="grid">'+entries.map(pcardHtml).join("")+"</div>" : '<p class="sub">No titles found.</p>');
+  bindCards(box);
+}
+function runDiscoverSearch(useQuery){
+  var q = document.getElementById("searchInput").value.trim();
+  var box = document.getElementById("discoverResults");
+  if (useQuery && q) {
+    box.innerHTML = '<p class="sub">Searching the reels…</p>';
+    tvFetch("/search/shows?q="+encodeURIComponent(q)).then(function(res){
+      var entries = (res||[]).map(function(r){ return mapShow(r.show); });
+      if (discoverGenre) entries = entries.filter(function(e){ return e.genres.indexOf(discoverGenre)>=0; });
+      showResults(entries, entries.length+" title(s) for \""+q+"\" (series, TVmaze). For films, use the links below the results.");
+    }).catch(function(){ box.innerHTML = '<p class="sub">Search failed — check your connection and try again.</p>'; });
+    return;
+  }
+  loadPool().then(function(pool){
+    var entries = pool.slice();
+    if (discoverGenre) entries = entries.filter(function(e){ return e.genres.indexOf(discoverGenre)>=0; });
+    showResults(entries.slice(0,18), "Taste-matched series from TVmaze"+(discoverGenre ? " · "+discoverGenre : "")+".");
+  });
+}
+
+/* ---------- Watched / Watchlist ---------- */
+function renderWatched(){
+  var list = DB.watched.slice().sort(function(a,b){ return (b.dateLogged||"").localeCompare(a.dateLogged||""); });
+  document.getElementById("watchedCount").textContent = "You've logged "+DB.watched.length+" titles.";
+  var box = document.getElementById("watchedList");
+  box.innerHTML = list.length ? list.map(function(e){ return entryRowHtml(e, "watched"); }).join("") : '<p class="sub">Nothing logged yet.</p>';
+  bindEntryRows(box);
+}
+function renderWatchlist(){
+  document.getElementById("watchlistCount").textContent = DB.watchlist.length+" item(s).";
+  var box = document.getElementById("watchlistList");
+  box.innerHTML = DB.watchlist.length ? DB.watchlist.map(function(e){ return entryRowHtml(e, "wl"); }).join("") : '<p class="sub">Your watchlist is empty.</p>';
+  bindEntryRows(box);
+}
+function manualFormHtml(prefix){
+  return '<div style="margin-top:10px"><label>Title *</label><input type="text" id="'+prefix+'Title" placeholder="Title">' +
+  '<div class="row"><span style="flex:1"><label>Type</label><select id="'+prefix+'Type"><option value="film">Film</option><option value="series">Series</option></select></span>' +
+  '<span style="flex:1"><label>Year</label><input type="number" id="'+prefix+'Year" placeholder="2024"></span></div>' +
+  '<label>Director</label><input type="text" id="'+prefix+'Director" placeholder="Director (optional)">' +
+  '<label>Genres (comma separated)</label><input type="text" id="'+prefix+'Genres" placeholder="Action, Thriller">' +
+  '<label>Where to watch / platform</label><input type="text" id="'+prefix+'Platform" placeholder="Netflix, Prime Video, In Cinemas…">' +
+  '<label>Poster image URL (optional)</label><input type="url" id="'+prefix+'Poster" placeholder="https://…">' +
+  '<div class="row" style="margin-top:8px"><button class="btn" id="'+prefix+'Save">Save title</button><button class="btn ghost" id="'+prefix+'Cancel">Cancel</button></div></div>';
+}
+function wireManualForm(prefix, target){
+  document.getElementById(prefix+"Cancel").addEventListener("click", function(){ document.getElementById(prefix+"FormWrap").innerHTML=""; document.getElementById(prefix+"FormWrap").classList.add("hidden"); });
+  document.getElementById(prefix+"Save").addEventListener("click", function(){
+    var title = document.getElementById(prefix+"Title").value.trim(); if (!title) { alert("Enter a title."); return; }
+    var e = mkEntry({ title:title, type:document.getElementById(prefix+"Type").value,
+      year: parseInt(document.getElementById(prefix+"Year").value,10) || null,
+      director: document.getElementById(prefix+"Director").value.trim(),
+      genres: document.getElementById(prefix+"Genres").value.split(",").map(function(s){ return s.trim(); }).filter(Boolean),
+      platform: document.getElementById(prefix+"Platform").value.trim(),
+      poster: document.getElementById(prefix+"Poster").value.trim(), source:"manual" });
+    if (target === "watched") { e.dateLogged = todayStr(); DB.watched.unshift(e); }
+    else { if (!inWatchlist(title) && !inWatched(title)) DB.watchlist.unshift(e); }
+    saveDB(DB); renderAll(); showView(target);
+  });
+}
+function watchedTitleSearch(){
+  var q = document.getElementById("watchedSearchInput").value.trim(); if (!q) return;
+  var box = document.getElementById("watchedSearchResults");
+  box.innerHTML = '<p class="sub">Searching…</p>';
+  tvFetch("/search/shows?q="+encodeURIComponent(q)).then(function(res){
+    var entries = (res||[]).map(function(r){ return mapShow(r.show); }).slice(0,6);
+    if (!entries.length) { box.innerHTML = '<p class="sub">No series found on TVmaze. Use "Add manually" — that works for films too.</p>'; return; }
+    cardPool = {}; entries.forEach(function(e){ cardPool[e.id]=e; });
+    box.innerHTML = '<label>Select a title</label><div class="grid">'+entries.map(pcardHtml).join("")+"</div>";
+    box.querySelectorAll("[data-open]").forEach(function(el){ el.addEventListener("click", function(){
+      var e = cardPool[el.getAttribute("data-open")]; if (!e) return;
+      var w = logAsWatched(e); saveDB(DB); box.innerHTML=""; renderAll(); openDetail(w);
+    }); });
+  }).catch(function(){ box.innerHTML = '<p class="sub">Search failed — check your connection, or add manually.</p>'; });
+}
+
+/* ---------- Library & preferences ---------- */
+function renderLibrary(){
+  document.getElementById("statWatchlist").textContent = DB.watchlist.length;
+  document.getElementById("statWatched").textContent = DB.watched.length;
+  document.getElementById("statReviews").textContent = DB.watched.filter(function(e){ return e.memo; }).length;
+  var plats = PLATFORMS.concat(DB.prefs.customServices).filter(function(p){ return DB.prefs.platforms[p]; });
+  document.getElementById("libPlatforms").innerHTML = plats.length ? plats.map(function(p){ return '<span class="chip static">'+esc(p)+'</span>'; }).join("") : '<span class="sub">None selected</span>';
+  document.getElementById("libGenres").innerHTML = DB.prefs.genres.length ? DB.prefs.genres.map(function(g){ return '<span class="chip static">'+esc(g)+'</span>'; }).join("") : '<span class="sub">None selected</span>';
+}
+function prefsFormHtml(){
+  var p = DB.prefs;
+  function chipGroup(name, items, selected){ return '<div class="chips" data-group="'+name+'">'+items.map(function(x){ return '<button class="chip'+(selected.indexOf(x)>=0?" on":"")+'" data-v="'+esc(x)+'">'+esc(x)+'</button>'; }).join("")+"</div>"; }
+  var h = '<div class="card"><h2 style="margin-top:0">Your taste</h2><label>Favorite genres</label>'+chipGroup("genres", GENRES, p.genres) +
+    '<label>Favorite languages</label>'+chipGroup("languages", LANGS, p.languages) +
+    '<label>Favorite countries</label>'+chipGroup("countries", COUNTRIES, p.countries) +
+    '<label>Content type</label><div class="seg" id="prefsType">'+["Films","Both","Series"].map(function(t){ return '<button data-t="'+t+'" class="'+(p.contentType===t?"on":"")+'">'+(t==="Both"?"Films + Series":t)+'</button>'; }).join("")+"</div>" +
+    '<div class="row"><span style="flex:1"><label>Year from</label><input type="number" id="prefsYearFrom" value="'+esc(p.yearFrom||"")+'"></span><span style="flex:1"><label>Year to</label><input type="number" id="prefsYearTo" value="'+esc(p.yearTo||"")+'"></span></div>' +
+    '<h2>Your platforms</h2><div id="prefsPlatforms">' +
+    PLATFORMS.concat(p.customServices).map(function(x){ return '<div class="row" style="justify-content:space-between;border-bottom:1px solid #22223a;padding:7px 0"><span>'+esc(x)+'</span><button class="chip'+(p.platforms[x]?" on":"")+'" data-plat="'+esc(x)+'">'+(p.platforms[x]?"Subscribed":"Not subscribed")+'</button></div>'; }).join("") +
+    '</div><div class="row" style="margin-top:8px"><input type="text" id="prefsNewService" placeholder="Add another service" style="flex:1"><button class="btn ghost small" id="prefsAddService">Add</button></div>' +
+    '<div class="row" style="margin-top:14px"><button class="btn" id="prefsSave">Save preferences</button><button class="btn ghost" id="prefsCancel">Cancel</button></div></div>';
+  return h;
+}
+function renderPrefsForm(){
+  var wrap = document.getElementById("prefsForm");
+  wrap.innerHTML = prefsFormHtml(); wrap.classList.remove("hidden");
+  var p = DB.prefs;
+  wrap.querySelectorAll("[data-group]").forEach(function(group){
+    group.querySelectorAll("[data-v]").forEach(function(b){ b.addEventListener("click", function(){
+      var key = group.getAttribute("data-group"), v = b.getAttribute("data-v"), arr = p[key], i = arr.indexOf(v);
+      if (i>=0) arr.splice(i,1); else arr.push(v); b.classList.toggle("on", i<0);
+    }); });
+  });
+  wrap.querySelectorAll("#prefsType button").forEach(function(b){ b.addEventListener("click", function(){ p.contentType = b.getAttribute("data-t"); wrap.querySelectorAll("#prefsType button").forEach(function(x){ x.classList.toggle("on", x===b); }); }); });
+  wrap.querySelectorAll("[data-plat]").forEach(function(b){ b.addEventListener("click", function(){ var k=b.getAttribute("data-plat"); p.platforms[k]=!p.platforms[k]; b.classList.toggle("on", p.platforms[k]); b.textContent = p.platforms[k] ? "Subscribed" : "Not subscribed"; }); });
+  document.getElementById("prefsAddService").addEventListener("click", function(){ var v = document.getElementById("prefsNewService").value.trim(); if (v && p.customServices.indexOf(v)<0) { p.customServices.push(v); p.platforms[v]=true; saveDB(DB); renderPrefsForm(); } });
+  document.getElementById("prefsCancel").addEventListener("click", function(){ DB = loadDB(); wrap.classList.add("hidden"); renderLibrary(); });
+  document.getElementById("prefsSave").addEventListener("click", function(){
+    p.yearFrom = parseInt(document.getElementById("prefsYearFrom").value,10) || null;
+    p.yearTo = parseInt(document.getElementById("prefsYearTo").value,10) || null;
+    poolCache = null; saveDB(DB); wrap.classList.add("hidden"); renderAll(); alert("Preferences saved.");
+  });
+}
+
+/* ---------- Backup ---------- */
+function exportBackup(){
+  var blob = new Blob([JSON.stringify(DB, null, 2)], { type:"application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "cinematch-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  document.getElementById("backupMsg").textContent = "Backup exported — keep the file somewhere safe (e.g. Google Drive).";
+}
+function importBackup(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var data = JSON.parse(String(reader.result));
+      if (!data || !Array.isArray(data.watched) || !Array.isArray(data.watchlist) || !data.prefs) throw new Error("bad format");
+      if (!confirm("Import this backup? It replaces your current CineMatch library on this device.")) return;
+      DB = data; lsSet(SEEDFLAG,"1"); saveDB(DB); poolCache = null; renderAll();
+      document.getElementById("backupMsg").textContent = "Backup imported.";
+    } catch(e){ document.getElementById("backupMsg").textContent = "That file is not a valid CineMatch backup."; }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Wiring & init ---------- */
+function renderAll(rerenderDetail){
+  renderHome(); renderWatched(); renderWatchlist(); renderLibrary();
+}
+document.querySelectorAll("#topnav button").forEach(function(b){ b.addEventListener("click", function(){ showView(b.getAttribute("data-view")); }); });
+document.getElementById("detailBack").addEventListener("click", function(){ showView(lastView === "detail" ? "home" : lastView); });
+document.getElementById("homeDiscoverBtn").addEventListener("click", function(){ showView("discover"); runDiscoverSearch(false); });
+document.getElementById("surpriseBtn").addEventListener("click", function(){
+  loadPool().then(function(pool){ if (pool.length) openDetail(pool[Math.floor(Math.random()*Math.min(pool.length,20))]); else showView("discover"); });
+});
+document.getElementById("searchBtn").addEventListener("click", function(){ runDiscoverSearch(true); });
+document.getElementById("searchInput").addEventListener("keydown", function(ev){ if (ev.key === "Enter") runDiscoverSearch(true); });
+document.getElementById("watchedSearchBtn").addEventListener("click", watchedTitleSearch);
+document.getElementById("watchedManualBtn").addEventListener("click", function(){ var w = document.getElementById("watchedManualForm"); w.classList.remove("hidden"); w.innerHTML = '<div id="wmFormWrap">'+manualFormHtml("wm")+"</div>"; wireManualForm("wm", "watched"); });
+document.getElementById("watchlistManualBtn").addEventListener("click", function(){ var w = document.getElementById("watchlistManualForm"); w.classList.remove("hidden"); w.innerHTML = '<div id="wlFormWrap">'+manualFormHtml("wl")+"</div>"; wireManualForm("wl", "watchlist"); });
+document.getElementById("watchlistDiscoverBtn").addEventListener("click", function(){ showView("discover"); runDiscoverSearch(false); });
+document.getElementById("editPrefsBtn").addEventListener("click", renderPrefsForm);
+document.getElementById("exportBtn").addEventListener("click", exportBackup);
+document.getElementById("importBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+document.getElementById("importFile").addEventListener("change", function(){ if (this.files && this.files[0]) importBackup(this.files[0]); this.value=""; });
+
+renderDiscoverGenres();
+renderAll();
+enrichSeeds();
+</script>
+</body>
+</html>
