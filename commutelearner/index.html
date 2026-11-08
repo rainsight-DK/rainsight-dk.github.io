@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CommuteMind — Your voice-first learning companion for the road</title>
+<meta name="description" content="Listen to short briefings on any topic and hear difficult text read aloud simply, hands-free while you commute.">
+<style>
+:root{
+  --bg:#0b1220; --card:#16213a; --line:#2b3c5f; --ink:#e8eefb; --sub:#9db1d6;
+  --accent:#4f8cff; --accent-ink:#ffffff; --good:#34d399; --chip:#0e1830;
+}
+html.light{ --bg:#eef2f9; --card:#ffffff; --line:#c7d3ea; --ink:#14213d; --sub:#4c5f85; --chip:#e3eafb; --accent-ink:#ffffff; }
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%;padding-bottom:86px}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.site{padding:20px 2px 4px}
+.logo{font-size:25px;font-weight:800;letter-spacing:.5px}
+.logo span{color:var(--accent)}
+.tagline{color:var(--sub);font-size:13.5px;margin:2px 0 0}
+.view{display:none}.view.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.modecard{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:12px 0;cursor:pointer;color:var(--ink)}
+.modecard h2{margin:0 0 4px;font-size:19px}
+.modecard p{margin:0;color:var(--sub);font-size:14px}
+.modecard:hover,.sesscard:hover{border-color:var(--accent)}
+h1{font-size:21px;margin:14px 0 6px} h2{font-size:16px;margin:18px 0 8px}
+.sub{color:var(--sub);font-size:14px;line-height:1.55}
+.note{color:var(--sub);font-size:12.5px;line-height:1.55}
+.btn{background:var(--accent);color:var(--accent-ink);border:none;border-radius:10px;padding:11px 18px;font-size:15px;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:600}
+.btn.small{padding:7px 12px;font-size:13px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+textarea,input[type=text],select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:15.5px;padding:11px;outline:none;font-family:inherit}
+html.light textarea,html.light input[type=text],html.light select{background:#f7faff}
+textarea{min-height:96px;resize:vertical;line-height:1.5}
+label{display:block;font-size:13px;color:var(--sub);margin:12px 0 5px}
+input[type=range]{width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--chip);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:13.5px;cursor:pointer}
+.chip.on{border-color:var(--accent);background:var(--accent);color:#fff}
+.chip small{display:block;font-size:11px;opacity:.75}
+.micbtn{flex:0 0 auto;width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--chip);color:var(--ink);font-size:20px;cursor:pointer}
+.micbtn.rec{background:#b91c1c;color:#fff;border-color:#b91c1c}
+.sesscard{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin:8px 0;cursor:pointer;color:var(--ink)}
+.sesscard .t{font-weight:700;font-size:15.5px}
+.sesscard .m{color:var(--sub);font-size:12.5px;margin-top:2px}
+.sesscard .p{color:var(--sub);font-size:13px;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--chip);border:1px solid var(--line)}
+.player{position:sticky;bottom:74px;background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:12px 14px;margin:12px 0;display:none}
+.player.on{display:block}
+.player .pt{font-weight:700;font-size:14.5px;margin-bottom:6px}
+nav.bottom{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:10}
+nav.bottom button{flex:1;background:none;border:none;color:var(--sub);font-size:12.5px;padding:10px 4px 14px;cursor:pointer}
+nav.bottom button .ic{display:block;font-size:19px;margin-bottom:2px}
+nav.bottom button.active{color:var(--accent);font-weight:700}
+.body-text{line-height:1.65;font-size:15px;white-space:pre-wrap}
+a.ext{color:var(--accent)}
+footer{color:var(--sub);font-size:12.5px;text-align:center;padding:20px 10px 4px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="logo">Commute<span>Mind</span></div>
+    <p class="tagline">Your voice-first learning companion for the road</p>
+  </header>
+
+  <!-- HOME -->
+  <section class="view" id="view-home">
+    <h1 id="greeting">Hello, driver</h1>
+    <button class="modecard" data-nav="listen"><h2>🎧 Listen &amp; Learn</h2><p>Listen to a short briefing about any topic while you drive — read from its Wikipedia article</p></button>
+    <button class="modecard" data-nav="explain"><h2>💡 Explain It Simply</h2><p>Paste a hard paragraph: hear it read aloud and look the concept up in plain language</p></button>
+    <h2>Recent sessions</h2>
+    <div id="recentList"></div>
+  </section>
+
+  <!-- LISTEN -->
+  <section class="view" id="view-listen">
+    <h1>Listen &amp; Learn</h1>
+    <label>What do you want to learn about?</label>
+    <div class="row" style="flex-wrap:nowrap">
+      <span style="flex:1"><input type="text" id="topicInput" placeholder="e.g. Why is the sky blue? How does a jet engine work?"></span>
+      <button class="micbtn" id="topicMic" title="Voice input" style="display:none">🎤</button>
+    </div>
+    <label>Length: <b id="lenLabel">4 minutes</b> (about <span id="lenWords">600</span> words)</label>
+    <input type="range" id="lenRange" min="3" max="5" step="1" value="4">
+    <div class="row" style="justify-content:space-between"><span class="note">3 min</span><span class="note">5 min</span></div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="genBtn" disabled>Find &amp; Read Briefing</button></div>
+    <p class="note" id="listenMsg"></p>
+    <div id="listenResult"></div>
+    <p class="note">Briefings are the introduction of the matching Wikipedia article, trimmed to your chosen length and read aloud by your device's voice. The article is saved as the session's source. Sessions save on this device.</p>
+  </section>
+
+  <!-- EXPLAIN -->
+  <section class="view" id="view-explain">
+    <h1>Explain It Simply</h1>
+    <label>Paste the difficult text</label>
+    <textarea id="explainInput" placeholder="Paste a hard paragraph here…"></textarea>
+    <div class="row" style="margin-top:10px"><button class="btn" id="readBtn" disabled>🔊 Read it aloud</button>
+    <button class="micbtn" id="explainMic" title="Dictate text" style="display:none">🎤</button></div>
+    <h2>Look the concept up, in plain language</h2>
+    <label>Concept to look up</label>
+    <input type="text" id="conceptInput" placeholder="e.g. photosynthesis, mortgage-backed security">
+    <label>Start with</label>
+    <div class="chips" id="styleChips">
+      <button class="chip" data-style="Simple explanation">Simple explanation<small>Plain, everyday language</small></button>
+      <button class="chip" data-style="Analogy">Analogy<small>An everyday comparison</small></button>
+      <button class="chip" data-style="What it is NOT">What it is NOT<small>Clear up misconceptions</small></button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" id="simpleWikiBtn">Simple Wikipedia</button>
+      <button class="btn ghost" id="wikiBtn">Wikipedia</button>
+      <button class="btn" id="saveExplainBtn" disabled>Save session</button>
+    </div>
+    <p class="note" id="explainMsg"></p>
+    <p class="note">This rebuild has no AI writer: explanations open on Simple Wikipedia / Wikipedia (real, plain-language references), and your pasted text is read aloud by your device's voice and saved to your sessions.</p>
+  </section>
+
+  <!-- SESSION DETAIL -->
+  <section class="view" id="view-session">
+    <button class="btn ghost small" id="sessionBack">← Back</button>
+    <div id="sessionBody"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="view" id="view-settings">
+    <h1>Settings</h1>
+    <div class="card">
+      <h2 style="margin-top:0">Appearance</h2>
+      <div class="row"><button class="btn ghost" id="darkBtn">🌙 Dark Mode</button><button class="btn ghost" id="lightBtn">☀ Light Mode</button></div>
+      <p class="note">Dark is easier on the eyes at night; light is better in bright daylight.</p>
+      <h2>Reading voice</h2>
+      <select id="voiceSelect"><option value="">Device default</option></select>
+      <p class="note" id="voiceCount"></p>
+      <h2>Reading speed: <span id="rateLabel">1.0x</span></h2>
+      <input type="range" id="rateRange" min="0.5" max="2" step="0.1" value="1">
+      <div class="row" style="justify-content:space-between"><span class="note">Slow</span><span class="note">Fast</span></div>
+      <div class="row" style="margin-top:10px"><button class="btn ghost" id="testVoiceBtn">Test voice</button></div>
+      <h2>Voice input</h2>
+      <p class="note">Push to talk: tap the mic, speak, tap again to stop. (Always-listening hands-free mode isn't reliable in a web app.) Voice features use your browser's speech engine — for best results while driving, use Chrome on Android.</p>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">Backup</h2>
+      <p class="note">Your sessions and settings live only on this device/browser. Export a backup file and keep it somewhere safe (e.g. Google Drive); import it on another device to restore. Importing replaces current data after you confirm.</p>
+      <div class="row"><button class="btn" id="exportBtn">Export backup</button><button class="btn ghost" id="importBtn">Import backup</button>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none"></div>
+      <p class="note" id="backupMsg"></p>
+    </div>
+  </section>
+
+  <!-- PLAYER -->
+  <div class="player" id="player">
+    <div class="pt" id="playerTitle">Now reading</div>
+    <div class="row">
+      <button class="btn small" id="playPauseBtn">⏸ Pause</button>
+      <button class="btn ghost small" id="stopBtn">⏹ Stop</button>
+      <span class="note" id="playerState"></span>
+    </div>
+  </div>
+
+  <footer>CommuteMind — rebuilt as an independent app.<br>Briefings: Wikipedia (CC BY-SA). Speech: your device's browser speech engine.</footer>
+</div>
+
+<nav class="bottom" id="bottomnav">
+  <button data-nav="home" class="active"><span class="ic">🏠</span>Home</button>
+  <button data-nav="listen"><span class="ic">🎧</span>Listen</button>
+  <button data-nav="explain"><span class="ic">💡</span>Explain</button>
+  <button data-nav="settings"><span class="ic">⚙</span>Settings</button>
+</nav>
+
+<script>
+"use strict";
+/* Failure-proof storage (works even where localStorage is restricted). */
+var MemStore = {};
+function lsGet(k){ try { return window.localStorage.getItem(k); } catch(e){ return (k in MemStore) ? MemStore[k] : null; } }
+function lsSet(k,v){ try { window.localStorage.setItem(k,v); } catch(e){ MemStore[k]=v; } }
+
+var DBKEY = "commuteMindV1", SEEDFLAG = "commuteMindSeededV1";
+function seedDB(){ return { sessions: [], settings: { theme: "dark", voiceURI: "", rate: 1.0 } }; }
+function loadDB(){
+  var db = null;
+  try { var raw = lsGet(DBKEY); if (raw) db = JSON.parse(raw); } catch(e){ db = null; }
+  if (!db || !Array.isArray(db.sessions) || !db.settings) { db = seedDB(); lsSet(SEEDFLAG,"1"); saveDB(db); }
+  return db;
+}
+function saveDB(db){ try { lsSet(DBKEY, JSON.stringify(db)); } catch(e){} }
+var DB = seedDB();
+try { DB = loadDB(); } catch(e){ /* keep seed */ }
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtDate(iso){ if (!iso) return ""; var p=String(iso).split("-"); var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return m[parseInt(p[1],10)-1]+" "+parseInt(p[2],10)+", "+p[0]; }
+function trimToWords(text, maxWords){
+  var words = String(text||"").split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return { text: words.join(" "), truncated: false, total: words.length };
+  var cut = words.slice(0, maxWords).join(" ");
+  var lastEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+  if (lastEnd > maxWords * 2) cut = cut.slice(0, lastEnd + 1);
+  return { text: cut, truncated: true, total: words.length };
+}
+
+/* ---------- Speech (device TTS) ---------- */
+var synth = (typeof window !== "undefined" && "speechSynthesis" in window) ? window.speechSynthesis : null;
+var speaking = false, paused = false, currentTitle = "";
+function chosenVoice(){
+  if (!synth) return null;
+  var uri = DB.settings.voiceURI; if (!uri) return null;
+  var vs = synth.getVoices();
+  for (var i=0;i<vs.length;i++) if (vs[i].voiceURI === uri) return vs[i];
+  return null;
+}
+function splitSentences(text){
+  var parts = String(text||"").match(/[^.!?]+[.!?]+["']?\s*|[^.!?]+$/g) || [String(text||"")];
+  return parts.map(function(s){ return s.trim(); }).filter(Boolean);
+}
+function speak(title, text){
+  stopSpeak();
+  if (!synth) { alert("Speech is not available in this browser."); return; }
+  currentTitle = title;
+  var chunks = splitSentences(text);
+  if (!chunks.length) return;
+  var voice = chosenVoice(), rate = DB.settings.rate || 1.0, last = chunks.length - 1;
+  chunks.forEach(function(c, i){
+    var u = new SpeechSynthesisUtterance(c);
+    if (voice) u.voice = voice;
+    u.rate = rate;
+    if (i === 0) u.onstart = function(){ speaking = true; paused = false; updatePlayer(); };
+    if (i === last) u.onend = function(){ speaking = false; paused = false; updatePlayer(); };
+    u.onerror = function(){ if (i === last) { speaking = false; updatePlayer(); } };
+    synth.speak(u);
+  });
+  speaking = true; updatePlayer();
+}
+function stopSpeak(){ if (synth) synth.cancel(); speaking = false; paused = false; updatePlayer(); }
+function updatePlayer(){
+  var p = document.getElementById("player");
+  p.classList.toggle("on", speaking);
+  document.getElementById("playerTitle").textContent = speaking ? ("🔊 " + currentTitle) : "";
+  document.getElementById("playerState").textContent = speaking ? (paused ? "Paused" : "Reading…") : "";
+  document.getElementById("playPauseBtn").textContent = paused ? "▶ Resume" : "⏸ Pause";
+}
+function populateVoices(){
+  var sel = document.getElementById("voiceSelect"); if (!sel) return;
+  var vs = synth ? synth.getVoices() : [];
+  sel.innerHTML = '<option value="">Device default</option>' + vs.map(function(v){
+    return '<option value="'+esc(v.voiceURI)+'"'+(DB.settings.voiceURI===v.voiceURI?" selected":"")+'>'+esc(v.name)+' ('+esc(v.lang)+')</option>';
+  }).join("");
+  document.getElementById("voiceCount").textContent = vs.length + " voices available from your device";
+}
+if (synth && typeof synth.onvoiceschanged !== "undefined") synth.onvoiceschanged = populateVoices;
+
+/* ---------- Speech recognition (push to talk) ---------- */
+var Recog = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+var activeRec = null;
+function wireMic(btnId, targetId){
+  var btn = document.getElementById(btnId); if (!btn) return;
+  if (!Recog) { btn.style.display = "none"; return; }
+  btn.style.display = "";
+  btn.addEventListener("click", function(){
+    if (activeRec) { activeRec.stop(); return; }
+    var r = new Recog(); r.lang = "en-US"; r.interimResults = false;
+    activeRec = r; btn.classList.add("rec"); btn.textContent = "⏹";
+    r.onresult = function(e){ var t = e.results[0][0].transcript; var inp = document.getElementById(targetId); inp.value = (inp.value ? inp.value + " " : "") + t; inp.dispatchEvent(new Event("input", { bubbles: true })); };
+    r.onend = function(){ activeRec = null; btn.classList.remove("rec"); btn.textContent = "🎤"; };
+    r.onerror = r.onend;
+    try { r.start(); } catch(e){ activeRec = null; btn.classList.remove("rec"); btn.textContent = "🎤"; }
+  });
+}
+
+/* ---------- Views ---------- */
+var currentView = "home";
+function showView(v){
+  currentView = v;
+  document.querySelectorAll(".view").forEach(function(s){ s.classList.remove("active"); });
+  var el = document.getElementById("view-"+v); if (el) el.classList.add("active");
+  document.querySelectorAll("#bottomnav button").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-nav")===v); });
+  window.scrollTo(0,0);
+}
+function sessCardHtml(s){
+  return '<button class="sesscard" data-sess="'+esc(s.id)+'"><span class="t">'+esc(s.title)+'</span> <span class="pill">'+(s.type==="listen"?"🎧 Listen":"💡 Explain")+'</span>' +
+    '<div class="m">'+esc(fmtDate(s.date))+(s.durationMinutes ? ' · '+s.durationMinutes+' min requested' : '')+'</div>' +
+    '<div class="p">'+esc(s.content)+'</div></button>';
+}
+function renderHome(){
+  var h = new Date().getHours();
+  document.getElementById("greeting").textContent = (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening") + ", driver";
+  var box = document.getElementById("recentList");
+  var ss = DB.sessions.slice(0, 5);
+  box.innerHTML = ss.length ? ss.map(sessCardHtml).join("") :
+    '<div class="card"><p class="sub" style="margin:0 0 10px">No sessions yet</p><button class="btn" data-nav="listen">Generate my first session</button></div>';
+  box.querySelectorAll("[data-sess]").forEach(function(c){ c.addEventListener("click", function(){ openSession(c.getAttribute("data-sess")); }); });
+  box.querySelectorAll("[data-nav]").forEach(function(b){ b.addEventListener("click", function(){ showView(b.getAttribute("data-nav")); }); });
+}
+function openSession(id){
+  var s = DB.sessions.filter(function(x){ return x.id===id; })[0]; if (!s) return;
+  var h = '<div class="card"><span class="pill">'+(s.type==="listen"?"🎧 Listen session":"💡 Explain session")+'</span>' +
+    '<h1>'+esc(s.title)+'</h1><p class="note">'+esc(fmtDate(s.date))+(s.durationMinutes ? ' · '+s.durationMinutes+' min requested' : '')+'</p>' +
+    (s.sources && s.sources.length ? '<p class="note">Source: '+s.sources.map(function(u){ return '<a class="ext" href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(u)+'</a>'; }).join(", ")+'</p>' : '') +
+    (s.steps && s.steps.length ? '<p class="note">Focus tried: '+s.steps.map(esc).join(" · ")+'</p>' : '') +
+    '<div class="row" style="margin:12px 0"><button class="btn" id="sessSpeak">🔊 Read aloud</button><button class="btn ghost" id="sessDelete">Delete</button></div>' +
+    '<div class="body-text">'+esc(s.content)+'</div></div>';
+  document.getElementById("sessionBody").innerHTML = h;
+  showView("session");
+  document.getElementById("sessSpeak").addEventListener("click", function(){ speak(s.title, s.content); });
+  document.getElementById("sessDelete").addEventListener("click", function(){ if (confirm("Delete this session?")) { DB.sessions = DB.sessions.filter(function(x){ return x.id!==id; }); saveDB(DB); stopSpeak(); renderAll(); showView("home"); } });
+}
+
+/* ---------- Listen ---------- */
+function minutesToWords(m){ return Math.round(m * 150); }
+function fetchBriefing(){
+  var topic = document.getElementById("topicInput").value.trim(); if (!topic) return;
+  var mins = parseInt(document.getElementById("lenRange").value, 10) || 4;
+  var msg = document.getElementById("listenMsg"), res = document.getElementById("listenResult");
+  msg.textContent = "Searching Wikipedia for “"+topic+"”…"; res.innerHTML = "";
+  if (typeof fetch !== "function") { msg.textContent = "Lookup needs an internet connection."; return; }
+  var url = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch="+encodeURIComponent(topic)+"&gsrlimit=1&prop=extracts|info&explaintext=1&exintro=1&inprop=url";
+  fetch(url).then(function(r){ return r.json(); }).then(function(data){
+    var pages = data && data.query && data.query.pages;
+    if (!pages) { msg.textContent = "No Wikipedia article found for that topic. Try different words."; return; }
+    var page = pages[Object.keys(pages)[0]];
+    if (!page || !page.extract) { msg.textContent = "That article has no readable introduction. Try another topic."; return; }
+    var trimmed = trimToWords(page.extract, minutesToWords(mins));
+    var s = { id: "s"+Date.now(), type: "listen", title: page.title, content: trimmed.text,
+      sources: [page.canonicalurl || ("https://en.wikipedia.org/wiki/"+encodeURIComponent(page.title.replace(/\s+/g,"_")))],
+      durationMinutes: mins, date: todayStr() };
+    DB.sessions.unshift(s); saveDB(DB); renderAll();
+    msg.textContent = "";
+    res.innerHTML = '<div class="card"><strong>'+esc(page.title)+'</strong> <span class="note">('+trimmed.total+' words in the full introduction; reading ~'+mins+' min'+(trimmed.truncated ? ", trimmed to fit" : "")+')</span>' +
+      '<div class="row" style="margin:10px 0"><button class="btn" id="briefSpeak">🔊 Read briefing</button><a class="ext" href="'+esc(s.sources[0])+'" target="_blank" rel="noopener">Open article</a></div>' +
+      '<div class="body-text">'+esc(trimmed.text)+'</div></div>';
+    document.getElementById("briefSpeak").addEventListener("click", function(){ speak(page.title, trimmed.text); });
+    speak(page.title, trimmed.text);
+  }).catch(function(){ msg.textContent = "Lookup failed — check your connection and try again."; });
+}
+
+/* ---------- Explain ---------- */
+var explainStyles = [];
+function saveExplain(){
+  var text = document.getElementById("explainInput").value.trim(); if (!text) return;
+  var concept = document.getElementById("conceptInput").value.trim();
+  var title = concept || (text.length > 60 ? text.slice(0, 60) + "…" : text);
+  var sources = [];
+  if (concept) sources.push("https://simple.wikipedia.org/w/index.php?search="+encodeURIComponent(concept));
+  var s = { id: "s"+Date.now(), type: "explain", title: title, content: text, sources: sources, steps: explainStyles.slice(), date: todayStr() };
+  DB.sessions.unshift(s); saveDB(DB); renderAll();
+  document.getElementById("explainMsg").textContent = "Session saved.";
+  openSession(s.id);
+}
+
+/* ---------- Backup ---------- */
+function exportBackup(){
+  var blob = new Blob([JSON.stringify(DB, null, 2)], { type: "application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "commutemind-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  document.getElementById("backupMsg").textContent = "Backup exported — keep the file somewhere safe (e.g. Google Drive).";
+}
+function importBackup(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var data = JSON.parse(String(reader.result));
+      if (!data || !Array.isArray(data.sessions) || !data.settings) throw new Error("bad format");
+      if (!confirm("Import this backup? It replaces your current CommuteMind data on this device.")) return;
+      DB = data; lsSet(SEEDFLAG,"1"); saveDB(DB); applySettings(); renderAll();
+      document.getElementById("backupMsg").textContent = "Backup imported.";
+    } catch(e){ document.getElementById("backupMsg").textContent = "That file is not a valid CommuteMind backup."; }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Settings ---------- */
+function applySettings(){
+  document.documentElement.classList.toggle("light", DB.settings.theme === "light");
+  document.getElementById("rateRange").value = DB.settings.rate || 1.0;
+  document.getElementById("rateLabel").textContent = (DB.settings.rate || 1.0).toFixed(1)+"x";
+  populateVoices();
+}
+function renderAll(){ renderHome(); }
+
+/* ---------- Wiring & init ---------- */
+document.querySelectorAll("[data-nav]").forEach(function(b){ b.addEventListener("click", function(){ showView(b.getAttribute("data-nav")); }); });
+document.getElementById("sessionBack").addEventListener("click", function(){ showView("home"); });
+document.getElementById("topicInput").addEventListener("input", function(){ document.getElementById("genBtn").disabled = !this.value.trim(); });
+document.getElementById("lenRange").addEventListener("input", function(){
+  document.getElementById("lenLabel").textContent = this.value + (this.value === "1" ? " minute" : " minutes");
+  document.getElementById("lenWords").textContent = minutesToWords(parseInt(this.value,10));
+});
+document.getElementById("genBtn").addEventListener("click", fetchBriefing);
+document.getElementById("explainInput").addEventListener("input", function(){
+  var has = !!this.value.trim();
+  document.getElementById("readBtn").disabled = !has;
+  document.getElementById("saveExplainBtn").disabled = !has;
+});
+document.getElementById("readBtn").addEventListener("click", function(){
+  var text = document.getElementById("explainInput").value.trim(); if (text) speak("Your passage", text);
+});
+document.querySelectorAll("#styleChips [data-style]").forEach(function(b){ b.addEventListener("click", function(){
+  var st = b.getAttribute("data-style");
+  if (explainStyles.indexOf(st) === -1) explainStyles.push(st); else explainStyles = explainStyles.filter(function(x){ return x !== st; });
+  b.classList.toggle("on", explainStyles.indexOf(st) !== -1);
+}); });
+document.getElementById("simpleWikiBtn").addEventListener("click", function(){
+  var c = document.getElementById("conceptInput").value.trim();
+  if (!c) { document.getElementById("explainMsg").textContent = "Type the concept to look up first."; return; }
+  window.open("https://simple.wikipedia.org/w/index.php?search="+encodeURIComponent(c), "_blank");
+});
+document.getElementById("wikiBtn").addEventListener("click", function(){
+  var c = document.getElementById("conceptInput").value.trim();
+  if (!c) { document.getElementById("explainMsg").textContent = "Type the concept to look up first."; return; }
+  window.open("https://en.wikipedia.org/w/index.php?search="+encodeURIComponent(c), "_blank");
+});
+document.getElementById("saveExplainBtn").addEventListener("click", saveExplain);
+document.getElementById("playPauseBtn").addEventListener("click", function(){
+  if (!synth || !speaking) return;
+  if (paused) { synth.resume(); paused = false; } else { synth.pause(); paused = true; }
+  updatePlayer();
+});
+document.getElementById("stopBtn").addEventListener("click", stopSpeak);
+document.getElementById("darkBtn").addEventListener("click", function(){ DB.settings.theme = "dark"; saveDB(DB); applySettings(); });
+document.getElementById("lightBtn").addEventListener("click", function(){ DB.settings.theme = "light"; saveDB(DB); applySettings(); });
+document.getElementById("voiceSelect").addEventListener("change", function(){ DB.settings.voiceURI = this.value; saveDB(DB); });
+document.getElementById("rateRange").addEventListener("input", function(){ DB.settings.rate = parseFloat(this.value); document.getElementById("rateLabel").textContent = DB.settings.rate.toFixed(1)+"x"; saveDB(DB); });
+document.getElementById("testVoiceBtn").addEventListener("click", function(){ speak("Voice test", "Hello, driver. This is your CommuteMind reading voice, at your chosen speed."); });
+document.getElementById("exportBtn").addEventListener("click", exportBackup);
+document.getElementById("importBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+document.getElementById("importFile").addEventListener("change", function(){ if (this.files && this.files[0]) importBackup(this.files[0]); this.value=""; });
+wireMic("topicMic", "topicInput");
+wireMic("explainMic", "explainInput");
+
+/* Test hooks (used by automated verification; harmless in production) */
+window.CM = { trimToWords: trimToWords, minutesToWords: minutesToWords, getDB: function(){ return DB; } };
+
+applySettings();
+renderAll();
+showView("home");
+</script>
+</body>
+</html>
