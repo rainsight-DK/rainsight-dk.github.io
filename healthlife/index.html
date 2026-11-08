@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HealthGuide</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f2f7f3; color: #1d2b21; min-height: 100vh; }
+  header { background: #15803d; color: #fff; padding: 14px 16px 10px; position: sticky; top: 0; z-index: 20; }
+  .brand { font-size: 23px; font-weight: 900; }
+  .tagline { font-size: 12px; opacity: .88; margin-top: 2px; }
+  nav { display: flex; gap: 6px; margin-top: 12px; overflow-x: auto; padding-bottom: 4px; }
+  nav button { flex: 1 0 auto; background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 8px 11px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  nav button.active { background: #fff; color: #15803d; }
+  main { padding: 16px; max-width: 760px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+  h1 { font-size: 22px; font-weight: 900; margin-bottom: 6px; }
+  h2 { font-size: 13px; font-weight: 800; letter-spacing: 1.2px; color: #15803d; margin: 20px 0 8px; text-transform: uppercase; }
+  .sub { color: #5c6f60; font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
+  .card { background: #fff; border: 1px solid #d9e6dc; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+  .action { background: #fff; border: 1px solid #d9e6dc; border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: left; width: 100%; }
+  .action .ic { font-size: 24px; }
+  .action .t { font-weight: 800; font-size: 15px; margin-top: 6px; color: #1d2b21; }
+  .action .d { font-size: 12px; color: #5c6f60; margin-top: 2px; }
+  input[type=text], input[type=number], input[type=url], input[type=date], select, textarea { width: 100%; background: #fff; border: 1px solid #bfd3c4; border-radius: 10px; color: #1d2b21; padding: 10px; font-size: 14px; margin-bottom: 8px; }
+  textarea { min-height: 64px; resize: vertical; }
+  label { display: block; font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #5c6f60; text-transform: uppercase; margin: 8px 0 4px; }
+  .btn { display: inline-block; background: #15803d; color: #fff; border: none; border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 800; cursor: pointer; text-decoration: none; text-align: center; }
+  .btn.ghost { background: #eef4ef; color: #2c4233; border: 1px solid #bfd3c4; }
+  .btn.small { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+  .chip { background: #eef4ef; border: 1px solid #bfd3c4; color: #2c4233; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .chip.on { background: #15803d; border-color: #15803d; color: #fff; }
+  .chip.static { cursor: default; }
+  .chip.cond { background: #dcfce7; border-color: #86efac; color: #14532d; cursor: default; }
+  .verdict { display: inline-block; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
+  .verdict.good { background: #dcfce7; color: #14532d; }
+  .verdict.caution { background: #fef3c7; color: #92400e; }
+  .verdict.info { background: #e0e7ff; color: #3730a3; }
+  .logcard { background: #fff; border: 1px solid #d9e6dc; border-radius: 14px; padding: 13px 14px; margin-bottom: 10px; cursor: pointer; }
+  .logcard .lt { font-weight: 800; font-size: 15px; line-height: 1.35; }
+  .logcard .lm { font-size: 12px; color: #5c6f60; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .logcard .lp { font-size: 13px; color: #40513f; margin-top: 7px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .body-text { font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+  .altlist { margin: 6px 0 0 18px; font-size: 14px; line-height: 1.6; }
+  .nutri { display: inline-block; font-weight: 900; border-radius: 8px; padding: 2px 9px; color: #fff; font-size: 13px; }
+  .flag { display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #fef3c7; color: #92400e; }
+  .flag.ok { background: #dcfce7; color: #14532d; }
+  .note { font-size: 12px; color: #5c6f60; line-height: 1.55; }
+  .warn { background: #fffbeb; border: 1px solid #f59e0b; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #92400e; margin-bottom: 12px; line-height: 1.5; }
+  .hidden { display: none !important; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 17px; flex: 0 0 auto; }
+  footer { text-align: center; color: #85977f; font-size: 11px; padding: 18px 10px 30px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">🌿 HealthGuide</div>
+  <div class="tagline">Your health advisor — your data stays on this device.</div>
+  <nav id="topnav">
+    <button data-view="home" class="active">Home</button>
+    <button data-view="check">Check</button>
+    <button data-view="history">History</button>
+    <button data-view="recipes">Recipes</button>
+    <button data-view="profiles">Profiles</button>
+  </nav>
+</header>
+<main>
+  <section id="view-home" class="view active">
+    <h1 id="greeting">Hello</h1>
+    <p class="sub">Ready to make healthy choices today?</p>
+    <div class="card" id="homeProfile"></div>
+    <h2>What would you like to check today?</h2>
+    <div class="grid2">
+      <button class="action" data-check="food"><div class="ic">📷</div><div class="t">Check Food</div><div class="d">Real nutrition data + log it</div></button>
+      <button class="action" data-check="menu"><div class="ic">📖</div><div class="t">Check Menu</div><div class="d">Open a menu, log your best picks</div></button>
+      <button class="action" data-check="activity"><div class="ic">💓</div><div class="t">Check Activity</div><div class="d">Log an activity check</div></button>
+      <button class="action" data-check="recipe"><div class="ic">👨‍🍳</div><div class="t">Suggest Recipe</div><div class="d">Your saved recipes + add your own</div></button>
+    </div>
+    <p class="sub" id="homeStats"></p>
+    <h2>Recent checks</h2>
+    <div id="homeRecent"></div>
+    <div class="row"><button class="btn ghost" id="homeHistoryBtn">View History</button></div>
+  </section>
+
+  <section id="view-check" class="view">
+    <h1 id="checkTitle">Check Food</h1>
+    <div class="chips" id="checkTabs">
+      <button class="chip on" data-mode="food">Food</button>
+      <button class="chip" data-mode="menu">Menu</button>
+      <button class="chip" data-mode="activity">Activity</button>
+      <button class="chip" data-mode="recipe">Recipe</button>
+    </div>
+    <div id="checkBody"></div>
+  </section>
+
+  <section id="view-history" class="view">
+    <h1>History</h1>
+    <p class="sub" id="historySub"></p>
+    <div class="chips" id="historyFilters">
+      <button class="chip on" data-f="all">All</button>
+      <button class="chip" data-f="food">Food</button>
+      <button class="chip" data-f="menu">Menu</button>
+      <button class="chip" data-f="activity">Activity</button>
+      <button class="chip" data-f="recipe">Recipe</button>
+    </div>
+    <div id="historyList"></div>
+  </section>
+
+  <section id="view-detail" class="view">
+    <button class="btn ghost small" id="detailBack">← Back to History</button>
+    <div id="detailBody" style="margin-top:12px"></div>
+  </section>
+
+  <section id="view-recipes" class="view">
+    <h1>Saved Recipes</h1>
+    <p class="sub" id="recipesSub"></p>
+    <div id="recipeList"></div>
+  </section>
+
+  <section id="view-profiles" class="view">
+    <h1>Profiles</h1>
+    <p class="sub">Switch the active profile or manage health details. Everything is stored on this device only.</p>
+    <div id="profileList"></div>
+    <div class="row" style="margin:10px 0"><button class="btn" id="addProfileBtn">＋ Add New Profile</button></div>
+    <div id="profileForm"></div>
+    <h2>Backup</h2>
+    <div class="card">
+      <p class="sub">Export a backup file and keep it (e.g. in Google Drive); import it on another device to move your data there. Import replaces what's on the receiving device.</p>
+      <div class="row">
+        <button class="btn ghost" id="exportBtn">⬇ Export backup</button>
+        <button class="btn ghost" id="importBtn">⬆ Import backup</button>
+        <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+      </div>
+      <p class="note" id="backupMsg" style="margin-top:8px"></p>
+    </div>
+  </section>
+</main>
+<footer>Historical checks and recipes were written by the original app's AI and are kept as your records.<br>New nutrition lookups: Open Food Facts (real product data). This app does not give medical advice.</footer>
+
+<script>
+"use strict";
+/* ---------- Failure-proof storage ---------- */
+var MemStore = {};
+function lsGet(k){ try { return window.localStorage.getItem(k); } catch(e){ return (k in MemStore) ? MemStore[k] : null; } }
+function lsSet(k,v){ try { window.localStorage.setItem(k,v); } catch(e){} MemStore[k]=v; }
+var DBKEY = "healthGuideV1", SEEDFLAG = "healthGuideSeededV1";
+
+/* ---------- Seed data: captured in full from the original app's data tables ---------- */
+function seedProfile(){
+  return { id:"p-dhk", name:"DHK", dob:"", sex:"male", avatarColor:"#8BAAB5",
+    conditions:["Hyperlipidemia","Early stage Atherosclerosis"], bpSys:120, bpDia:"",
+    glucose:128, allergies:["No"], medications:["No"],
+    notes:"Just about to start the medications, but not now." };
+}
+function seedRecipes(){ return [
+  { id:"r-bark", title:"Frozen Cacao and Coconut Yogurt Bark", date:"2026-08-10",
+    description:"A heart-healthy, low-glycemic dessert made with Greek yogurt, raw cacao, and coconut, perfect for a cooling treat that supports lipid health and blood glucose management.",
+    ingredients:["2 cups plain non-fat Greek yogurt","3 tablespoons raw unsweetened cacao powder","1 tablespoon monk fruit sweetener","1/4 cup unsweetened shredded coconut","1/2 teaspoon pure vanilla extract"],
+    instructions:"1. In a medium mixing bowl, whisk together the Greek yogurt, cacao powder, monk fruit sweetener, and vanilla extract until smooth and fully combined. 2. Line a baking sheet with parchment paper. 3. Spread the yogurt mixture onto the parchment paper into an even layer, approximately 1/4 inch thick. 4. Sprinkle the shredded coconut evenly over the top. 5. Place the baking sheet in the freezer for at least 3 hours or until completely firm. 6. Once frozen, remove from the freezer and break the bark into irregular pieces with your hands or a knife. 7. Store in a sealed container in the freezer.",
+    servings:6, prepTime:"10 minutes", cookTime:"3 hours (freezing time)",
+    nutritionNotes:"This recipe is excellent for your profile. Greek yogurt provides high-quality protein to keep you full without unhealthy fats. Raw cacao is rich in flavonoids, which support vascular health and help manage early-stage atherosclerosis. Using monk fruit instead of refined sugar keeps your blood glucose impact minimal, which is crucial since your glucose is at 128 mg/dL. By choosing non-fat yogurt and unsweetened toppings, you avoid saturated fats that could negatively impact your hyperlipidemia." },
+  { id:"r-poke", title:"Heart-Smart Brown Rice Poke Bowl", date:"2026-07-16",
+    description:"A heart-healthy, nutrient-dense bowl featuring fiber-rich brown rice, lean protein from fresh tuna, and heart-healthy fats from avocado, seasoned with blood-pressure-friendly coconut aminos.",
+    ingredients:["1 cup cooked brown rice (cooled)","4 oz fresh sushi-grade tuna, cubed","1/2 medium avocado, sliced","1/2 cup cucumber, sliced thin","1 tablespoon low-sodium coconut aminos","1 teaspoon fresh grated ginger","1 teaspoon toasted sesame seeds","1/4 cup shredded carrots","Optional: thinly sliced radish or scallions for garnish"],
+    instructions:"1. In a small bowl, whisk together the low-sodium coconut aminos and grated fresh ginger. 2. Place the cubed tuna into the bowl and toss gently with the marinade; let it sit for 5-10 minutes. 3. Scoop the cooled brown rice into a serving bowl. 4. Arrange the marinated tuna, avocado slices, cucumber, and shredded carrots neatly over the rice. 5. Sprinkle with sesame seeds and garnish with radish or scallions if desired. Serve immediately.",
+    servings:1, prepTime:"15 minutes", cookTime:"0 minutes (assuming pre-cooked rice)",
+    nutritionNotes:"This meal is excellent for hypertension and atherosclerosis. Brown rice provides complex carbohydrates and fiber, which helps manage blood glucose levels. Tuna provides heart-healthy Omega-3 fatty acids, and avocado offers monounsaturated fats that support arterial health. Using low-sodium coconut aminos instead of soy sauce is essential for maintaining lower sodium intake, which is critical for managing your current blood pressure of 160 mmHg." }
+]; }
+function L(id, date, type, title, input, verdict, rec, alts){ return { id:id, date:date, type:type, title:title, input:input, verdict:verdict, recommendation:rec, alternatives:alts||[] }; }
+function seedLogs(){ return [
+L("log01","2026-08-21","activity","Handstand","Hand stand","caution",
+  "Handstands are intense inversions that cause a rapid increase in blood pressure in the upper body and head. For individuals with early-stage atherosclerosis, these sudden pressure spikes can put significant stress on the arterial walls. Additionally, your blood glucose of 128 mg/dL is in the prediabetic range, and since you have not yet started your management medications, your body's cardiovascular response to extreme isometric stress may not be fully stabilized. The physical strain and the risk of the Valsalva maneuver (holding your breath during exertion) could cause a temporary but sharp rise in blood pressure."),
+L("log02","2026-08-17","menu","Singapore Rice Noodle (with Tofu or Veggie), Chow Fun Noodle","1 menu photo(s)","info",
+  "Singapore Rice Noodle (with Tofu or Veggie), Chow Fun Noodle with Gravy (with Tofu or Veggie), Tofu as the protein choice for any dish"),
+L("log03","2026-08-16","activity","2-mile cross-country running","Cross country (running) for 2 miles","caution",
+  "Cross-country running is a high-intensity cardiovascular activity. While exercise is a primary treatment for hyperlipidemia and atherosclerosis, the presence of plaque (atherosclerosis) means your arteries may not handle sudden, intense strain as efficiently. Additionally, your blood glucose of 128 mg/dL is in the prediabetic range, which can affect energy metabolism. Since you are just about to start medications, it is crucial to ensure your heart is ready for this level of exertion to avoid potential plaque rupture or cardiac stress."),
+L("log04","2026-08-16","food","Unsweetened iced tea","Unsweetened ice tea","good",
+  "Unsweetened iced tea is an excellent choice for your health profile. For your early-stage atherosclerosis and hyperlipidemia, tea provides flavonoids and polyphenols that help relax and dilate blood vessels, supporting overall cardiovascular health and potentially lowering the risk of stroke according to the Harvard School of Public Health [Harvard School of Public Health](https://www.bolay.com/blog/the-health-benefits-of-unsweetened-iced-tea). Crucially, since your blood glucose is 128 mg/dL (which is in the elevated range), this drink is ideal because it contains zero sugar and typically only causes a minimal blood sugar spike of about 2 mg/dL, making it one of the best beverages for glucose management according to MyGluCoach [MyGluCoach](https://myglucoach.com/uk/alcohol-and-sugar-free-tea/). Unlike sweet tea, it does not contribute to elevated triglycerides or insulin resistance, which are risk factors for worsening arterial health as noted by NCH Stats [NCH Stats](https://nchstats.com/food/unsweetened-iced-tea-benefits/).",
+  ["Iced green tea (high in antioxidants)","Sparkling water with a squeeze of lemon or lime","Hibiscus tea (naturally tart and caffeine-free)","Infused water with cucumber and mint"]),
+L("log05","2026-08-10","recipe","Frozen Cacao and Coconut Yogurt Bark","Desert with coconut powder, Greek yogurt, monk fruit, cottage cheese, sugar free cacao powder","good",
+  "A heart-healthy, low-glycemic dessert made with Greek yogurt, raw cacao, and coconut, perfect for a cooling treat that supports lipid health and blood glucose management."),
+L("log06","2026-08-09","food","Kirkland Signature Organic Unsweetened Almond Non-Dairy Beverage (Vanilla)","Photo analysis","good",
+  "This almond milk is an excellent choice for your specific health needs. For hyperlipidemia and atherosclerosis, it contains 0g of saturated fat and 0mg of cholesterol, which helps avoid the plaque-building effects associated with saturated fats found in full-fat dairy [Foods High in Saturated Fat](https://www.webmd.com/diet/foods-high-in-saturated-fat) [What is Atherosclerosis? | American Heart Association](https://www.heart.org/en/health-topics/cholesterol/about-cholesterol/atherosclerosis). Furthermore, with your blood glucose at 128 mg/dL, this 'Unsweetened' version is ideal because it contains 0g of added sugars and only 1g of total carbohydrates, preventing the blood sugar spikes that sweetened beverages cause [Organic Unsweetened Almond Non-Diary Beverage Vanilla – Kirkland](https://world.openfoodfacts.org/product/17591308/organic-unsweetened-almond-non-diary-beverage-vanilla-kirkland).",
+  ["Unsweetened Soy Milk (for higher protein content)","Unsweetened Cashew Milk","Water"]),
+L("log07","2026-08-02","menu","Tacos de Pescado (Blackened), Vegetable Tacos, Chicken or Shrimp Fajitas, Tacos de Pollo","1 menu photo(s)","info",
+  "Tacos de Pescado (Blackened), Vegetable Tacos, Chicken or Shrimp Fajitas, Tacos de Pollo"),
+L("log08","2026-07-29","food","The Greek Gods Plain Traditional Greek Style Yogurt","Photo analysis","caution",
+  "Hello DHK. While this yogurt is a good choice because it has no added sugars (important for managing your blood glucose of 128 mg/dL), the 'Traditional' style contains 5g of saturated fat per serving—about 25% of the recommended daily limit. For someone with hyperlipidemia and early-stage atherosclerosis, reducing saturated fat is critical to managing cholesterol and protecting your arteries. The protein and probiotics are beneficial, but the fat content makes this a 'caution' item for your heart health.",
+  ["Non-fat (0%) Plain Greek Yogurt","Low-fat (2%) Plain Greek Yogurt","Unsweetened Soy Yogurt"]),
+L("log09","2026-07-26","food","The Greek Gods Plain Traditional Greek Style Yogurt","Photo analysis","caution",
+  "This yogurt is a 'caution' primarily due to its saturated fat content. One serving contains 5g of saturated fat (25% of the Daily Value), which is quite high for someone with hyperlipidemia and early-stage atherosclerosis. Saturated fats are known to raise LDL ('bad') cholesterol, which can worsen arterial plaque. Additionally, your blood glucose of 128 mg/dL is elevated; while this yogurt has no 'added' sugar, the 'Traditional Style' includes cream and pectin, making it higher in calories and fat—but lower in protein (7g)—than standard strained Greek yogurt. Higher protein versions are generally better for blood sugar stability.",
+  ["0% Fat (Non-fat) Plain Greek Yogurt (e.g., Fage 0% or Chobani Non-Fat Plain)","Low-fat (1%) plain kefir","Fat-free plain Icelandic Skyr (typically very high in protein)"]),
+L("log10","2026-07-25","food","Santa Cruz Organic No Stir Creamy Dark Roasted Peanut Butter","Spoon of peanut butter","caution",
+  "This specific peanut butter is a mixed bag for your profile. For your hyperlipidemia and atherosclerosis, the 'no-stir' formula is a concern because it uses palm oil to prevent separation, contributing 4g of saturated fat per serving. Reducing saturated fats from tropical oils is key to managing arterial plaque. However, for your blood glucose level of 128 mg/dL, this is an excellent snack choice because it has zero added sugars and the protein/fat content helps stabilize blood sugar levels.",
+  ["Natural 'Stir' Peanut Butter (ingredients should only be peanuts and salt)","Almond butter (typically lower in saturated fat than peanut butter)","Raw walnuts or pecans (excellent for heart health)"]),
+L("log11","2026-07-24","food","Miso soup with seaweed and tofu, served with brown rice.","Miso soup containing seaweed, tofu, green onion. Mixed with brown rice","caution",
+  "This meal has several heart-healthy components, but requires caution due to your hypertension (160 mmHg). Miso paste is naturally very high in sodium, which can cause fluid retention and further increase blood pressure, putting extra stress on your cardiovascular system and worsening atherosclerosis. On the positive side, tofu is an excellent low-fat protein for hyperlipidemia, and brown rice is a much better choice than white rice for managing your blood glucose (128 mg/dL) due to its fiber content.",
+  ["Use a labeled 'low-sodium' or 'reduced-sodium' miso paste","Dilute the soup with more water or a no-salt-added vegetable stock","Increase the amount of tofu and seaweed while decreasing the amount of broth used","Add more potassium-rich greens like spinach to help balance the sodium"]),
+L("log12","2026-07-24","food","Ottogi Curry (Spicy) with Brown Rice","Curry and brown rice","caution",
+  "The Ottogi Curry mix is very high in sodium, containing 810mg (34% of the Daily Value) in just a small 20g serving of powder. For someone with a blood pressure of 160 mmHg, this level of sodium can significantly hinder blood pressure management. Furthermore, the product contains palm oil, which contributes 3g of saturated fat per serving; this is a concern given your hyperlipidemia and atherosclerosis, as saturated fats can raise LDL cholesterol. While choosing brown rice is an excellent decision for managing your blood glucose (128 mg/dL) due to its fiber content, the curry sauce itself uses wheat flour and corn starch as thickeners, which adds refined carbohydrates to the meal.",
+  ["Use a salt-free curry powder blend and season with fresh herbs or a squeeze of lemon instead of the premixed sauce.","Prepare the curry with a high volume of heart-healthy vegetables like broccoli, carrots, and onions to increase fiber and potassium.","Use lean protein sources like lentils, chickpeas, or skinless chicken breast to keep the meal heart-healthy."]),
+L("log13","2026-07-23","menu","Grilled Salmon with Steamed Asparagus, Quinoa and Roasted Vegetables, Grilled chicken and Steamed Broccoli and Steamed Carrots and Roasted Brussels Sprouts","https://share.google/1xGWI2EUyjCgJ5Uce","info",
+  "Grilled Salmon with Steamed Asparagus, Quinoa and Roasted Vegetable Bowl, Mixed Greens with Olive Oil and Lemon Dressing, Lentil or Bean-Based Soup"),
+L("log14","2026-07-22","food","Cabbage salad with red vinaigrette dressing","Cabbage salad with red vinaigrette dressing","good",
+  "Cabbage is an excellent choice for your heart health. It is high in fiber and plant sterols, which help lower the LDL (bad) cholesterol associated with hyperlipidemia and atherosclerosis. Its high potassium content helps manage your 160 mmHg blood pressure by counteracting the effects of sodium. Additionally, cabbage is low-glycemic, making it safe for your 128 mg/dL blood glucose level. A vinaigrette is a better choice than creamy dressings because it is lower in saturated fats; however, be mindful that commercial dressings can contain 230-360mg of sodium per serving, which can impact blood pressure.",
+  ["Homemade dressing using extra virgin olive oil and lemon juice or apple cider vinegar to eliminate added sodium and sugar","Add walnuts or flaxseeds for heart-healthy omega-3 fatty acids"]),
+L("log15","2026-07-22","food","Roasted or grilled chicken breast, white rice, and asparagus.","Photo analysis","caution",
+  "This meal has great foundations but requires adjustments for your specific health profile. The chicken is a lean protein and asparagus is a high-fiber vegetable, both of which are excellent for atherosclerosis and hyperlipidemia. However, with a blood glucose level of 128 mg/dL, the white rice is a concern because it is a refined carbohydrate that can cause rapid blood sugar spikes. In addition, the meal has a potential sodium risk, so the focus should be on keeping the seasonings simple and avoiding any added salts that could impact your blood pressure (160 mmHg), with the recommendation to use this as the single largest source of carbs for this meal.",
+  ["Swap white rice for brown rice, quinoa, or farro to provide more fiber and a slower glucose release.","Use cauliflower rice for an even lower glycemic impact.","Ensure seasoning is strictly salt-free, using lemon, cracked pepper, or garlic powder instead.","Increase the ratio of asparagus to rice to improve heart-healthy fiber intake."]),
+L("log16","2026-07-21","food","Viva Naturals Organic Cacao Powder","Photo analysis","good",
+  "This organic cacao powder is an excellent choice for your heart health. It is naturally sodium-free, which is crucial for managing your hypertension (160 mmHg). Cacao is rich in flavanols, which are plant compounds that can help improve blood vessel elasticity and blood flow, potentially supporting lower blood pressure. Since it has 0g of saturated fat and 0g of cholesterol, it is very safe for hyperlipidemia and early-stage atherosclerosis. Furthermore, with 0g of added sugar and low total carbohydrates, it is a great alternative to cocoa mixes for managing your blood glucose level of 128 mg/dL.",
+  ["Ceylon cinnamon for added flavor without sugar","Fresh raspberries or blueberries for natural sweetness and extra fiber","Unsweetened almond or soy milk as a base for a heart-healthy hot chocolate"]),
+L("log17","2026-07-17","food","Grilled salmon and brown rice, with a small piece of roasted vegetable (possibly sweet potato or squash)","Grilled salmon, brown rice","good",
+  "This meal is an excellent choice for your profile. Salmon is rich in Omega-3 fatty acids, which help lower triglycerides and reduce the arterial inflammation associated with atherosclerosis and hyperlipidemia. Brown rice is a whole grain that provides fiber, which is beneficial for stabilizing blood glucose (currently 128 mg/dL) and managing cholesterol. Given your high blood pressure of 160 mmHg, the only concern is hidden sodium; ensure the salmon wasn't seasoned with heavy salt or soy sauce.",
+  ["Add a side of steamed leafy greens like spinach or bok choy for potassium to help lower blood pressure.","Use lemon, garlic, and herbs for flavor instead of salt.","Try cauliflower rice as a lower-carb alternative if you find your glucose levels staying elevated."]),
+L("log18","2026-07-16","food","Salmon poke bowl with brown rice, avocado, diced cucumber, and a side of cherry tomatoes.","Salmon poke bowl with brown rice","caution",
+  "This meal is a mixed bag for your health profile. The salmon is excellent for atherosclerosis and hyperlipidemia because it's rich in Omega-3 fatty acids, and brown rice is a better choice for your blood glucose (128 mg/dL) than white rice due to its fiber content. However, the 'Caution' verdict is primarily due to your hypertension (160 mmHg). Poke bowls are frequently prepared with high-sodium marinades (soy sauce) and salty toppings, which can lead to a significant spike in blood pressure. Since you have not yet started medication, managing sodium intake is your most critical immediate defense.",
+  ["Request low-sodium soy sauce or coconut aminos on the side.","Use fresh lemon or lime juice and extra ginger for flavor without the salt.","Increase the ratio of cucumbers and tomatoes to rice to help lower the total glycemic load."]),
+L("log19","2026-07-16","recipe","Heart-Smart Brown Rice Poke Bowl","Poke with Raw tuna and cucumber","good",
+  "A heart-healthy, nutrient-dense bowl featuring fiber-rich brown rice, lean protein from fresh tuna, and heart-healthy fats from avocado, seasoned with blood-pressure-friendly coconut aminos."),
+L("log20","2026-07-16","food","Chobani Strawberry Banana Greek Yogurt Drink","Photo analysis","caution",
+  "This yogurt drink is a mixed choice for your specific health needs. For your hypertension, it is relatively low in sodium (110mg) and provides potassium (330mg), which helps manage blood pressure. However, for your hyperlipidemia and early-stage atherosclerosis, the 2.5g of saturated fat (13% of your daily value) is something to watch closely, as heart-healthy diets aim to minimize these fats. Additionally, the 14g of total sugar (including 6g of added sugar) is a concern given your elevated blood glucose of 128 mg/dL, though the 10g of protein helps slow sugar absorption.",
+  ["Plain non-fat Greek yogurt (zero saturated fat and no added sugar)","Fresh whole strawberries or a small banana","Low-sodium cottage cheese with berries"]),
+L("log21","2026-07-16","food","Unsweetened, sodium-free sparkling water","Half cup of sparkling water with zero sugar, zero calorie, zero sweetener, zero sodium","good",
+  "This is an excellent beverage choice for your profile. Since it contains zero sodium, it will not negatively impact your hypertension (currently recorded at 160 mmHg). Being free of sugars and artificial sweeteners, it will not raise your blood glucose levels (128 mg/dL) or contribute to hyperlipidemia or the progression of atherosclerosis. It provides hydration without the risks associated with soda or sweetened drinks.",
+  ["Plain still water","Sparkling water with a squeeze of fresh lemon or lime","Unsweetened herbal tea","Water infused with cucumber or mint"]),
+L("log22","2026-07-16","food","1 banana","1 banana","good",
+  "A banana is an excellent choice for your current health profile. Its high potassium content helps counter the effects of sodium and eases tension in your blood vessel walls, which is crucial given your blood pressure of 160 mmHg. Additionally, the soluble fiber helps manage hyperlipidemia and supports heart health in the context of early atherosclerosis. While your blood glucose is slightly elevated at 128 mg/dL, a banana's fiber ensures the natural sugars are absorbed more slowly than processed snacks.",
+  ["Fresh berries (lower glycemic index)","Half an avocado (healthy fats for heart health)","A small handful of raw walnuts"]),
+L("log23","2026-07-16","food","Two pan-fried eggs and a small portion of mixed brown and white rice.","2 fried eggs, little mixed (brown and white) rice for breakfast","caution",
+  "While this is a controlled portion, there are a few concerns given your health profile. With hypertension (160 mmHg) and hyperlipidemia, the saturated fats used in frying eggs can worsen cholesterol levels and arterial health. Two whole eggs also contain a significant amount of dietary cholesterol; for those with atherosclerosis, moderation is key. Additionally, your blood glucose (128 mg/dL) is in the prediabetic range, so even small amounts of white rice can cause spikes due to its low fiber content.",
+  ["Poached or boiled eggs to avoid added frying oils","One whole egg mixed with two egg whites to reduce cholesterol and saturated fat","100% brown rice, quinoa, or steel-cut oats for more fiber","Add steamed spinach or sliced tomatoes to provide potassium, which helps lower blood pressure"])
+]; }
+function seedDB(){ var p = seedProfile(); return { profiles:[p], activeProfileId:p.id, logs:seedLogs(), recipes:seedRecipes() }; }
+function loadDB(){
+  var db = null;
+  try { var raw = lsGet(DBKEY); if (raw) db = JSON.parse(raw); } catch(e){ db = null; }
+  if (!db || !Array.isArray(db.profiles) || !Array.isArray(db.logs) || !Array.isArray(db.recipes)) { db = seedDB(); lsSet(SEEDFLAG,"1"); saveDB(db); }
+  return db;
+}
+function saveDB(db){ try { lsSet(DBKEY, JSON.stringify(db)); } catch(e){} }
+var DB = seedDB();
+try { DB = loadDB(); } catch(e) { /* keep seed */ }
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function richText(s){ return esc(s).replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a class="ext" href="$2" target="_blank" rel="noopener">$1</a>'); }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtDate(iso){ if (!iso) return ""; var p=String(iso).split("-"); var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return m[parseInt(p[1],10)-1]+" "+parseInt(p[2],10)+", "+p[0]; }
+function profile(){ return DB.profiles.filter(function(p){ return p.id===DB.activeProfileId; })[0] || DB.profiles[0]; }
+function myLogs(){ var pid = profile() ? profile().id : ""; return DB.logs.filter(function(l){ return !l.profileId || l.profileId===pid; }).slice().sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); }); }
+function myRecipes(){ var pid = profile() ? profile().id : ""; return DB.recipes.filter(function(r){ return !r.profileId || r.profileId===pid; }); }
+var TYPE_LABEL = { food:"Food", menu:"Menu Check", activity:"Activity", recipe:"Recipe" };
+var VERDICT_LABEL = { good:"Good Choice", caution:"Use Caution", info:"Best Picks" };
+
+var currentView = "home", checkMode = "food", historyFilter = "all";
+function showView(v){
+  currentView = v;
+  document.querySelectorAll(".view").forEach(function(s){ s.classList.remove("active"); });
+  var el = document.getElementById("view-"+v); if (el) el.classList.add("active");
+  document.querySelectorAll("#topnav button").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-view")===v); });
+  window.scrollTo(0,0);
+}
+function verdictChip(v){ return '<span class="verdict '+esc(v)+'">'+esc(VERDICT_LABEL[v]||v)+'</span>'; }
+function logCardHtml(l){
+  return '<div class="logcard" data-log="'+esc(l.id)+'"><div class="lt">'+esc(l.title)+'</div>' +
+    '<div class="lm">'+verdictChip(l.verdict)+'<span>'+esc(TYPE_LABEL[l.type]||l.type)+'</span><span>'+esc(fmtDate(l.date))+'</span></div>' +
+    '<div class="lp">'+esc(l.recommendation)+'</div></div>';
+}
+function bindLogCards(container){
+  if (!container) return;
+  container.querySelectorAll("[data-log]").forEach(function(c){ c.addEventListener("click", function(){ openLog(c.getAttribute("data-log")); }); });
+}
+
+/* ---------- Home ---------- */
+function renderHome(){
+  var p = profile();
+  document.getElementById("greeting").textContent = "Hello, "+(p ? p.name : "");
+  var hp = document.getElementById("homeProfile");
+  if (p) {
+    hp.innerHTML = '<div class="row"><span class="avatar" style="background:'+esc(p.avatarColor||"#8BAAB5")+'">'+esc((p.name||"?").slice(0,2).toUpperCase())+'</span>' +
+      '<div><strong>For '+esc(p.name)+'</strong><div class="chips" style="margin:4px 0 0">' +
+      (p.conditions||[]).map(function(c){ return '<span class="chip cond">'+esc(c)+'</span>'; }).join("") + '</div>' +
+      '<div class="note">Blood pressure: '+(p.bpSys||"—")+(p.bpDia?"/"+p.bpDia:"")+' · Glucose: '+(p.glucose||"—")+' mg/dL</div></div></div>';
+  } else hp.innerHTML = '<p class="sub">No profile yet — add one in Profiles.</p>';
+  var logs = myLogs();
+  var good = logs.filter(function(l){ return l.verdict==="good"; }).length;
+  var caution = logs.filter(function(l){ return l.verdict==="caution"; }).length;
+  document.getElementById("homeStats").textContent = logs.length+" checks saved · "+good+" good choices · "+caution+" cautions · "+myRecipes().length+" recipes saved";
+  var recent = document.getElementById("homeRecent");
+  recent.innerHTML = logs.slice(0,5).map(logCardHtml).join("") || '<p class="sub">No checks yet.</p>';
+  bindLogCards(recent);
+}
+
+/* ---------- Check ---------- */
+function logFormHtml(mode, prefill){
+  prefill = prefill || {};
+  return '<div class="card"><label>'+(mode==="menu" ? "Your best picks" : mode==="recipe" ? "Recipe title" : "Title")+'</label>' +
+    '<input type="text" id="lfTitle" value="'+esc(prefill.title||"")+'" placeholder="'+(mode==="food" ? "e.g. Double Whopper set, one portion" : mode==="activity" ? "e.g. Outdoor concert, 3 hours" : "")+'">' +
+    '<label>Your verdict</label><select id="lfVerdict">' +
+    '<option value="good"'+(prefill.verdict==="good"?" selected":"")+'>Good Choice</option>' +
+    '<option value="caution"'+(prefill.verdict==="caution"?" selected":"")+'>Use Caution</option>' +
+    '<option value="info"'+(prefill.verdict==="info"?" selected":"")+'>Best Picks / Note</option></select>' +
+    '<label>Notes</label><textarea id="lfNotes" placeholder="Your notes on this check…">'+esc(prefill.notes||"")+'</textarea>' +
+    '<div class="row"><button class="btn" id="lfSave">Save to History</button></div><p class="note" id="lfMsg"></p></div>';
+}
+function renderCheck(){
+  document.querySelectorAll("#checkTabs [data-mode]").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-mode")===checkMode); });
+  document.getElementById("checkTitle").textContent = { food:"Check Food", menu:"Check Menu", activity:"Check Activity", recipe:"Suggest Recipe" }[checkMode];
+  var body = document.getElementById("checkBody"), p = profile();
+  if (checkMode === "food") {
+    body.innerHTML = '<p class="sub">Describe a packaged food and look up its real nutrition (Open Food Facts), or just log a check with your own verdict. Reference flags use standard per-100g traffic-light thresholds — general information, not medical advice.</p>' +
+      '<div class="card"><label>Describe what you\'re eating</label><textarea id="foodQuery" placeholder="e.g. Greek yogurt, peanut butter, almond milk"></textarea>' +
+      '<div class="row"><button class="btn" id="offSearchBtn">Look up nutrition</button></div><div id="offResults" style="margin-top:10px"></div></div>' +
+      '<div id="foodLogWrap">'+logFormHtml("food")+'</div>';
+    document.getElementById("offSearchBtn").addEventListener("click", offSearch);
+    wireLogForm("food", null);
+  } else if (checkMode === "menu") {
+    body.innerHTML = '<p class="sub">The original read menu photos/links with AI. Here: open the menu page yourself, then log the picks you chose.</p>' +
+      '<div class="card"><label>Menu webpage link</label><input type="url" id="menuUrl" placeholder="https://restaurant.com/menu">' +
+      '<div class="row"><button class="btn ghost" id="menuOpenBtn">Open menu page</button></div></div>' + logFormHtml("menu");
+    document.getElementById("menuOpenBtn").addEventListener("click", function(){ var u = document.getElementById("menuUrl").value.trim(); if (u) window.open(u, "_blank"); });
+    wireLogForm("menu", null);
+  } else if (checkMode === "activity") {
+    body.innerHTML = '<p class="sub">Describe the activity and log your check. (The original\'s safety verdicts were written by AI; this rebuild keeps your history and your own verdicts.)</p>' +
+      '<div class="card"><label>Describe the activity</label><textarea id="actQuery" placeholder="e.g. Outdoor concert, 3 hours, evening, moderate intensity"></textarea></div>' + logFormHtml("activity");
+    wireLogForm("activity", function(){ return document.getElementById("actQuery").value.trim(); });
+  } else {
+    var recs = myRecipes();
+    body.innerHTML = '<p class="sub">Recipes safe for '+(p ? esc(p.name) : "you")+'\'s conditions — your saved recipes:</p>' +
+      (recs.length ? recs.map(function(r){ return '<div class="logcard" data-recipe="'+esc(r.id)+'"><div class="lt">'+esc(r.title)+'</div><div class="lp">'+esc(r.description)+'</div></div>'; }).join("") : '<p class="sub">No recipes saved yet.</p>') +
+      '<h2>Add your own recipe</h2><div class="card">' +
+      '<label>Title</label><input type="text" id="rcTitle"><label>Description</label><textarea id="rcDesc"></textarea>' +
+      '<label>Ingredients (one per line)</label><textarea id="rcIng"></textarea>' +
+      '<label>Instructions</label><textarea id="rcInst"></textarea>' +
+      '<div class="row"><span style="flex:1"><label>Servings</label><input type="number" id="rcServ"></span><span style="flex:1"><label>Prep time</label><input type="text" id="rcPrep"></span><span style="flex:1"><label>Cook time</label><input type="text" id="rcCook"></span></div>' +
+      '<label>Nutrition notes</label><textarea id="rcNotes"></textarea>' +
+      '<div class="row"><button class="btn" id="rcSave">Save recipe</button></div><p class="note" id="rcMsg"></p></div>';
+    body.querySelectorAll("[data-recipe]").forEach(function(c){ c.addEventListener("click", function(){ showView("recipes"); }); });
+    document.getElementById("rcSave").addEventListener("click", function(){
+      var t = document.getElementById("rcTitle").value.trim(); if (!t) { document.getElementById("rcMsg").textContent = "Give the recipe a title."; return; }
+      var r = { id:"r"+Date.now(), profileId: profile() ? profile().id : "", title:t, date: todayStr(),
+        description: document.getElementById("rcDesc").value.trim(),
+        ingredients: document.getElementById("rcIng").value.split("\n").map(function(s){ return s.trim(); }).filter(Boolean),
+        instructions: document.getElementById("rcInst").value.trim(),
+        servings: parseInt(document.getElementById("rcServ").value,10) || "",
+        prepTime: document.getElementById("rcPrep").value.trim(), cookTime: document.getElementById("rcCook").value.trim(),
+        nutritionNotes: document.getElementById("rcNotes").value.trim() };
+      DB.recipes.unshift(r);
+      DB.logs.unshift({ id:"log"+Date.now(), profileId:r.profileId, type:"recipe", title:t, input:"Added manually", verdict:"good", recommendation:r.description || "Recipe saved.", alternatives:[], date: todayStr() });
+      saveDB(DB); renderAll(); showView("recipes");
+    });
+  }
+}
+function wireLogForm(mode, inputGetter){
+  var btn = document.getElementById("lfSave"); if (!btn) return;
+  btn.addEventListener("click", function(){
+    var title = document.getElementById("lfTitle").value.trim();
+    if (!title) { document.getElementById("lfMsg").textContent = "Enter a title first."; return; }
+    var input = inputGetter ? inputGetter() : (mode==="food" ? (document.getElementById("foodQuery") ? document.getElementById("foodQuery").value.trim() : "") : title);
+    DB.logs.unshift({ id:"log"+Date.now(), profileId: profile() ? profile().id : "", type:mode, title:title,
+      input: input || title, verdict: document.getElementById("lfVerdict").value,
+      recommendation: document.getElementById("lfNotes").value.trim() || "(No notes)", alternatives:[], date: todayStr() });
+    saveDB(DB); renderAll(); showView("history");
+  });
+}
+function nutriFlag(label, val, unit, highAt){
+  if (val == null || isNaN(val)) return "";
+  var high = val >= highAt;
+  return '<span class="flag'+(high?"":" ok")+'">'+label+" "+val+unit+(high?" · high":"")+'</span>';
+}
+function offSearch(){
+  var q = document.getElementById("foodQuery").value.trim(); if (!q) return;
+  var box = document.getElementById("offResults");
+  box.innerHTML = '<p class="sub">Searching Open Food Facts…</p>';
+  if (typeof fetch !== "function") { box.innerHTML = '<p class="sub">Lookup needs an internet connection.</p>'; return; }
+  fetch("https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(q)+"&json=1&page_size=6&fields=product_name,brands,nutriscore_grade,nutriments")
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var prods = (data.products||[]).filter(function(p){ return p.product_name; });
+    if (!prods.length) { box.innerHTML = '<p class="sub">No products found. You can still log the check below.</p>'; return; }
+    box.innerHTML = prods.map(function(p, i){
+      var n = p.nutriments||{};
+      var g = (p.nutriscore_grade||"").toUpperCase();
+      var colors = { A:"#038141", B:"#85bb2f", C:"#fecb02", D:"#ee8100", E:"#e63e11" };
+      return '<div class="card" style="margin-bottom:8px"><div class="row" style="justify-content:space-between"><strong>'+esc(p.product_name)+'</strong>' +
+        (g && colors[g] ? '<span class="nutri" style="background:'+colors[g]+'">Nutri-Score '+g+'</span>' : '') + '</div>' +
+        '<div class="note">'+esc(p.brands||"")+' · per 100g</div><div class="row" style="margin-top:6px">' +
+        nutriFlag("Sat fat", n["saturated-fat_100g"], "g", 5) + nutriFlag("Sugars", n["sugars_100g"], "g", 22.5) +
+        nutriFlag("Salt", n["salt_100g"], "g", 1.5) + nutriFlag("Sodium", n["sodium_100g"], "g", 0.6) +
+        (n["energy-kcal_100g"] != null ? '<span class="flag ok">'+Math.round(n["energy-kcal_100g"])+' kcal</span>' : '') +
+        '</div><div class="row" style="margin-top:8px"><button class="btn ghost small" data-offlog="'+i+'">Log this food</button></div></div>';
+    }).join("");
+    box.querySelectorAll("[data-offlog]").forEach(function(b){ b.addEventListener("click", function(){
+      var p = prods[parseInt(b.getAttribute("data-offlog"),10)]; var n = p.nutriments||{};
+      var summary = "Open Food Facts (per 100g): Nutri-Score "+((p.nutriscore_grade||"?").toUpperCase())+
+        ", saturated fat "+(n["saturated-fat_100g"]!=null?n["saturated-fat_100g"]+"g":"—")+
+        ", sugars "+(n["sugars_100g"]!=null?n["sugars_100g"]+"g":"—")+
+        ", salt "+(n["salt_100g"]!=null?n["salt_100g"]+"g":"—")+".";
+      var wrap = document.getElementById("foodLogWrap");
+      wrap.innerHTML = logFormHtml("food", { title: p.product_name, notes: summary });
+      wireLogForm("food", null);
+      wrap.scrollIntoView();
+    }); });
+  })
+  .catch(function(){ box.innerHTML = '<p class="sub">Lookup failed — check your connection. You can still log the check below.</p>'; });
+}
+
+/* ---------- History & detail ---------- */
+function renderHistory(){
+  document.querySelectorAll("#historyFilters [data-f]").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-f")===historyFilter); });
+  var logs = myLogs();
+  document.getElementById("historySub").textContent = "Recent checks for "+(profile() ? profile().name : "")+" — "+logs.length+" saved.";
+  var shown = historyFilter==="all" ? logs : logs.filter(function(l){ return l.type===historyFilter; });
+  var box = document.getElementById("historyList");
+  box.innerHTML = shown.length ? shown.map(logCardHtml).join("") : '<p class="sub">No checks in this category.</p>';
+  bindLogCards(box);
+}
+function openLog(id){
+  var l = DB.logs.filter(function(x){ return x.id===id; })[0]; if (!l) return;
+  var h = '<div class="card"><div class="row">'+verdictChip(l.verdict)+'<span class="chip static">'+esc(TYPE_LABEL[l.type]||l.type)+'</span><span class="note">'+esc(fmtDate(l.date))+'</span></div>' +
+    '<h1 style="margin-top:10px">'+esc(l.title)+'</h1>' +
+    '<p class="note" style="margin:6px 0">You checked: '+esc(l.input)+'</p>' +
+    '<h2>'+(l.type==="menu" ? "Best picks" : "Recommendation")+'</h2><p class="body-text">'+richText(l.recommendation)+'</p>';
+  if (l.alternatives && l.alternatives.length) h += '<h2>Alternatives</h2><ul class="altlist">'+l.alternatives.map(function(a){ return '<li>'+esc(a)+'</li>'; }).join("")+'</ul>';
+  h += '<div class="row" style="margin-top:14px"><button class="btn ghost" id="logDelete">Delete this check</button></div></div>';
+  document.getElementById("detailBody").innerHTML = h;
+  showView("detail");
+  document.getElementById("logDelete").addEventListener("click", function(){ if (confirm("Delete this check from history?")) { DB.logs = DB.logs.filter(function(x){ return x.id!==id; }); saveDB(DB); renderAll(); showView("history"); } });
+}
+
+/* ---------- Recipes ---------- */
+function renderRecipes(){
+  var recs = myRecipes();
+  document.getElementById("recipesSub").textContent = recs.length+" recipe(s) saved for "+(profile() ? profile().name : "")+".";
+  document.getElementById("recipeList").innerHTML = recs.length ? recs.map(function(r){
+    return '<div class="card"><h1 style="font-size:18px">'+esc(r.title)+'</h1><p class="sub">'+esc(r.description)+'</p>' +
+      '<div class="note">Servings: '+esc(r.servings||"—")+' · Prep: '+esc(r.prepTime||"—")+' · Cook: '+esc(r.cookTime||"—")+' · Saved '+esc(fmtDate(r.date))+'</div>' +
+      '<h2>Ingredients</h2><ul class="altlist">'+(r.ingredients||[]).map(function(i){ return '<li>'+esc(i)+'</li>'; }).join("")+'</ul>' +
+      '<h2>Instructions</h2><p class="body-text">'+esc(r.instructions)+'</p>' +
+      (r.nutritionNotes ? '<h2>Nutrition notes</h2><p class="body-text">'+esc(r.nutritionNotes)+'</p>' : '') +
+      '<div class="row" style="margin-top:10px"><button class="btn ghost small" data-delrecipe="'+esc(r.id)+'">Delete recipe</button></div></div>';
+  }).join("") : '<p class="sub">No recipes yet — add one from Check → Recipe.</p>';
+  document.querySelectorAll("[data-delrecipe]").forEach(function(b){ b.addEventListener("click", function(){ if (confirm("Delete this recipe?")) { DB.recipes = DB.recipes.filter(function(x){ return x.id!==b.getAttribute("data-delrecipe"); }); saveDB(DB); renderAll(); } }); });
+}
+
+/* ---------- Profiles ---------- */
+var editingProfileId = null;
+function renderProfiles(){
+  var box = document.getElementById("profileList");
+  box.innerHTML = DB.profiles.map(function(p){
+    var active = p.id===DB.activeProfileId;
+    return '<div class="card"><div class="row"><span class="avatar" style="background:'+esc(p.avatarColor||"#8BAAB5")+'">'+esc((p.name||"?").slice(0,2).toUpperCase())+'</span>' +
+      '<div style="flex:1"><strong>'+esc(p.name)+'</strong> '+(active?'<span class="verdict good">Active</span>':'') +
+      '<div class="chips" style="margin:4px 0 0">'+(p.conditions||[]).map(function(c){ return '<span class="chip cond">'+esc(c)+'</span>'; }).join("")+'</div>' +
+      '<div class="note">BP '+(p.bpSys||"—")+(p.bpDia?"/"+p.bpDia:"")+' · Glucose '+(p.glucose||"—")+' mg/dL · Sex: '+esc(p.sex||"—")+(p.dob ? ' · DOB '+esc(p.dob) : '')+'</div>' +
+      (p.notes ? '<div class="note" style="margin-top:4px">'+esc(p.notes)+'</div>' : '') + '</div></div>' +
+      '<div class="row" style="margin-top:10px">' +
+      (active ? "" : '<button class="btn small" data-activate="'+esc(p.id)+'">Make active</button>') +
+      '<button class="btn ghost small" data-editp="'+esc(p.id)+'">Edit</button>' +
+      (DB.profiles.length>1 ? '<button class="btn ghost small" data-delp="'+esc(p.id)+'">Delete</button>' : "") + '</div></div>';
+  }).join("");
+  box.querySelectorAll("[data-activate]").forEach(function(b){ b.addEventListener("click", function(){ DB.activeProfileId = b.getAttribute("data-activate"); saveDB(DB); renderAll(); }); });
+  box.querySelectorAll("[data-editp]").forEach(function(b){ b.addEventListener("click", function(){ editingProfileId = b.getAttribute("data-editp"); renderProfileForm(); }); });
+  box.querySelectorAll("[data-delp]").forEach(function(b){ b.addEventListener("click", function(){ var id=b.getAttribute("data-delp"); if (confirm("Delete this profile and its checks/recipes?")) { DB.profiles = DB.profiles.filter(function(x){ return x.id!==id; }); DB.logs = DB.logs.filter(function(x){ return x.profileId!==id; }); DB.recipes = DB.recipes.filter(function(x){ return x.profileId!==id; }); if (DB.activeProfileId===id) DB.activeProfileId = DB.profiles[0].id; saveDB(DB); renderAll(); } }); });
+}
+function profileFormHtml(p){
+  p = p || { name:"", dob:"", sex:"", avatarColor:"#8BAAB5", conditions:[], bpSys:"", bpDia:"", glucose:"", allergies:[], medications:[], notes:"" };
+  var colors = ["#8BAAB5","#15803d","#b45309","#6d28d9","#be185d"];
+  return '<div class="card"><label>Name *</label><input type="text" id="pfName" value="'+esc(p.name)+'">' +
+    '<div class="row"><span style="flex:1"><label>Date of birth</label><input type="date" id="pfDob" value="'+esc(p.dob||"")+'"></span>' +
+    '<span style="flex:1"><label>Sex</label><select id="pfSex"><option value="">—</option><option value="male"'+(p.sex==="male"?" selected":"")+'>Male</option><option value="female"'+(p.sex==="female"?" selected":"")+'>Female</option><option value="other"'+(p.sex==="other"?" selected":"")+'>Other</option></select></span></div>' +
+    '<label>Avatar color</label><div class="chips" id="pfColors">'+colors.map(function(c){ return '<button class="chip'+(p.avatarColor===c?" on":"")+'" data-color="'+c+'" style="background:'+c+';color:#fff;border-color:'+c+'">'+(p.avatarColor===c?"✓":"·")+'</button>'; }).join("")+'</div>' +
+    '<label>Diagnosed conditions (comma separated)</label><input type="text" id="pfConditions" value="'+esc((p.conditions||[]).join(", "))+'">' +
+    '<div class="row"><span style="flex:1"><label>BP systolic</label><input type="number" id="pfSys" value="'+esc(p.bpSys||"")+'"></span><span style="flex:1"><label>BP diastolic</label><input type="number" id="pfDia" value="'+esc(p.bpDia||"")+'"></span><span style="flex:1"><label>Glucose (mg/dL)</label><input type="number" id="pfGlu" value="'+esc(p.glucose||"")+'"></span></div>' +
+    '<label>Allergies (comma separated)</label><input type="text" id="pfAllergies" value="'+esc((p.allergies||[]).join(", "))+'">' +
+    '<label>Current medications (comma separated)</label><input type="text" id="pfMeds" value="'+esc((p.medications||[]).join(", "))+'">' +
+    '<label>Additional notes</label><textarea id="pfNotes">'+esc(p.notes||"")+'</textarea>' +
+    '<div class="row"><button class="btn" id="pfSave">Save profile</button><button class="btn ghost" id="pfCancel">Cancel</button></div><p class="note" id="pfMsg"></p></div>';
+}
+var pfColorSel = "#8BAAB5";
+function renderProfileForm(){
+  var wrap = document.getElementById("profileForm");
+  var p = editingProfileId ? DB.profiles.filter(function(x){ return x.id===editingProfileId; })[0] : null;
+  wrap.innerHTML = profileFormHtml(p);
+  pfColorSel = (p && p.avatarColor) || "#8BAAB5";
+  wrap.querySelectorAll("[data-color]").forEach(function(b){ b.addEventListener("click", function(){ pfColorSel = b.getAttribute("data-color"); wrap.querySelectorAll("[data-color]").forEach(function(x){ x.classList.toggle("on", x===b); x.textContent = x===b ? "✓" : "·"; }); }); });
+  document.getElementById("pfCancel").addEventListener("click", function(){ editingProfileId = null; wrap.innerHTML = ""; });
+  document.getElementById("pfSave").addEventListener("click", function(){
+    var name = document.getElementById("pfName").value.trim();
+    if (!name) { document.getElementById("pfMsg").textContent = "Name is required."; return; }
+    var split = function(id){ return document.getElementById(id).value.split(",").map(function(s){ return s.trim(); }).filter(Boolean); };
+    var data = { name:name, dob: document.getElementById("pfDob").value, sex: document.getElementById("pfSex").value, avatarColor: pfColorSel,
+      conditions: split("pfConditions"), bpSys: parseInt(document.getElementById("pfSys").value,10) || "", bpDia: parseInt(document.getElementById("pfDia").value,10) || "",
+      glucose: parseInt(document.getElementById("pfGlu").value,10) || "", allergies: split("pfAllergies"), medications: split("pfMeds"),
+      notes: document.getElementById("pfNotes").value.trim() };
+    if (editingProfileId) { var t = DB.profiles.filter(function(x){ return x.id===editingProfileId; })[0]; Object.keys(data).forEach(function(k){ t[k]=data[k]; }); }
+    else { data.id = "p"+Date.now(); DB.profiles.push(data); }
+    editingProfileId = null; wrap.innerHTML = ""; saveDB(DB); renderAll();
+  });
+}
+
+/* ---------- Backup ---------- */
+function exportBackup(){
+  var blob = new Blob([JSON.stringify(DB, null, 2)], { type:"application/json" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "healthguide-backup-"+todayStr()+".json"; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  document.getElementById("backupMsg").textContent = "Backup exported — keep the file somewhere safe (e.g. Google Drive).";
+}
+function importBackup(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var data = JSON.parse(String(reader.result));
+      if (!data || !Array.isArray(data.profiles) || !Array.isArray(data.logs) || !Array.isArray(data.recipes)) throw new Error("bad format");
+      if (!confirm("Import this backup? It replaces your current HealthGuide data on this device.")) return;
+      DB = data; lsSet(SEEDFLAG,"1"); saveDB(DB); renderAll();
+      document.getElementById("backupMsg").textContent = "Backup imported.";
+    } catch(e){ document.getElementById("backupMsg").textContent = "That file is not a valid HealthGuide backup."; }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Wiring & init ---------- */
+function renderAll(){ renderHome(); renderCheck(); renderHistory(); renderRecipes(); renderProfiles(); }
+document.querySelectorAll("#topnav button").forEach(function(b){ b.addEventListener("click", function(){ showView(b.getAttribute("data-view")); }); });
+document.querySelectorAll("[data-check]").forEach(function(b){ b.addEventListener("click", function(){ checkMode = b.getAttribute("data-check"); renderCheck(); showView("check"); }); });
+document.querySelectorAll("#checkTabs [data-mode]").forEach(function(b){ b.addEventListener("click", function(){ checkMode = b.getAttribute("data-mode"); renderCheck(); }); });
+document.querySelectorAll("#historyFilters [data-f]").forEach(function(b){ b.addEventListener("click", function(){ historyFilter = b.getAttribute("data-f"); renderHistory(); }); });
+document.getElementById("homeHistoryBtn").addEventListener("click", function(){ showView("history"); });
+document.getElementById("detailBack").addEventListener("click", function(){ showView("history"); });
+document.getElementById("addProfileBtn").addEventListener("click", function(){ editingProfileId = null; renderProfileForm(); });
+document.getElementById("exportBtn").addEventListener("click", exportBackup);
+document.getElementById("importBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+document.getElementById("importFile").addEventListener("change", function(){ if (this.files && this.files[0]) importBackup(this.files[0]); this.value=""; });
+
+renderAll();
+</script>
+</body>
+</html>
