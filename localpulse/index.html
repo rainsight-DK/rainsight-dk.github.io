@@ -64,7 +64,7 @@
   <div id="status">Search for a place, or tap “My location”.</div>
 
   <main id="dash">
-    <div class="card" id="card-address" style="display:none"><h2>Address</h2><div class="big" id="addr-main" onclick="openSummary()" title="Tap for the location summary" style="cursor:pointer; text-decoration:underline dotted; text-underline-offset:4px"></div><div class="muted" id="addr-sub" style="margin-top:4px"></div><div class="src">Source: OpenStreetMap geocoding (Nominatim). Tap the location name above for a summary — prices, price trend, and schools.</div></div>
+    <div class="card" id="card-address" style="display:none"><h2>Address</h2><div class="big" id="addr-main" onclick="openSummary()" title="Tap for the location summary" style="cursor:pointer; text-decoration:underline dotted; text-underline-offset:4px"></div><div class="muted" id="addr-sub" style="margin-top:4px"></div><div class="src">Source: OpenStreetMap geocoding (Nominatim). Tap the location name above for a summary — prices, schools, and an AI area report.</div></div>
     <div class="card" id="card-county" style="display:none"><h2>County</h2><div class="big" id="county-main"></div><div class="src">Source: OpenStreetMap · FCC Census Block API</div></div>
     <div class="card" id="card-values" style="display:none"><h2>Home values & income — this census tract</h2><div id="values-body"><span class="muted">Loading Census data…</span></div>
       <div class="src">Source: U.S. Census Bureau, American Community Survey (ACS 2024) 5-year estimates, via Census Reporter. These are survey estimates for the census tract (a small neighbourhood area), updated yearly — not live market prices or listings.</div></div>
@@ -110,6 +110,7 @@
 "use strict";
 const KEY = "localPulseV1";
 let LP = JSON.parse(localStorage.getItem(KEY) || "null") || { saved: [] };
+if (!Array.isArray(LP.reports)) LP.reports = [];
 function saveLP(){ localStorage.setItem(KEY, JSON.stringify(LP)); }
 const esc = s => { const d=document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; };
 const $ = id => document.getElementById(id);
@@ -166,6 +167,7 @@ async function loadPlace(lat, lng, label){
   $("addr-sub").textContent = [a.city || a.town || a.village || a.hamlet || "", a.state || "", a.postcode || ""].filter(Boolean).join(", ") || main;
   if(a.county){ $("card-county").style.display = ""; $("county-main").textContent = a.county + (a.state ? ", " + a.state : ""); }
   CUR.zip = a.postcode || "";
+  CUR.county = a.county || "";
   STATE.values = null; STATE.schools = null;
   setStatus("Showing data for " + (street || main) + ".");
   loadValues(lat, lng);
@@ -283,6 +285,15 @@ function renderSummary(){
   const sub = $("addr-sub").textContent || "";
   const zip = (CUR && CUR.zip) || "";
   let h = '<div class="card"><div class="big">' + esc(name) + '</div>' + (sub ? '<div class="muted" style="margin-top:4px">' + esc(sub) + "</div>" : "") + "</div>";
+  h += '<div class="card"><h2>🤖 Area report from an AI</h2>' +
+    '<p style="margin:0 0 8px; font-size:.92rem">Ask an AI to research this area for a possible family move — <b>schools, house prices, and safety first</b>. The prompt below already includes this spot’s Census figures and nearby schools. You ask in the AI app; you keep the answer here, saved on this place.</p>' +
+    '<label>Your area-report prompt</label><textarea id="aiPrompt" rows="10" readonly></textarea>' +
+    '<div class="row" style="margin-top:8px"><button class="btn" id="aiChatGPT">💬 ChatGPT</button><button class="btn ghost" id="aiClaude">✳️ Claude</button></div>' +
+    '<div class="row" style="margin-top:8px"><button class="btn ghost" id="aiGemini">✨ Copy + Gemini</button><button class="btn ghost" id="aiCopy">📋 Copy prompt</button></div>' +
+    '<div id="aiReports">' + reportsListHtml() + '</div>' +
+    '<label style="margin-top:10px">Paste the AI’s report here to keep it</label><textarea id="aiAnswer" rows="5" placeholder="Paste the report…"></textarea>' +
+    '<label>Answered by</label><select id="aiSource"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>Muse (in chat)</option><option>Other AI</option></select>' +
+    '<div class="row" style="margin-top:8px"><button class="btn" onclick="saveAiReport()">Save report to this place</button></div><p class="note" id="aiMsg"></p></div>';
   h += '<div class="card"><h2>Home prices — current snapshot</h2>';
   const v = STATE.values;
   if(v && v !== "err"){
@@ -322,13 +333,89 @@ function renderSummary(){
     h += '<span class="muted">Schools are still loading — go back, give it a few seconds, then tap the location name again.</span>';
   }
   h += "</div>";
-  h += '<p class="muted" style="font-size:.8rem; text-align:center">Summary built on this device on ' + new Date().toLocaleDateString(undefined, { month:"long", day:"numeric", year:"numeric" }) + " from the sources named above. Nothing here is AI-generated.</p>";
+  h += '<p class="muted" style="font-size:.8rem; text-align:center">Summary built on this device on ' + new Date().toLocaleDateString(undefined, { month:"long", day:"numeric", year:"numeric" }) + " from the sources named above. Census and school data are as sourced above; area reports are written by the AI you choose and saved by you.</p>";
   $("summary-body").innerHTML = h;
+  wireAreaAi();
+}
+
+
+/* ---------- AI area reports ---------- */
+function placeReports(lat, lng){
+  return (LP.reports || []).filter(r => Math.abs(r.lat - lat) < 1e-4 && Math.abs(r.lng - lng) < 1e-4)
+    .sort((x, y) => (y.date || "").localeCompare(x.date || ""));
+}
+function buildAreaPrompt(){
+  const name = $("addr-main").textContent || (CUR && CUR.label) || "This location";
+  const sub = $("addr-sub").textContent || "";
+  const v = STATE.values; const lines = [];
+  lines.push("I am scouting this area for a possible family move. Research it and give me an area report.");
+  lines.push("");
+  lines.push("Location: " + name + (sub ? " \u2014 " + sub : ""));
+  if (CUR && CUR.zip) lines.push("ZIP code: " + CUR.zip);
+  if (CUR && CUR.county) lines.push("County shown by map data (please confirm): " + CUR.county);
+  if (v && v !== "err" && v.hv != null) {
+    lines.push("Known figures for the small census tract around this spot (U.S. Census ACS 2024 5-year estimates): median home value " + money(v.hv) + "; " + (v.county || "county") + " median home value " + money(v.hvCounty) + "; median household income " + money(v.inc) + "; median gross rent " + money(v.rent) + ".");
+  }
+  const sc = STATE.schools;
+  if (Array.isArray(sc) && sc.length) lines.push("Schools within about 2 miles (OpenStreetMap): " + sc.slice(0, 6).map(s => s.name + " (" + s.level + ", " + s.dist.toFixed(1) + " mi away)").join("; ") + ".");
+  lines.push("");
+  lines.push("Answer in this order, with a short heading for each section:");
+  lines.push("1. SCHOOLS (a main interest): the quality and ratings of the zoned elementary, middle, and high schools, and whether the schools make this a good candidate for a family with elementary- and middle-school-age children to move to.");
+  lines.push("2. HOUSE PRICES (a main interest): the typical home price now, and the year-by-year price trend over roughly the last 5 years (direction and approximate size); typical rent if you know it.");
+  lines.push("3. SAFETY (a main interest): the crime level, what kinds of incidents are common, and how safety compares with nearby areas.");
+  lines.push("4. WALKABILITY: sidewalks, parks, and whether daily errands are practical on foot; a Walk Score if one is published.");
+  lines.push("5. COUNTY AND CITY: confirm which county and city this exact spot is in.");
+  lines.push("6. STRENGTHS AND WEAKNESSES: the key pros and cons of relocating here as a family.");
+  lines.push("7. ANYTHING ELSE a family with kids should know: commute patterns, new development, flood or other local risks, community feel.");
+  lines.push("");
+  lines.push("Use current sources and cite them by name. Keep verified facts separate from opinion, and say plainly when something is uncertain or could not be verified \u2014 do not guess numbers.");
+  return lines.join("\n");
+}
+function lpCopy(t, done){
+  function fallback(){ const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch(e){} ta.remove(); if (done) done(); }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){ if (done) done(); }, fallback); else fallback();
+}
+function reportsListHtml(){
+  if (!CUR) return "";
+  const reps = placeReports(CUR.lat, CUR.lng);
+  if (!reps.length) return '<p class="muted" style="font-size:.88rem; margin:10px 0 0">No saved report for this place yet.</p>';
+  return '<h3 style="margin:14px 0 6px; font-size:1rem">Your saved reports for this place</h3>' + reps.map(r =>
+    '<div class="report" style="border:1px solid var(--line, #e5e0d5); border-radius:10px; padding:10px; margin-bottom:8px">' +
+    '<div class="muted" style="font-size:.8rem">' + new Date(r.date).toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" }) + ' \u00b7 via ' + esc(r.source || "AI") + '</div>' +
+    '<div style="white-space:pre-wrap; font-size:.92rem; margin-top:6px">' + esc(r.text) + '</div>' +
+    '<div class="row" style="margin-top:8px"><button class="btn ghost small" onclick="deleteReport(\'' + r.id + '\')">Delete report</button></div></div>').join("");
+}
+function wireAreaAi(){
+  const ta = $("aiPrompt"); if (!ta || !CUR) return;
+  ta.value = buildAreaPrompt();
+  $("aiChatGPT").addEventListener("click", () => window.open("https://chatgpt.com/?q=" + encodeURIComponent(ta.value), "_blank"));
+  $("aiClaude").addEventListener("click", () => window.open("https://claude.ai/new?q=" + encodeURIComponent(ta.value), "_blank"));
+  $("aiGemini").addEventListener("click", () => lpCopy(ta.value, () => { $("aiMsg").textContent = "Prompt copied \u2014 paste it in Gemini."; window.open("https://gemini.google.com/app", "_blank"); }));
+  $("aiCopy").addEventListener("click", () => lpCopy(ta.value, () => { $("aiMsg").textContent = "Prompt copied \u2014 paste it to any AI, or to Muse in your chat."; }));
+}
+function saveAiReport(){
+  const text = $("aiAnswer").value.trim(); const msg = $("aiMsg");
+  if (!text) { msg.textContent = "Paste the AI\u2019s report first."; return; }
+  if (!CUR) return;
+  const label = $("addr-main").textContent + ($("addr-sub").textContent ? ", " + $("addr-sub").textContent : "");
+  if (!LP.saved.some(s => Math.abs(s.lat - CUR.lat) < 1e-6 && Math.abs(s.lng - CUR.lng) < 1e-6)) {
+    LP.saved.push({ label, lat: CUR.lat, lng: CUR.lng, savedAt: new Date().toISOString() });
+    updateSavedCount();
+  }
+  LP.reports = LP.reports || [];
+  LP.reports.unshift({ id: "rep" + Date.now(), label, lat: CUR.lat, lng: CUR.lng, date: new Date().toISOString(), source: $("aiSource").value, text });
+  saveLP(); renderSummary();
+  setStatus("Report saved to this place.");
+}
+function deleteReport(id){
+  if (!confirm("Delete this saved report?")) return;
+  LP.reports = (LP.reports || []).filter(r => r.id !== id);
+  saveLP(); renderSummary();
 }
 
 /* ---------- Backup ---------- */
 function exportBackup(){
-  const payload = JSON.stringify({ app:"LocalPulse", version:1, exportedAt:new Date().toISOString(), saved:LP.saved }, null, 1);
+  const payload = JSON.stringify({ app:"LocalPulse", version:1, exportedAt:new Date().toISOString(), saved:LP.saved, reports:LP.reports || [] }, null, 1);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([payload], { type:"application/json" }));
   a.download = "localpulse-backup-" + new Date().toISOString().slice(0,10) + ".json";
@@ -338,7 +425,7 @@ function importBackup(input){
   const file = input.files && input.files[0]; if(!file) return;
   file.text().then(t=>{ try { const data = JSON.parse(t); if(!data || !Array.isArray(data.saved)) throw new Error("shape");
     if(!confirm("Replace your saved locations (" + LP.saved.length + ") with the backup (" + data.saved.length + ")?")) return;
-    LP.saved = data.saved; saveLP(); updateSavedCount(); renderSaved(); alert("Backup imported.");
+    LP.saved = data.saved; LP.reports = Array.isArray(data.reports) ? data.reports : []; saveLP(); updateSavedCount(); renderSaved(); alert("Backup imported.");
   } catch(e){ alert("That file doesn't look like a LocalPulse backup."); } });
 }
 </script>
