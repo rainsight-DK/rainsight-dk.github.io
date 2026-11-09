@@ -109,6 +109,20 @@ footer{color:var(--sub);font-size:12.5px;text-align:center;padding:22px 10px 4px
     <div class="row" style="justify-content:space-between"><h1 style="margin:0">Help Me Decide</h1><button class="btn ghost small" id="decideReset">Reset</button></div>
     <div class="progress" id="decideProgress"><span class="on"></span><span></span><span></span></div>
     <div id="decideBody"></div>
+    <div class="card">
+      <h2 style="margin-top:0">🤖 Or ask an AI to decide</h2>
+      <p class="note">Uses your wizard answers above — the ingredients you checked, cuisine, styles. The AI picks the best dish for tonight and returns it as a full recipe; paste the answer back and it saves to your library.</p>
+      <label>Your decide prompt</label>
+      <textarea id="dcAiPrompt" rows="9" readonly></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn" id="dcAiChatGPT">💬 Open in ChatGPT</button><button class="btn ghost" id="dcAiClaude">✳️ Open in Claude</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn ghost" id="dcAiGemini">✨ Copy + open Gemini</button><button class="btn ghost" id="dcAiCopy">📋 Copy prompt</button></div>
+      <label style="margin-top:12px">Paste the AI's answer</label>
+      <textarea id="dcAiAnswer" placeholder="Paste the whole answer, including the recipe block…"></textarea>
+      <label>Answered by</label>
+      <select id="dcAiSource"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>Muse (in chat)</option><option>Other AI</option></select>
+      <div class="row" style="margin-top:10px"><button class="btn" id="dcAiSave">Save the recipe</button></div>
+      <p class="note" id="dcAiMsg"></p>
+    </div>
   </section>
 
   <!-- EXTRACT / ADD -->
@@ -122,6 +136,20 @@ footer{color:var(--sub);font-size:12.5px;text-align:center;padding:22px 10px 4px
       <button class="btn" id="importBtn">Import</button></div>
       <p class="note" id="importMsg"></p>
       <div class="dropzone" id="fileDrop">📄 Upload a recipe text file (.txt) — it fills the form below<input type="file" id="fileInput" accept=".txt,text/plain" style="display:none"></div>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">🤖 Or extract with an AI</h2>
+      <p class="note">For any recipe page — not just TheMealDB. The AI opens the link and transcribes the recipe; if it can't open links, paste the page's text to it instead. Its answer fills the manual form below for your check — nothing is saved until you tap Save there.</p>
+      <label>Recipe page link</label>
+      <input type="url" id="exAiUrl" placeholder="https://…">
+      <label>Your extract prompt</label>
+      <textarea id="exAiPrompt" rows="8" readonly></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn" id="exAiChatGPT">💬 Open in ChatGPT</button><button class="btn ghost" id="exAiClaude">✳️ Open in Claude</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn ghost" id="exAiGemini">✨ Copy + open Gemini</button><button class="btn ghost" id="exAiCopy">📋 Copy prompt</button></div>
+      <label style="margin-top:12px">Paste the AI's answer</label>
+      <textarea id="exAiAnswer" placeholder="Paste the whole answer, including the recipe block…"></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn" id="exAiFill">Fill the form below</button></div>
+      <p class="note" id="exAiMsg"></p>
     </div>
     <div class="card">
       <h2 style="margin-top:0">Add a recipe manually</h2>
@@ -407,7 +435,18 @@ function renderRecipe(){
     }).join("") +
     '<div class="card"><b>What you still need to buy ('+needList.length+')</b>' +
     (needList.length ? '<ul style="margin:8px 0 0;padding-left:18px;line-height:1.6">'+needList.map(function(ing){ return '<li>'+esc(scaleMeasure(ing.measure, factor))+' '+esc(ing.name)+'</li>'; }).join("")+'</ul>' : '<p class="note" style="margin:6px 0 0">You have everything. 🎉</p>') + '</div>' +
-    '<h2>Instructions</h2><ol class="steps">'+r.steps.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join("")+'</ol>';
+    '<h2>Instructions</h2><ol class="steps">'+r.steps.map(function(s){ return '<li>'+esc(s)+'</li>'; }).join("")+'</ol>' +
+    (r.aiText ? '<div class="card"><h2 style="margin-top:0">🤖 The AI\'s full answer</h2><details><summary>Show the answer this recipe came from ('+esc(r.aiSource || "AI")+(r.basedOn ? ', a version of '+esc(r.basedOn) : '')+')</summary><div style="white-space:pre-wrap;line-height:1.55;margin-top:8px">'+esc(r.aiText)+'</div></details></div>' : '') +
+    '<div class="card"><h2 style="margin-top:0">🤖 Make a version with an AI</h2>' +
+    '<p class="note">Describe the change — spicier, for 2 people, kid-friendly, swap the protein, lower-carb. The prompt carries this whole recipe; paste the AI\'s version back and it saves to your library as its own recipe.</p>' +
+    '<label>What should change?</label><input type="text" id="rvAiChange" placeholder="e.g. Spicier, and for 2 people">' +
+    '<label>Your version prompt</label><textarea id="rvAiPrompt" rows="9" readonly></textarea>' +
+    '<div class="row" style="margin-top:10px"><button class="btn" id="rvAiChatGPT">💬 Open in ChatGPT</button><button class="btn ghost" id="rvAiClaude">✳️ Open in Claude</button></div>' +
+    '<div class="row" style="margin-top:8px"><button class="btn ghost" id="rvAiGemini">✨ Copy + open Gemini</button><button class="btn ghost" id="rvAiCopy">📋 Copy prompt</button></div>' +
+    '<label style="margin-top:12px">Paste the AI\'s version</label><textarea id="rvAiAnswer" placeholder="Paste the whole answer, including the recipe block…"></textarea>' +
+    '<label>Made by</label><select id="rvAiSource"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>Muse (in chat)</option><option>Other AI</option></select>' +
+    '<div class="row" style="margin-top:10px"><button class="btn" id="rvAiSave">Save version to library</button></div>' +
+    '<p class="note" id="rvAiMsg"></p></div>';
   document.getElementById("recipeBody").innerHTML = h;
   document.getElementById("svMinus").addEventListener("click", function(){ if (targetServings > 1) { targetServings--; renderRecipe(); } });
   document.getElementById("svPlus").addEventListener("click", function(){ if (targetServings < 24) { targetServings++; renderRecipe(); } });
@@ -430,6 +469,27 @@ function renderRecipe(){
     if (navigator.share) navigator.share({ title: r.title, text: text }).catch(function(){});
     else if (navigator.clipboard) { navigator.clipboard.writeText(text); alert("Recipe copied to clipboard."); }
   });
+  var rp = document.getElementById("rvAiPrompt");
+  if (rp) {
+    rp.value = buildVersionPrompt(r, "");
+    var rebuild = function(){ rp.value = buildVersionPrompt(r, document.getElementById("rvAiChange").value.trim()); };
+    document.getElementById("rvAiChatGPT").addEventListener("click", function(){ rebuild(); window.open("https://chatgpt.com/?q=" + encodeURIComponent(rp.value), "_blank"); });
+    document.getElementById("rvAiClaude").addEventListener("click", function(){ rebuild(); window.open("https://claude.ai/new?q=" + encodeURIComponent(rp.value), "_blank"); });
+    document.getElementById("rvAiGemini").addEventListener("click", function(){ rebuild(); rfCopy(rp.value, function(){ window.open("https://gemini.google.com/app", "_blank"); }); });
+    document.getElementById("rvAiCopy").addEventListener("click", function(){ rebuild(); rfCopy(rp.value, null); });
+    document.getElementById("rvAiSave").addEventListener("click", function(){
+      var text = document.getElementById("rvAiAnswer").value.trim();
+      var msg = document.getElementById("rvAiMsg");
+      if (!text) { msg.textContent = "Paste the AI's version first."; return; }
+      var p = parseAiRecipe(text);
+      if (!p) { msg.textContent = "That answer has no recipe block \u2014 ask the AI to use the exact format from the prompt, then paste again."; return; }
+      var src = document.getElementById("rvAiSource").value;
+      var nr = recipeFromParsed(p, { aiSource: src, aiText: text, basedOn: r.title });
+      nr.description = (nr.description ? nr.description + " " : "") + "(Version by " + src + " of " + r.title + ".)";
+      DB.saved.unshift(nr); saveDB(DB); renderHome();
+      openRecipe(nr, "saved");
+    });
+  }
 }
 
 /* ---------- Extract / manual add ---------- */
@@ -525,7 +585,130 @@ document.getElementById("recipeBack").addEventListener("click", function(){ show
 document.getElementById("exportBtn").addEventListener("click", exportBackup);
 document.getElementById("importBackupBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
 document.getElementById("importFile").addEventListener("change", function(){ if (this.files && this.files[0]) importBackup(this.files[0]); this.value=""; });
+/* ---------- AI handoff ---------- */
+var RF_FORMAT = ["", "Return the recipe in exactly this format (keep the labels and markers):", "===RECIPE===", "TITLE: <dish name>", "SERVINGS: <number>", "CUISINE: <cuisine>", "STYLE: <category or style>", "SOURCE: <source URL if any, else leave blank>", "DESCRIPTION: <one or two sentences>", "INGREDIENTS:", "<measure> | <ingredient>   (one per line; leave the measure empty if there is none)", "STEPS:", "<one step per line>", "===END==="].join("\n");
+function rfCopy(t, done){
+  function fallback(){ var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch(e){} ta.remove(); if (done) done(); }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){ if (done) done(); }, fallback); else fallback();
+}
+function parseAiRecipe(text){
+  var body = text;
+  var m = /===RECIPE===([\s\S]*?)(?:===END===|$)/.exec(text);
+  if (m) body = m[1];
+  var f = { title: "", servings: null, cuisine: "", style: "", source: "", description: "" };
+  var ings = [], steps = [], section = "";
+  body.split(/\r?\n/).forEach(function(raw){
+    var line = raw.trim(); if (!line) return;
+    var lm;
+    if (section === "") {
+      if ((lm = /^TITLE:\s*(.+)$/i.exec(line))) { f.title = lm[1].trim(); return; }
+      if ((lm = /^SERVINGS:\s*(\d+)/i.exec(line))) { f.servings = parseInt(lm[1], 10); return; }
+      if ((lm = /^CUISINE:\s*(.+)$/i.exec(line))) { f.cuisine = lm[1].trim(); return; }
+      if ((lm = /^STYLE:\s*(.+)$/i.exec(line))) { f.style = lm[1].trim(); return; }
+      if ((lm = /^SOURCE:\s*(.+)$/i.exec(line))) { f.source = lm[1].trim(); return; }
+      if ((lm = /^DESCRIPTION:\s*(.+)$/i.exec(line))) { f.description = lm[1].trim(); return; }
+    }
+    if (/^INGREDIENTS:?$/i.test(line)) { section = "ing"; return; }
+    if (/^(STEPS|INSTRUCTIONS|METHOD|DIRECTIONS):?$/i.test(line)) { section = "steps"; return; }
+    if (section === "ing") {
+      var clean = line.replace(/^(?:\d+[.)]\s*|[-\u2022]\s*)/, "");
+      var parts = clean.split("|");
+      if (parts.length > 1) ings.push({ measure: parts[0].trim(), name: parts.slice(1).join("|").trim() });
+      else ings.push({ measure: "", name: clean });
+      return;
+    }
+    if (section === "steps") { steps.push(line.replace(/^(?:\d+[.)]\s*|[-\u2022]\s*)/, "")); return; }
+  });
+  if (!f.title || (!ings.length && !steps.length)) return null;
+  f.ingredients = ings; f.steps = steps;
+  return f;
+}
+function recipeFromParsed(p, extra){
+  var r = { id: "ai" + Date.now(), mealDbId: "", title: p.title,
+    source: p.source || "", description: p.description || "",
+    servings: p.servings ? String(p.servings) : "", servingsNumber: p.servings || null,
+    ingredients: p.ingredients, steps: p.steps, tags: [], cuisine: p.cuisine || "", style: p.style || "",
+    imageUrl: "", youtube: "", savedDate: todayStr() };
+  if (extra) Object.keys(extra).forEach(function(k){ r[k] = extra[k]; });
+  return r;
+}
+function buildVersionPrompt(r, change){
+  var L = [];
+  L.push("Here is a recipe I use. Make me a new version of it with this change: " + (change || "<I will describe the change>"));
+  L.push("Keep it recognizably the same dish unless the change says otherwise. Give complete ingredients with quantities consistent with the servings you state, and full steps \u2014 no placeholders.");
+  L.push("");
+  L.push("Current recipe: " + r.title + " (serves " + (r.servingsNumber || 4) + ")");
+  L.push("Ingredients:");
+  r.ingredients.forEach(function(i){ L.push("- " + ((i.measure ? i.measure + " " : "") + i.name)); });
+  L.push("Steps:");
+  r.steps.forEach(function(s, i){ L.push((i + 1) + ". " + s); });
+  L.push(RF_FORMAT);
+  return L.join("\n");
+}
+function buildDecidePrompt(){
+  var L = [];
+  L.push("Help me decide what to cook for dinner tonight.");
+  L.push("Ingredients I already have: " + (decide.pantry.length ? decide.pantry.join(", ") : "(none specified \u2014 assume common pantry staples)"));
+  if (decide.cuisine) L.push("Cuisine I feel like: " + decide.cuisine + ".");
+  if (decide.style && decide.style.length) L.push("Style: " + decide.style.join(", ") + ".");
+  L.push("Pick the single best dish I can cook tonight, mostly from what I have. First, give me two alternate dishes as lines starting with ALTERNATE: (name \u2014 one-line reason). Then give your best pick as a complete recipe:");
+  L.push(RF_FORMAT);
+  return L.join("\n");
+}
+function buildExtractPrompt(){
+  var url = document.getElementById("exAiUrl").value.trim();
+  var L = [];
+  L.push("Open this recipe page and transcribe the recipe exactly as written there \u2014 do not invent, substitute, or drop ingredients or steps:");
+  L.push(url || "<the link I give you>");
+  L.push("If you cannot open links, reply exactly: I can't open that link \u2014 paste the page text here instead. (Then I will paste the text and you transcribe that.)");
+  L.push("Put the page URL in the SOURCE line.");
+  L.push(RF_FORMAT);
+  return L.join("\n");
+}
+function wireRfAi(){
+  var dp = document.getElementById("dcAiPrompt"); if (!dp) return;
+  dp.value = buildDecidePrompt();
+  document.getElementById("dcAiChatGPT").addEventListener("click", function(){ dp.value = buildDecidePrompt(); window.open("https://chatgpt.com/?q=" + encodeURIComponent(dp.value), "_blank"); });
+  document.getElementById("dcAiClaude").addEventListener("click", function(){ dp.value = buildDecidePrompt(); window.open("https://claude.ai/new?q=" + encodeURIComponent(dp.value), "_blank"); });
+  document.getElementById("dcAiGemini").addEventListener("click", function(){ dp.value = buildDecidePrompt(); rfCopy(dp.value, function(){ window.open("https://gemini.google.com/app", "_blank"); }); });
+  document.getElementById("dcAiCopy").addEventListener("click", function(){ dp.value = buildDecidePrompt(); rfCopy(dp.value, null); });
+  document.getElementById("dcAiSave").addEventListener("click", function(){
+    var text = document.getElementById("dcAiAnswer").value.trim();
+    var msg = document.getElementById("dcAiMsg");
+    if (!text) { msg.textContent = "Paste the AI's answer first."; return; }
+    var p = parseAiRecipe(text);
+    if (!p) { msg.textContent = "That answer has no recipe block \u2014 ask the AI to use the exact format from the prompt, then paste again."; return; }
+    var nr = recipeFromParsed(p, { aiSource: document.getElementById("dcAiSource").value, aiText: text });
+    DB.saved.unshift(nr); saveDB(DB); renderHome();
+    openRecipe(nr, "decide");
+  });
+  var xp = document.getElementById("exAiPrompt");
+  xp.value = buildExtractPrompt();
+  document.getElementById("exAiChatGPT").addEventListener("click", function(){ xp.value = buildExtractPrompt(); window.open("https://chatgpt.com/?q=" + encodeURIComponent(xp.value), "_blank"); });
+  document.getElementById("exAiClaude").addEventListener("click", function(){ xp.value = buildExtractPrompt(); window.open("https://claude.ai/new?q=" + encodeURIComponent(xp.value), "_blank"); });
+  document.getElementById("exAiGemini").addEventListener("click", function(){ xp.value = buildExtractPrompt(); rfCopy(xp.value, function(){ window.open("https://gemini.google.com/app", "_blank"); }); });
+  document.getElementById("exAiCopy").addEventListener("click", function(){ xp.value = buildExtractPrompt(); rfCopy(xp.value, null); });
+  document.getElementById("exAiFill").addEventListener("click", function(){
+    var text = document.getElementById("exAiAnswer").value.trim();
+    var msg = document.getElementById("exAiMsg");
+    if (!text) { msg.textContent = "Paste the AI's answer first."; return; }
+    var p = parseAiRecipe(text);
+    if (!p) { msg.textContent = "That answer has no recipe block \u2014 ask the AI to use the exact format from the prompt, then paste again."; return; }
+    document.getElementById("mfTitle").value = p.title;
+    document.getElementById("mfSource").value = p.source || document.getElementById("exAiUrl").value.trim();
+    document.getElementById("mfServings").value = p.servings || "";
+    document.getElementById("mfCuisine").value = p.cuisine || "";
+    document.getElementById("mfStyle").value = p.style || "";
+    document.getElementById("mfIngredients").value = p.ingredients.map(function(i){ return ((i.measure ? i.measure + " " : "") + i.name).trim(); }).join("\n");
+    document.getElementById("mfSteps").value = p.steps.join("\n");
+    document.getElementById("mfMsg").textContent = "Filled from the AI's answer \u2014 check it over, then Save to library.";
+    msg.textContent = "Form filled below.";
+    document.getElementById("mfTitle").scrollIntoView();
+  });
+}
+
 window.RF = { scaleMeasure: scaleMeasure, getDB: function(){ return DB; }, getDecide: function(){ return decide; } };
+wireRfAi();
 renderAll();
 renderDecide();
 showView("home");
