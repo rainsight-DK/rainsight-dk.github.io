@@ -178,6 +178,7 @@ function renderPlan(){
     '<div class="mut">📅 ' + fmtDate(p.plan_date) + ' · ' + p.num_days + (p.num_days === 1 ? ' day' : ' days') + '<br>From: ' + esc(p.origin || "—") + '<br>Destination: ' + esc(p.destination || "—") + (p.created ? '<br>Saved: ' + esc(p.created) : '') + '</div>' +
     '<div class="row" style="margin-top:12px"><button id="shareBtn">📤 Share</button><button id="icsBtn">📅 Calendar file</button></div>' +
     '<div class="row" style="margin-top:8px"><button id="editBtn">✏️ Edit plan</button><button id="similarBtn">🧭 Plan similar</button><button class="danger" id="delBtn">Delete</button></div></div>' +
+    (p.aiText ? '<div class="card"><div class="mut">🤖 Imported from ' + esc(p.aiSource || "an AI") + (p.aiImportedAt ? ' \u00b7 ' + esc(fmtDate(p.aiImportedAt.slice(0, 10))) : '') + '</div><details style="margin-top:8px"><summary>View the AI\u2019s original answer</summary><div style="white-space:pre-wrap;margin-top:8px;font-size:14px">' + esc(p.aiText) + '</div></details></div>' : '') +
     '<div class="weather" id="weatherBox"></div>';
   p.days.forEach(function(d, di){
     h += '<div class="day-h">' + esc(d.label) + '</div><div class="mut" style="margin:-4px 0 4px">' + fmtDate(d.date) + '</div><div class="card">';
@@ -245,6 +246,12 @@ function renderPlanner(){
     '<label class="fl">Your planning prompt</label><textarea id="aiPrompt" rows="9" readonly></textarea>' +
     '<div class="row" style="margin-top:9px"><button class="primary" id="aiChatGPT">💬 Open in ChatGPT</button><button id="aiClaude">✳️ Open in Claude</button></div>' +
     '<div class="row" style="margin-top:8px"><button id="aiGemini">✨ Copy + open Gemini</button><button id="aiCopy">📋 Copy prompt</button></div></div>' +
+    '<div class="card"><h2 class="sec">📥 Save the AI\u2019s plan here</h2>' +
+    '<p class="mut" style="margin-top:0">Once the AI has answered \u2014 and you\u2019ve revised the plan with it there \u2014 copy its final answer and paste it below. The app turns the ===TRAVELPLAN=== block into a real saved plan (days, times, places, costs) and keeps the full text on the plan, so you never have to dig through the AI app\u2019s history. No format block? It still saves, split by \u201cDay N\u201d headings as best it can.</p>' +
+    '<label class="fl">Paste the AI\u2019s final answer</label><textarea id="aiImportText" rows="7" placeholder="Paste the whole answer\u2026"></textarea>' +
+    '<label class="fl">Answered by</label><select id="aiImportSource"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>Muse (in chat)</option><option>Other AI</option></select>' +
+    '<div class="row" style="margin-top:9px"><button class="primary" id="importAiBtn">Save as a plan</button></div>' +
+    '<p class="mut" id="importMsg" style="margin-bottom:0"></p></div>' +
     '<div class="card"><p class="mut" style="margin-top:0">Prefer to build the days yourself? Start a blank plan in the editor — or look for ideas first:</p>' +
     '<button class="primary" id="startPlanBtn" style="width:100%">✏️ Start a blank plan from this form</button>' +
     '<div id="ideaLinks" style="margin-top:12px"></div>' +
@@ -296,6 +303,16 @@ function renderPlanner(){
     if((f.conditions || "").trim()) L.push("Special conditions: " + f.conditions.trim());
     L.push("");
     L.push("Format the answer day by day. For each day, list activities in time order with: start and end time, place name, address, a one-line description, why it suits this group, and an estimated cost. Use only real, currently operating places; do not invent opening hours or prices — mark anything uncertain as 'verify'. Keep driving legs realistic for the distance limits above, and note anything that needs booking ahead.");
+    L.push("");
+    L.push("IMPORTANT \u2014 end your answer with the final itinerary in EXACTLY this machine-readable format, between the two marker lines, so my travel app can import it as a saved plan:");
+    L.push("===TRAVELPLAN===");
+    L.push("TITLE: <short trip title>");
+    L.push("START: <first day, as YYYY-MM-DD>");
+    L.push("DAY 1 | <YYYY-MM-DD> | <short theme for the day>");
+    L.push("<HH:MM>-<HH:MM> | <activity name> | <place and address> | <cost, or Free> | <category: travel, food, sightseeing, activity, rest, stay, or other> | <one-line description>");
+    L.push("...one line per activity, in time order; a DAY line for each day...");
+    L.push("===END===");
+    L.push("Keep every line inside the markers exactly in that pipe-separated shape. Write your normal explanation above the block \u2014 the block is the version my app saves.");
     return L.join("\n");
   }
   function refreshPrompt(){ var ta = $("aiPrompt"); if(ta) ta.value = buildPrompt(); }
@@ -309,6 +326,66 @@ function renderPlanner(){
   $("aiClaude").addEventListener("click", function(){ refreshPrompt(); window.open("https://claude.ai/new?q=" + encodeURIComponent($("aiPrompt").value), "_blank"); });
   $("aiGemini").addEventListener("click", function(){ refreshPrompt(); copyText($("aiPrompt").value, function(){ toast("Prompt copied — paste it in Gemini"); window.open("https://gemini.google.com/app", "_blank"); }); });
   $("aiCopy").addEventListener("click", function(){ refreshPrompt(); copyText($("aiPrompt").value, function(){ toast("Prompt copied"); }); });
+  function pad2(n){ return (n < 10 ? "0" : "") + n; }
+  function normTime(t){ var m = /^(\d{1,2}):(\d{2})/.exec(t || ""); return m ? pad2(+m[1]) + ":" + m[2] : ""; }
+  function parseAiPlan(text){
+    var bm = /===TRAVELPLAN===([\s\S]*?)===END===/.exec(text);
+    var loose = !bm;
+    var lines = (bm ? bm[1] : text).split(/\r?\n/);
+    var title = "", start = "", days = [], cur = null, m;
+    function newDay(label){ cur = { date: "", label: label, activities: [] }; days.push(cur); }
+    function stray(line){
+      if(!cur) newDay("Day 1");
+      var acts = cur.activities;
+      if(acts.length) acts[acts.length - 1].desc = ((acts[acts.length - 1].desc || "") + "\n" + line).trim();
+      else acts.push({ start: "", end: "", name: line.slice(0, 140), place: "", address: "", price: "", url: "", category: "other", desc: "" });
+    }
+    lines.forEach(function(raw){
+      var line = raw.trim(); if(!line) return;
+      if((m = /^TITLE:\s*(.+)$/i.exec(line))){ title = m[1].trim(); return; }
+      if((m = /^START:\s*(\d{4}-\d{2}-\d{2})/i.exec(line))){ start = m[1]; return; }
+      if((m = /^DAY\s+(\d+)\s*(?:\|\s*(\d{4}-\d{2}-\d{2}))?\s*(?:\|\s*(.*))?$/i.exec(line))){
+        newDay("Day " + m[1] + (m[3] && m[3].trim() ? " \u2014 " + m[3].trim() : "")); cur.date = m[2] || ""; return; }
+      if(loose && (m = /^[#*\s]*DAY\s+(\d+)\b[:\s\u2014-]*(.*)$/i.exec(line))){
+        newDay("Day " + m[1] + (m[2] && m[2].trim() ? " \u2014 " + m[2].replace(/\*/g, "").trim() : "")); return; }
+      var ranged = /^(\d{1,2}:\d{2})\s*[-\u2013\u2014]\s*(\d{1,2}:\d{2})\s*\|\s*(.+)$/.exec(line);
+      var single = !ranged && /^(\d{1,2}:\d{2})\s*\|\s*(.+)$/.exec(line);
+      if(ranged || single){
+        if(!cur) newDay("Day 1");
+        var rest = ranged ? ranged[3] : single[2];
+        var parts = rest.split("|").map(function(s){ return s.trim(); });
+        cur.activities.push({ start: normTime(ranged ? ranged[1] : single[1]), end: ranged ? normTime(ranged[2]) : "", name: parts[0] || "Activity", place: parts[1] || "", address: parts[1] || "", price: parts[2] || "", url: "", category: (parts[3] || "other").toLowerCase(), desc: parts.slice(4).join(" | ") || "" });
+        return; }
+      if(!loose){ stray(line); return; }
+      var clean = line.replace(/^[-*\u2022]\s*/, "").replace(/\*\*/g, "");
+      if(!cur) newDay("Day 1");
+      if(clean) cur.activities.push({ start: "", end: "", name: clean.slice(0, 160), place: "", address: "", price: "", url: "", category: "other", desc: "" });
+    });
+    days = days.filter(function(d){ return d.activities.length; });
+    if(!days.length) days = [{ date: "", label: "Day 1", activities: [{ start: "", end: "", name: "Imported plan (unstructured)", place: "", address: "", price: "", url: "", category: "other", desc: text.slice(0, 4000) }] }];
+    return { title: title, start: start, days: days, structured: !loose };
+  }
+  $("importAiBtn").addEventListener("click", function(){
+    var text = $("aiImportText").value.trim(); var msg = $("importMsg");
+    if(!text){ msg.textContent = "Paste the AI\u2019s answer first."; return; }
+    readForm();
+    var parsed = parseAiPlan(text);
+    var now = new Date();
+    var startDate = parsed.start || f.planDate || now.toISOString().slice(0, 10);
+    parsed.days.forEach(function(d, i){ if(!d.date) d.date = addDays(startDate, i); });
+    var plan = {
+      id: "p" + Date.now(),
+      title: parsed.title || ((f.destination || f.location || "AI trip") + " \u2014 AI plan"),
+      plan_date: startDate, num_days: parsed.days.length,
+      destination: f.destination || f.location || "", origin: f.origin || "",
+      created: now.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }),
+      inputs: JSON.parse(JSON.stringify(f)), days: parsed.days,
+      aiText: text, aiSource: $("aiImportSource").value, aiImportedAt: now.toISOString()
+    };
+    DB.plans.unshift(plan); save();
+    currentPlanId = plan.id; view = "plan"; render(); window.scrollTo(0, 0);
+    toast(parsed.structured ? "Plan imported from " + plan.aiSource : "Saved \u2014 no format block found, so it was split by days as best it could");
+  });
   var steps = document.querySelectorAll("[data-step]");
   for(var i=0;i<steps.length;i++) steps[i].addEventListener("click", function(){
     var parts = this.getAttribute("data-step").split(":"); var k = parts[0], d = parseInt(parts[1],10);
