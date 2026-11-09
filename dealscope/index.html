@@ -184,7 +184,7 @@ function startForm(existing){
 function renderCheck(){
   var f = formState; if(!f){ startForm(null); return; }
   var h = '<div class="card"><h2 class="sec">' + (f.id ? "Edit deal" : "Check a Deal") + '</h2>' +
-    '<p class="mut" style="margin-top:0">Attach photos of the flyer or brochure (up to 6), then fill in the terms. The score and verdict are yours to set — paste the flyer text to Muse in chat if you want the analysis drafted for you.</p>' +
+    '<p class="mut" style="margin-top:0">Attach photos of the flyer or brochure (up to 6), fill in the terms you have, then let an AI evaluate it in the panel below — or set the score and verdict yourself.</p>' +
     '<label class="fl">Flyer photos</label><input type="file" id="d_photos" accept="image/*" multiple>' +
     '<div class="thumbs" id="thumbBox">' + f.images.map(function(src, i){ return '<span style="position:relative"><img src="' + src + '"><button class="small danger" data-delimg="' + i + '" style="position:absolute;top:2px;right:2px;padding:2px 7px">✕</button></span>'; }).join("") + '</div>' +
     '<label class="fl">Title</label><input id="d_title" value="' + esc(f.title) + '" placeholder="e.g., Chase Sapphire Preferred offer">' +
@@ -201,7 +201,16 @@ function renderCheck(){
     '<label class="fl">Risks (one per line)</label><textarea id="d_risks">' + esc(f.risks) + '</textarea>' +
     '<div class="row"><div><label class="fl">Score (0–100)</label><input id="d_score" type="number" min="0" max="100" value="' + esc(f.score) + '"></div>' +
     '<div><label class="fl">Verdict</label><select id="d_verdict"><option value="">Not scored</option><option value="go"' + (f.verdict === "go" ? " selected" : "") + '>Go</option><option value="caution"' + (f.verdict === "caution" ? " selected" : "") + '>Caution</option><option value="nogo"' + (f.verdict === "nogo" ? " selected" : "") + '>No go</option></select></div></div>' +
-    '<div class="row" style="margin-top:14px"><button class="primary" id="d_save">' + (f.id ? "Save changes" : "Save deal") + '</button><button id="d_cancel">Cancel</button></div></div>';
+    '<div class="row" style="margin-top:14px"><button class="primary" id="d_save">' + (f.id ? "Save changes" : "Save deal") + '</button><button id="d_cancel">Cancel</button></div></div>' +
+    '<div class="card"><h2 class="sec">🤖 Evaluate with an AI</h2>' +
+    '<p class="mut" style="margin-top:0">The prompt below is built from this deal — its terms, your vehicles or home when relevant, and any flyer photos attached above (attach the same photos in the AI app; it reads the terms, including fine print). The AI compares current competing offers, then answers with a verdict block this app can file straight into the form.</p>' +
+    '<label class="fl">Your evaluation prompt</label><textarea id="aiPrompt" rows="9" readonly></textarea>' +
+    '<div class="row" style="margin-top:9px"><button class="primary" id="aiChatGPT">💬 Open in ChatGPT</button><button id="aiClaude">✳️ Open in Claude</button></div>' +
+    '<div class="row" style="margin-top:8px"><button id="aiGemini">✨ Copy + open Gemini</button><button id="aiCopy">📋 Copy prompt</button></div>' +
+    '<label class="fl" style="margin-top:12px">Paste the AI’s answer — apply it to this deal</label><textarea id="aiAnswer" rows="6" placeholder="Paste the whole answer…"></textarea>' +
+    '<label class="fl">Answered by</label><select id="aiSource"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>Muse (in chat)</option><option>Other AI</option></select>' +
+    '<div class="row" style="margin-top:9px"><button class="primary" id="aiApplyBtn">Apply to this deal</button></div>' +
+    '<p class="mut" id="aiMsg" style="margin-bottom:0"></p></div>';
   $("main").innerHTML = h;
   function sync(){
     f.title = $("d_title").value; f.keyTerms = $("d_terms").value; f.price = $("d_price").value; f.monthly = $("d_monthly").value;
@@ -209,6 +218,66 @@ function renderCheck(){
     f.pros = $("d_pros").value; f.cons = $("d_cons").value; f.risks = $("d_risks").value; f.score = $("d_score").value; f.verdict = $("d_verdict").value;
     var tv = $("d_type").value; f.offerType = tv === "__new" ? ($("d_newtype").value.trim() || f.offerType) : tv;
   }
+  function dsCopy(t, done){
+    function fallback(){ var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch(e){} ta.remove(); if(done) done(); }
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){ if(done) done(); }, fallback); else fallback();
+  }
+  function buildDealPrompt(){
+    var L = [];
+    L.push("Evaluate this consumer offer for me and tell me whether it is a good deal.");
+    L.push("");
+    L.push("Offer: " + (f.title || "(untitled)") + " \u2014 category: " + (f.offerType || ""));
+    if(f.keyTerms) L.push("Terms as I have them: " + f.keyTerms);
+    var nums = [];
+    if(f.price) nums.push("total price $" + f.price);
+    if(f.monthly) nums.push("$" + f.monthly + "/month");
+    if(f.rate) nums.push("rate " + f.rate + "%");
+    if(f.expiry) nums.push("offer expires " + f.expiry);
+    if(nums.length) L.push("Numbers: " + nums.join(", ") + ".");
+    if(f.link) L.push("Offer link: " + f.link);
+    if(f.images && f.images.length) L.push("(I am attaching " + f.images.length + " photo(s) of the flyer/brochure to this message \u2014 read every term from them, including the fine print.)");
+    var hay = ((f.title || "") + " " + (f.offerType || "")).toLowerCase();
+    if(DB.profile && (DB.profile.current || DB.profile.wants || DB.profile.mustHaves || DB.profile.notes)){
+      L.push("About me, from my DealScope profile: " + [DB.profile.current, DB.profile.wants, DB.profile.mustHaves, DB.profile.notes].filter(Boolean).join(" "));
+    }
+    if(/car|auto|vehicle|lease|van|truck|ev\b|dealer/.test(hay) && DB.autos){
+      L.push("My current vehicles, for replacement/trade-in context: " + DB.autos.map(function(v){ return v.year + " " + v.brand + " " + v.model + ", " + Number(v.mileage).toLocaleString("en-US") + " miles, " + (v.accident === "none" ? "no accidents" : "1 minor accident"); }).join("; ") + ".");
+    }
+    if(/home|mortgage|roof|solar|water|hvac|internet|cable|security|pest|lawn/.test(hay) && DB.home){
+      var hm = DB.home;
+      L.push("My home, for context: " + hm.city + ", GA " + hm.zip + " \u2014 bought for $" + Number(hm.price).toLocaleString("en-US") + " (" + hm.yearBuilt + "), " + Number(hm.sqft).toLocaleString("en-US") + " sq ft, " + hm.beds + " bed / " + hm.baths + " bath.");
+    }
+    L.push("");
+    L.push("Do this:");
+    L.push("1. Extract the offer's complete real terms: total cost, all fees, conditions, exclusions, deadlines, and what changes after any promotional period.");
+    L.push("2. Judge whether it is a good deal against current competing offers \u2014 search the live web and cite your sources by name.");
+    L.push("3. List the pros, the cons, and the risks or traps (fine print, auto-renewal, eligibility, penalties).");
+    L.push("");
+    L.push("Then end your answer with EXACTLY this block, so my app can file it:");
+    L.push("===DEALSCOPE===");
+    L.push("VERDICT: <GO, CAUTION, or NO GO>");
+    L.push("SCORE: <0-100; higher means a better deal>");
+    L.push("SUMMARY: <one or two sentences>");
+    L.push("PROS: <points separated by ; >");
+    L.push("CONS: <points separated by ; >");
+    L.push("RISKS: <points separated by ; >");
+    L.push("===END===");
+    return L.join("\n");
+  }
+  function parseDealAi(text){
+    var bm = /===DEALSCOPE===([\s\S]*?)===END===/.exec(text);
+    var out = { verdict: "", score: "", summary: "", pros: "", cons: "", risks: "", structured: !!bm };
+    var s = bm ? bm[1] : text, m;
+    if((m = /^VERDICT:\s*(NO GO|CAUTION|GO)/im.exec(s))) out.verdict = m[1].toUpperCase() === "GO" ? "go" : (m[1].toUpperCase() === "CAUTION" ? "caution" : "nogo");
+    if((m = /^SCORE:\s*(\d{1,3})/im.exec(s))) out.score = Math.min(100, parseInt(m[1], 10));
+    if((m = /^SUMMARY:\s*(.+)$/im.exec(s))) out.summary = m[1].trim();
+    ["pros", "cons", "risks"].forEach(function(k){
+      var mm = new RegExp("^" + k.toUpperCase() + ":\\s*(.+)$", "im").exec(s);
+      if(mm) out[k] = mm[1].split(/\s*;\s*/).filter(Boolean).join("\n");
+    });
+    return out;
+  }
+  function refreshAiPrompt(){ sync(); $("aiPrompt").value = buildDealPrompt(); }
   $("d_type").addEventListener("change", function(){ $("d_newtype").style.display = this.value === "__new" ? "block" : "none"; });
   document.querySelectorAll("[data-delimg]").forEach(function(b){ b.addEventListener("click", function(){ sync(); f.images.splice(parseInt(b.getAttribute("data-delimg"),10), 1); renderCheck(); }); });
   $("d_photos").addEventListener("change", function(){
@@ -234,6 +303,26 @@ function renderCheck(){
     if(files.length > room) alert("Only the first " + room + " photo(s) fit — the limit is 6 per deal.");
   });
   $("d_cancel").addEventListener("click", function(){ formState = null; view = f.id ? "deal" : "home"; render(); });
+  $("aiPrompt").value = buildDealPrompt();
+  $("aiChatGPT").addEventListener("click", function(){ refreshAiPrompt(); window.open("https://chatgpt.com/?q=" + encodeURIComponent($("aiPrompt").value), "_blank"); });
+  $("aiClaude").addEventListener("click", function(){ refreshAiPrompt(); window.open("https://claude.ai/new?q=" + encodeURIComponent($("aiPrompt").value), "_blank"); });
+  $("aiGemini").addEventListener("click", function(){ refreshAiPrompt(); dsCopy($("aiPrompt").value, function(){ toast("Prompt copied \u2014 paste it in Gemini"); window.open("https://gemini.google.com/app", "_blank"); }); });
+  $("aiCopy").addEventListener("click", function(){ refreshAiPrompt(); dsCopy($("aiPrompt").value, function(){ toast("Prompt copied"); }); });
+  $("aiApplyBtn").addEventListener("click", function(){
+    var text = $("aiAnswer").value.trim(); var msg = $("aiMsg");
+    if(!text){ msg.textContent = "Paste the AI\u2019s answer first."; return; }
+    sync();
+    var r = parseDealAi(text);
+    if(r.verdict) f.verdict = r.verdict;
+    if(r.score !== "") f.score = r.score;
+    if(r.summary) f.summary = r.summary; else if(!r.structured && !f.summary) f.summary = text.slice(0, 600);
+    if(r.pros) f.pros = r.pros;
+    if(r.cons) f.cons = r.cons;
+    if(r.risks) f.risks = r.risks;
+    f.aiText = text; f.aiSource = $("aiSource").value; f.aiDate = new Date().toISOString();
+    renderCheck();
+    toast(r.structured ? "AI evaluation applied \u2014 review, then Save deal" : "AI text saved on this deal \u2014 no format block was found");
+  });
   $("d_save").addEventListener("click", function(){
     sync();
     if(!f.title.trim()){ alert("Give the deal a title."); return; }
@@ -259,7 +348,8 @@ function renderDeal(){
     (d.link ? '<button id="openLink">See more details ↗</button>' : '') +
     '<div class="row" style="margin-top:10px"><button id="editBtn">✏️ Edit</button><button class="danger" id="delBtn">Delete deal</button></div></div>' +
     '<div class="card"><h2 class="sec">Key terms</h2><p style="margin:0;line-height:1.55">' + (d.keyTerms ? esc(d.keyTerms) : '<span class="mut">—</span>') + '</p></div>' +
-    '<div class="card"><h2 class="sec">Pros</h2>' + lines(d.pros) + '<h2 class="sec">Cons</h2>' + lines(d.cons) + '<h2 class="sec">Risks</h2>' + lines(d.risks) + '</div>';
+    '<div class="card"><h2 class="sec">Pros</h2>' + lines(d.pros) + '<h2 class="sec">Cons</h2>' + lines(d.cons) + '<h2 class="sec">Risks</h2>' + lines(d.risks) + '</div>' +
+    (d.aiText ? '<div class="card"><h2 class="sec">🤖 AI evaluation</h2><div class="mut">By ' + esc(d.aiSource || "an AI") + (d.aiDate ? ' \u00b7 ' + esc(fmtDate(d.aiDate.slice(0, 10))) : '') + ' \u2014 applied by you from the AI\u2019s answer.</div><details style="margin-top:8px"><summary>View the AI\u2019s full answer</summary><div style="white-space:pre-wrap;margin-top:8px;font-size:14px;line-height:1.55">' + esc(d.aiText) + '</div></details></div>' : '');
   $("main").innerHTML = h;
   $("backBtn").addEventListener("click", function(){ view = "home"; render(); window.scrollTo(0,0); });
   $("editBtn").addEventListener("click", function(){ startForm(d); });
