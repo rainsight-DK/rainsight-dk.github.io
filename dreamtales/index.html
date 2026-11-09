@@ -954,7 +954,21 @@ function renderCreate(){
   var editing = editStoryId ? storyById(editStoryId) : null;
   if(editing && editing.source !== "family") editing = null;
   var h = '<p class="kicker">Made for tonight</p><h1>' + (editing ? "Edit your story" : "Write your own story") + '</h1>';
-  h += '<p class="sub">In the original app, an AI wrote the story. Here, the storyteller is you: write or paste a story, split it into pages, and it joins the shelf in the same reader. (The picture prompts below each page in the reader show what the original would have drawn.)</p>';
+  h += '<p class="sub">Two ways to make a story: ask an AI in the panel below and paste its story back, or be the storyteller yourself \u2014 write or paste a story, split it into pages, and it joins the shelf in the same reader. (The picture prompts below each page in the reader show what the original app would have drawn.)</p>';
+  var aiChild = activeChild();
+  h += '<div class="card"><h2 style="margin-top:0">🤖 Ask an AI to write it</h2>';
+  h += '<p class="small" style="margin-top:0">The prompt is addressed for ' + esc(aiChild ? aiChild.name : "your reader") + ' and asks for a calm bedtime story in this app\u2019s page format. Ask in the AI app, paste the story back here, and it joins the shelf.</p>';
+  h += '<label class="f">Tonight\u2019s story idea</label><textarea id="aiIdea" rows="3">' + esc(db.createDraft || "") + '</textarea>';
+  h += '<div class="filters" style="margin-top:10px"><div><label class="f">Reading length</label><select id="aiMins"><option value="3">About 3 minutes</option><option value="5" selected>About 5 minutes</option><option value="10">About 10 minutes</option></select></div>';
+  h += '<div><label class="f">Story kind</label><select id="aiTheme">';
+  Object.keys(THEMES).forEach(function(k){ h += '<option value="' + k + '"' + (k === "calm" ? " selected" : "") + '>' + THEMES[k] + '</option>'; });
+  h += '</select></div></div>';
+  h += '<label class="f" style="margin-top:10px">Your story prompt</label><textarea id="aiPrompt" rows="8" readonly></textarea>';
+  h += '<div class="row" style="margin-top:10px"><button class="gold-btn" id="aiChatGPT">💬 Open in ChatGPT</button><button class="ghost-btn" id="aiClaude">✳️ Open in Claude</button></div>';
+  h += '<div class="row" style="margin-top:8px"><button class="ghost-btn" id="aiGemini">✨ Copy + open Gemini</button><button class="ghost-btn" id="aiCopy">📋 Copy prompt</button></div>';
+  h += '<label class="f" style="margin-top:12px">Paste the AI\u2019s story</label><textarea id="aiAnswer" rows="8" placeholder="Paste the whole story\u2026"></textarea>';
+  h += '<label class="f">Written by</label><select id="aiSource"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>Muse (in chat)</option><option>Other AI</option></select>';
+  h += '<div class="row" style="margin-top:12px"><button class="gold-btn" id="aiSaveStory">Save story to shelf</button></div><p class="small" id="aiMsg"></p></div>';
   h += '<div class="card">';
   h += '<label class="f">Title</label><input type="text" id="cTitle" value="' + (editing ? esc(editing.title) : "") + '" placeholder="e.g. The Brave Little Tooth">';
   h += '<div class="filters" style="margin-top:10px"><div><label class="f">Author</label><input type="text" id="cAuthor" value="' + (editing ? esc(editing.author) : "Made for your family") + '"></div>';
@@ -973,6 +987,26 @@ function renderCreate(){
   h += '<h2>Story ideas</h2><div class="card">';
   h += '<p class="small" style="margin-top:0">A draft found in the original app\'s Create page, kept for you:</p><p>“' + esc(db.createDraft || "") + '”</p>';
   h += '<p class="small">More ideas from the original: “A shy little fox learns that trying again is braver than winning.” · “A gentle story about the sea and the tide going to sleep.”</p></div>';
+  function dtCopy(t, done){
+    function fallback(){ var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch(e){} ta.remove(); if(done) done(); }
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){ if(done) done(); }, fallback); else fallback();
+  }
+  function buildStoryPrompt(){
+    var child = activeChild();
+    var idea = $("#aiIdea").value.trim();
+    var mins = parseInt($("#aiMins").value, 10) || 5;
+    var L = [];
+    L.push("Write a calm bedtime story for " + (child ? child.name : "my child") + (child ? ", a " + child.age + "-year-old " + (child.gender === "any" ? "child" : child.gender) : "") + ".");
+    if(idea) L.push("The story idea: " + idea);
+    L.push("Length: about " + mins + " minutes read aloud \u2014 roughly " + (mins * 130) + " words. Tone: gentle, warm and calm, with a soft, sleepy ending. Nothing scary or exciting near the end; keep it soothing and age-appropriate.");
+    L.push("");
+    L.push("Format your answer exactly like this:");
+    L.push("TITLE: <the story's title>");
+    L.push("Then the story itself, split into pages: put a line containing only --- between pages. Each page should be about 40\u201380 words \u2014 one scene or moment per page.");
+    L.push("SUMMARY: <one sentence about the story>");
+    L.push("Write only the title line, the pages, and the summary line \u2014 no extra commentary.");
+    return L.join("\n");
+  }
   app.innerHTML = h;
   $("#cSave").addEventListener("click", function(){
     var title = $("#cTitle").value.trim();
@@ -995,6 +1029,38 @@ function renderCreate(){
       toast("Story saved to the shelf");
     }
     editStoryId = null; save(); go("shelf");
+  });
+  $("#aiPrompt").value = buildStoryPrompt();
+  ["aiIdea", "aiMins"].forEach(function(id){ $("#" + id).addEventListener("change", function(){ $("#aiPrompt").value = buildStoryPrompt(); }); });
+  $("#aiChatGPT").addEventListener("click", function(){ $("#aiPrompt").value = buildStoryPrompt(); window.open("https://chatgpt.com/?q=" + encodeURIComponent($("#aiPrompt").value), "_blank"); });
+  $("#aiClaude").addEventListener("click", function(){ $("#aiPrompt").value = buildStoryPrompt(); window.open("https://claude.ai/new?q=" + encodeURIComponent($("#aiPrompt").value), "_blank"); });
+  $("#aiGemini").addEventListener("click", function(){ $("#aiPrompt").value = buildStoryPrompt(); dtCopy($("#aiPrompt").value, function(){ toast("Prompt copied \u2014 paste it in Gemini"); window.open("https://gemini.google.com/app", "_blank"); }); });
+  $("#aiCopy").addEventListener("click", function(){ $("#aiPrompt").value = buildStoryPrompt(); dtCopy($("#aiPrompt").value, function(){ toast("Prompt copied"); }); });
+  $("#aiSaveStory").addEventListener("click", function(){
+    var text = $("#aiAnswer").value.trim(); var msg = $("#aiMsg");
+    if(!text){ msg.textContent = "Paste the AI\u2019s story first."; return; }
+    var title = "", summary = "", body = text, m;
+    if((m = /^TITLE:\s*(.+)$/im.exec(body))){ title = m[1].trim(); body = body.replace(m[0], ""); }
+    if((m = /^SUMMARY:\s*(.+)$/im.exec(body))){ summary = m[1].trim(); body = body.replace(m[0], ""); }
+    body = body.trim();
+    var rawPages = body.split(/\n\s*---\s*\n/).map(function(t){ return t.trim(); }).filter(Boolean);
+    if(rawPages.length <= 1){
+      var paras = body.split(/\n\s*\n/).map(function(t){ return t.trim(); }).filter(Boolean);
+      if(paras.length > 1) rawPages = paras;
+    }
+    if(!rawPages.length){ msg.textContent = "That paste looks empty \u2014 try again."; return; }
+    if(!title) title = (rawPages[0].split(/\n/)[0] || "Untitled story").slice(0, 60);
+    var pages = rawPages.map(function(t){ return { text: t, image_prompt: "" }; });
+    var words = pages.reduce(function(n, p){ return n + p.text.split(/\s+/).filter(Boolean).length; }, 0);
+    var child = activeChild();
+    var ns = { id: "story" + Date.now(), source: "family", source_name: "", topic: $("#aiIdea").value.trim(),
+      title: title, author: $("#aiSource").value, theme: $("#aiTheme").value,
+      age_min: child ? Math.max(1, child.age - 2) : 4, age_max: child ? child.age + 2 : 10, gender: child ? child.gender : "any",
+      pages: pages, reading_minutes: Math.max(1, Math.round(words / 130)), has_drawings: false, is_free: true, emoji: "🌙",
+      summary: summary || (pages[0].text.slice(0, 140) + (pages[0].text.length > 140 ? "\u2026" : "")) };
+    db.stories.unshift(ns);
+    if(child){ if(!db.shelf[child.id]) db.shelf[child.id] = []; db.shelf[child.id].unshift(ns.id); }
+    save(); toast("Story saved to the shelf"); go("shelf");
   });
   var ce = $("#cCancelEdit"); if(ce) ce.addEventListener("click", function(){ editStoryId = null; render(); });
   var cd = $("#cDelete"); if(cd) cd.addEventListener("click", function(){
