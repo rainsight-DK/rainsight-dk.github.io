@@ -1,0 +1,15 @@
+{
+ "name": "DictaKids \u2014 Listen & Spell",
+ "short_name": "DictaKids",
+ "start_url": "./index.html",
+ "display": "standalone",
+ "background_color": "#EEF0FE",
+ "theme_color": "#4F46E5",
+ "icons": [
+  {
+   "src": "icon.svg",
+   "sizes": "512x512",
+   "type": "image/svg+xml"
+  }
+ ]
+}
