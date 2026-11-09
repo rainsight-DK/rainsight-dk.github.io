@@ -111,6 +111,61 @@ function renderList(){
   document.querySelectorAll("[data-delc]").forEach(function(b){ b.addEventListener("click", function(){ if(confirm("Delete this comparison?")){ DB.comparisons = DB.comparisons.filter(function(x){ return x.id !== b.getAttribute("data-delc"); }); save(); renderList(); } }); });
 }
 
+/* ---------- AI handoff ---------- */
+function cxCopy(t, done){
+  function fallback(){ var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch(e){} ta.remove(); if (done) done(); }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){ if (done) done(); }, fallback); else fallback();
+}
+function buildComparePrompt(c){
+  var L = [];
+  L.push("Compare these products for me and tell me which one I should buy.");
+  L.push("Product type: " + (c.productType || "(not specified)"));
+  L.push("");
+  L.push("The products (prices and notes are what I found myself):");
+  c.products.forEach(function(p, i){
+    var line = (i + 1) + ") " + (p.name || ("Product " + (i + 1)));
+    if (p.price) line += " \u2014 price I found: $" + p.price;
+    if (p.summary) line += " \u2014 my summary: " + p.summary;
+    L.push(line);
+    if (p.details) L.push("   My notes: " + p.details);
+  });
+  if (c.criteria && c.criteria.length) {
+    L.push("");
+    L.push("My comparison criteria (values I recorded, with my own star ratings out of 5):");
+    c.criteria.forEach(function(cr){
+      var parts = cr.values.map(function(v, pi){ var nm = c.products[pi].name || ("Product " + (pi + 1)); return nm + ": " + (v || "\u2014") + " (I rated " + (cr.ratings[pi] || 0) + "/5)"; });
+      L.push("- " + cr.name + " | " + parts.join(" | "));
+    });
+  }
+  if (c.considerations && c.considerations.trim()) { L.push(""); L.push("My considerations:"); L.push(c.considerations.trim()); }
+  L.push("");
+  L.push("Check current sources for specs and prices, and cite them. Flag anything that differs from what I recorded \u2014 a price that has changed, a spec I have wrong. Judge the products against my criteria, my ratings, and my considerations, not generic priorities.");
+  L.push("");
+  L.push("End your answer with exactly this block:");
+  L.push("===COMPARIX===");
+  L.push("WINNER: <the exact product name from my list>");
+  L.push("REASONING: <your reasoning \u2014 a short paragraph>");
+  L.push("WATCHOUTS: <anything I should double-check before buying, or 'none'>");
+  L.push("===END===");
+  return L.join("\n");
+}
+function parseComparix(text){
+  var m = /===COMPARIX===([\s\S]*?)(?:===END===|$)/.exec(text);
+  if (!m) return null;
+  var body = m[1];
+  function grab(label, nextLabels){
+    var mm = new RegExp(label + ":\\s*", "i").exec(body); if (!mm) return "";
+    var rest = body.slice(mm.index + mm[0].length);
+    if (nextLabels) { var cut = rest.search(new RegExp("\\n\\s*(?:" + nextLabels + "):", "i")); if (cut !== -1) rest = rest.slice(0, cut); }
+    return rest.trim();
+  }
+  var winner = grab("WINNER", "REASONING|WATCHOUTS");
+  var reasoning = grab("REASONING", "WATCHOUTS");
+  var watchouts = grab("WATCHOUTS", null);
+  if (!reasoning && !winner) return null;
+  return { winner: winner, reasoning: reasoning, watchouts: watchouts };
+}
+
 /* ---------- Editor ---------- */
 function renderEdit(){
   var c = byId(cur); if(!c){ view = "list"; renderList(); return; }
@@ -140,7 +195,16 @@ function renderEdit(){
     '<tr><th>Total ⭐</th>' + t.map(function(n){ return '<th>' + n + '</th>'; }).join("") + '<th></th></tr></table></div>' +
     '<div class="row" style="margin-top:9px"><input id="newCrit" placeholder="New criterion (e.g. Battery life)"><button class="fix" id="addCrit">Add row</button></div></div>';
   // Considerations + decision
-  h += '<div class="card"><h2 class="sec">Considerations</h2><p class="mut" style="margin-top:0">Anything that should shape the decision — budget limits, must-haves, who it is for. (In the original this was the step before the AI suggestion.)</p><textarea id="f_cons" placeholder="One consideration per line">' + esc(c.considerations) + '</textarea></div>' +
+  h += '<div class="card"><h2 class="sec">Considerations</h2><p class="mut" style="margin-top:0">Anything that should shape the decision — budget limits, must-haves, who it is for. (These feed the AI comparison in the next card — in the original, this was the step right before the AI suggestion.)</p><textarea id="f_cons" placeholder="One consideration per line">' + esc(c.considerations) + '</textarea></div>' +
+    '<div class="card"><h2 class="sec">🤖 Ask an AI to Compare</h2>' +
+    '<p class="mut" style="margin-top:0">The prompt carries this whole worksheet — products, your prices, the criteria table with your ratings, and your considerations. The AI checks current sources and ends with a verdict block; paste its answer back to apply it to My Decision below.</p>' +
+    (c.aiText ? '<p class="mut">Latest AI verdict: <b>' + esc(c.aiWinnerName || "—") + '</b> by ' + esc(c.aiSource || "AI") + (c.aiDate ? ' · ' + fmtDate(c.aiDate) : '') + '</p><details class="dsum"><summary>Show the AI\'s full answer</summary><div style="white-space:pre-wrap;line-height:1.55;margin-top:6px">' + esc(c.aiText) + '</div></details>' : '') +
+    '<label class="fl">Your comparison prompt</label><textarea id="cxPrompt" rows="10" readonly></textarea>' +
+    '<div class="row" style="margin-top:9px"><button id="cxChatGPT">💬 Open in ChatGPT</button><button id="cxClaude">✳️ Open in Claude</button></div>' +
+    '<div class="row" style="margin-top:7px"><button id="cxGemini">✨ Copy + open Gemini</button><button id="cxCopy">📋 Copy prompt</button></div>' +
+    '<label class="fl" style="margin-top:10px">Paste the AI\'s answer</label><textarea id="cxAnswer" placeholder="Paste the whole answer, including the verdict block…"></textarea>' +
+    '<label class="fl">Answered by</label><select id="cxSource"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>Muse (in chat)</option><option>Other AI</option></select>' +
+    '<div class="row" style="margin-top:9px"><button id="cxApply">Apply the AI\'s comparison</button></div><p class="mut" id="cxMsg"></p></div>' +
     '<div class="card"><h2 class="sec">My Decision</h2><label class="fl">Winner</label><select id="f_winner"><option value="-1">— not decided yet —</option>' + c.products.map(function(p, i){ return '<option value="' + i + '"' + (c.decision.winner === i ? " selected" : "") + '>' + esc(p.name || ("Product " + (i + 1))) + '</option>'; }).join("") + '</select>' +
     '<label class="fl">Why — your reasoning</label><textarea id="f_why" placeholder="Why this one wins, trade-offs you accepted…">' + esc(c.decision.notes) + '</textarea>' +
     '<button class="danger" id="delBtn" style="margin-top:12px">Delete this comparison</button></div>';
@@ -163,6 +227,29 @@ function renderEdit(){
   $("f_cons").addEventListener("change", function(){ c.considerations = this.value; upd(); });
   $("f_winner").addEventListener("change", function(){ c.decision.winner = parseInt(this.value, 10); upd(); renderEdit(); });
   $("f_why").addEventListener("change", function(){ c.decision.notes = this.value; upd(); });
+  var cxp = $("cxPrompt");
+  if (cxp) {
+    cxp.value = buildComparePrompt(c);
+    var cxRebuild = function(){ cxp.value = buildComparePrompt(c); };
+    $("cxChatGPT").addEventListener("click", function(){ cxRebuild(); window.open("https://chatgpt.com/?q=" + encodeURIComponent(cxp.value), "_blank"); });
+    $("cxClaude").addEventListener("click", function(){ cxRebuild(); window.open("https://claude.ai/new?q=" + encodeURIComponent(cxp.value), "_blank"); });
+    $("cxGemini").addEventListener("click", function(){ cxRebuild(); cxCopy(cxp.value, function(){ window.open("https://gemini.google.com/app", "_blank"); }); });
+    $("cxCopy").addEventListener("click", function(){ cxRebuild(); cxCopy(cxp.value, null); });
+    $("cxApply").addEventListener("click", function(){
+      var text = $("cxAnswer").value.trim();
+      var msg = $("cxMsg");
+      if (!text) { msg.textContent = "Paste the AI's answer first."; return; }
+      var p = parseComparix(text);
+      if (!p) { msg.textContent = "That answer has no ===COMPARIX=== verdict block \u2014 ask the AI to end with the exact block from the prompt, then paste again."; return; }
+      var srcName = $("cxSource").value;
+      var wi = -1;
+      c.products.forEach(function(pr, i){ var n = (pr.name || "").trim().toLowerCase(); var w = (p.winner || "").trim().toLowerCase(); if (n && w && (n === w || n.indexOf(w) !== -1 || w.indexOf(n) !== -1)) wi = i; });
+      if (wi >= 0) c.decision.winner = wi;
+      c.decision.notes = (c.decision.notes ? c.decision.notes.replace(/\s+$/, "") + "\n\n" : "") + "AI (" + srcName + ", " + fmtDate(Date.now()) + "): " + p.reasoning + (p.watchouts ? "\nWatch-outs: " + p.watchouts : "");
+      c.aiText = text; c.aiSource = srcName; c.aiDate = Date.now(); c.aiWinnerName = wi >= 0 ? c.products[wi].name : p.winner;
+      upd(); renderEdit();
+    });
+  }
   $("delBtn").addEventListener("click", function(){ if(confirm("Delete this comparison?")){ DB.comparisons = DB.comparisons.filter(function(x){ return x.id !== c.id; }); save(); cur = null; view = "list"; render(); } });
 }
 $("photoFile").addEventListener("change", function(){
