@@ -224,7 +224,18 @@ function refreshNow(){
   Promise.all(FEEDS.map(f => fetchFeed(f[0], f[1]).then(list => ({ ok: true, list: list })).catch(() => ({ ok: false, list: [] }))))
     .then(results => {
       const okCount = results.filter(r => r.ok).length;
-      if (!okCount){ note.textContent = 'Could not update just now \u2014 showing the last saved stories. Check your connection and try again.'; return; }
+      if (!okCount){
+        // Live feeds unreachable from this connection: fall back to the newest
+        // saved copy (kept fresh by the repo's automatic refresher).
+        return fetch('stories.json?t=' + Date.now(), { cache: 'no-store' })
+          .then(r => { if (!r.ok) throw new Error('feed'); return r.json(); })
+          .then(data => { render(data);
+            const g = data.generated_at ? new Date(data.generated_at) : null;
+            note.textContent = 'Live update is not reachable from this connection \u2014 showing the newest saved stories'
+              + (g ? ' (refreshed ' + g.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + g.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + ')' : '') + '.';
+          })
+          .catch(() => { note.textContent = 'Could not update just now \u2014 showing the last saved stories. Check your connection and try again.'; });
+      }
       const seen = new Set(); let stories = [];
       results.forEach(r => r.list.forEach(s => { const key = s.link.split('?')[0].toLowerCase();
         if (!seen.has(key)){ seen.add(key); stories.push(s); } }));
