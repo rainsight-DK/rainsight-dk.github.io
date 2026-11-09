@@ -94,6 +94,20 @@ footer{color:var(--sub);font-size:12.5px;text-align:center;padding:20px 10px 4px
     <div class="row" style="margin-top:12px"><button class="btn" id="genBtn" disabled>Find &amp; Read Briefing</button></div>
     <p class="note" id="listenMsg"></p>
     <div id="listenResult"></div>
+    <div class="card">
+      <h2 style="margin-top:0">🤖 Or have an AI research &amp; write it</h2>
+      <p class="note">The prompt below asks an AI to research your topic and write a briefing made for listening — plain spoken paragraphs, no lists or markdown for the voice to trip over. Paste its answer back and it saves as a session, ready to play.</p>
+      <label>Your briefing prompt (topic + length from above)</label>
+      <textarea id="aiListenPrompt" rows="8" readonly></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn" id="aiListenChatGPT">💬 Open in ChatGPT</button><button class="btn ghost" id="aiListenClaude">✳️ Open in Claude</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn ghost" id="aiListenGemini">✨ Copy + open Gemini</button><button class="btn ghost" id="aiListenCopy">📋 Copy prompt</button></div>
+      <label style="margin-top:12px">Paste the AI's briefing</label>
+      <textarea id="aiListenAnswer" placeholder="Paste the whole briefing…"></textarea>
+      <label>Written by</label>
+      <select id="aiListenSource"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>Muse (in chat)</option><option>Other AI</option></select>
+      <div class="row" style="margin-top:10px"><button class="btn" id="aiListenSave">Save session</button></div>
+      <p class="note" id="aiListenMsg"></p>
+    </div>
     <p class="note">Briefings are the introduction of the matching Wikipedia article, trimmed to your chosen length and read aloud by your device's voice. The article is saved as the session's source. Sessions save on this device.</p>
   </section>
 
@@ -119,7 +133,21 @@ footer{color:var(--sub);font-size:12.5px;text-align:center;padding:20px 10px 4px
       <button class="btn" id="saveExplainBtn" disabled>Save session</button>
     </div>
     <p class="note" id="explainMsg"></p>
-    <p class="note">This rebuild has no AI writer: explanations open on Simple Wikipedia / Wikipedia (real, plain-language references), and your pasted text is read aloud by your device's voice and saved to your sessions.</p>
+    <div class="card">
+      <h2 style="margin-top:0">🤖 Or ask an AI to explain it</h2>
+      <p class="note">The prompt below carries the text you pasted above, plus the style chips you picked. The AI explains it in plain, spoken-friendly language; paste the explanation back and it becomes the session — your original text stays attached.</p>
+      <label>Your explanation prompt</label>
+      <textarea id="aiExplainPrompt" rows="8" readonly></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn" id="aiExplainChatGPT">💬 Open in ChatGPT</button><button class="btn ghost" id="aiExplainClaude">✳️ Open in Claude</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn ghost" id="aiExplainGemini">✨ Copy + open Gemini</button><button class="btn ghost" id="aiExplainCopy">📋 Copy prompt</button></div>
+      <label style="margin-top:12px">Paste the AI's explanation</label>
+      <textarea id="aiExplainAnswer" placeholder="Paste the whole explanation…"></textarea>
+      <label>Written by</label>
+      <select id="aiExplainSource"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>Muse (in chat)</option><option>Other AI</option></select>
+      <div class="row" style="margin-top:10px"><button class="btn" id="aiExplainSave">Save session</button></div>
+      <p class="note" id="aiExplainMsg"></p>
+    </div>
+    <p class="note">Explanations can also open on Simple Wikipedia / Wikipedia (real, plain-language references); your pasted text itself can be read aloud by your device's voice and saved to your sessions.</p>
   </section>
 
   <!-- SESSION DETAIL -->
@@ -304,7 +332,7 @@ function openSession(id){
     (s.sources && s.sources.length ? '<p class="note">Source: '+s.sources.map(function(u){ return '<a class="ext" href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(u)+'</a>'; }).join(", ")+'</p>' : '') +
     (s.steps && s.steps.length ? '<p class="note">Focus tried: '+s.steps.map(esc).join(" · ")+'</p>' : '') +
     '<div class="row" style="margin:12px 0"><button class="btn" id="sessSpeak">🔊 Read aloud</button><button class="btn ghost" id="sessDelete">Delete</button></div>' +
-    '<div class="body-text">'+esc(s.content)+'</div></div>';
+    (s.aiSource ? '<p class="note">Written by '+esc(s.aiSource)+'</p>' : '') + (s.originalText ? '<p class="note" style="margin-bottom:4px">Original text</p><div class="body-text" style="opacity:.7;margin-bottom:12px">'+esc(s.originalText)+'</div>' : '') + '<div class="body-text">'+esc(s.content)+'</div></div>';
   document.getElementById("sessionBody").innerHTML = h;
   showView("session");
   document.getElementById("sessSpeak").addEventListener("click", function(){ speak(s.title, s.content); });
@@ -351,6 +379,80 @@ function saveExplain(){
   DB.sessions.unshift(s); saveDB(DB); renderAll();
   document.getElementById("explainMsg").textContent = "Session saved.";
   openSession(s.id);
+}
+
+/* ---------- AI handoff ---------- */
+function cmCopy(t, done){
+  function fallback(){ var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch(e){} ta.remove(); if (done) done(); }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){ if (done) done(); }, fallback); else fallback();
+}
+function cleanForSpeech(t){
+  return t.replace(/^TITLE:\s*.+$/im, "").replace(/^#{1,6}\s*/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").replace(/`(.+?)`/g, "$1").replace(/^\s*[-\u2022]\s+/gm, "").trim();
+}
+function buildBriefPrompt(){
+  var topic = document.getElementById("topicInput").value.trim();
+  var mins = parseInt(document.getElementById("lenRange").value, 10) || 4;
+  var L = [];
+  L.push("Research this topic and write me a short audio briefing I can listen to while driving.");
+  L.push("Topic: " + (topic || "<the topic I name>"));
+  L.push("Length: about " + mins + " minutes spoken aloud \u2014 roughly " + minutesToWords(mins) + " words.");
+  L.push("Write it FOR LISTENING, not reading: plain spoken paragraphs only \u2014 no headings, no bullet points, no markdown, no links, no bracketed references. Start with one sentence that orients me, then explain the topic in a clear order, and end with a one-sentence wrap-up. Use short sentences and everyday words, and spell out an abbreviation the first time you use it. Base it on reliable sources; if some part is uncertain, say so plainly inside the briefing \u2014 do not invent facts.");
+  L.push("Begin with a first line in this form: TITLE: <a short title for the briefing>");
+  return L.join("\n");
+}
+function buildExplainPrompt(){
+  var text = document.getElementById("explainInput").value.trim();
+  var concept = document.getElementById("conceptInput").value.trim();
+  var styles = explainStyles.length ? explainStyles.slice() : ["Simple explanation"];
+  var L = [];
+  L.push("Explain the following text to me in plain language, so I can listen to the explanation while driving.");
+  if (concept) L.push("The key concept is: " + concept + ".");
+  L.push("Use these approaches: " + styles.join("; ") + ".");
+  L.push("Write it FOR LISTENING: plain spoken paragraphs only \u2014 no headings, no bullet points, no markdown, no links. Short sentences, everyday words, and one concrete example if it helps. Keep it under about 400 words.");
+  L.push("");
+  L.push("Here is the text:");
+  L.push('"""');
+  L.push(text || "<the text I paste>");
+  L.push('"""');
+  return L.join("\n");
+}
+function wireAiCards(){
+  var lp = document.getElementById("aiListenPrompt"); if (!lp) return;
+  lp.value = buildBriefPrompt();
+  document.getElementById("aiListenChatGPT").addEventListener("click", function(){ lp.value = buildBriefPrompt(); window.open("https://chatgpt.com/?q=" + encodeURIComponent(lp.value), "_blank"); });
+  document.getElementById("aiListenClaude").addEventListener("click", function(){ lp.value = buildBriefPrompt(); window.open("https://claude.ai/new?q=" + encodeURIComponent(lp.value), "_blank"); });
+  document.getElementById("aiListenGemini").addEventListener("click", function(){ lp.value = buildBriefPrompt(); cmCopy(lp.value, function(){ window.open("https://gemini.google.com/app", "_blank"); }); });
+  document.getElementById("aiListenCopy").addEventListener("click", function(){ lp.value = buildBriefPrompt(); cmCopy(lp.value, null); });
+  document.getElementById("aiListenSave").addEventListener("click", function(){
+    var text = document.getElementById("aiListenAnswer").value.trim();
+    var msg = document.getElementById("aiListenMsg");
+    if (!text) { msg.textContent = "Paste the AI's briefing first."; return; }
+    var topic = document.getElementById("topicInput").value.trim();
+    var tm = /^TITLE:\s*(.+)$/im.exec(text);
+    var mins = parseInt(document.getElementById("lenRange").value, 10) || 4;
+    var s = { id: "s" + Date.now(), type: "listen", title: tm ? tm[1].trim() : (topic || "AI briefing"),
+      content: cleanForSpeech(text), sources: [], durationMinutes: mins, date: todayStr(),
+      aiSource: document.getElementById("aiListenSource").value };
+    DB.sessions.unshift(s); saveDB(DB); renderAll(); openSession(s.id);
+  });
+  var ep = document.getElementById("aiExplainPrompt");
+  ep.value = buildExplainPrompt();
+  document.getElementById("aiExplainChatGPT").addEventListener("click", function(){ ep.value = buildExplainPrompt(); window.open("https://chatgpt.com/?q=" + encodeURIComponent(ep.value), "_blank"); });
+  document.getElementById("aiExplainClaude").addEventListener("click", function(){ ep.value = buildExplainPrompt(); window.open("https://claude.ai/new?q=" + encodeURIComponent(ep.value), "_blank"); });
+  document.getElementById("aiExplainGemini").addEventListener("click", function(){ ep.value = buildExplainPrompt(); cmCopy(ep.value, function(){ window.open("https://gemini.google.com/app", "_blank"); }); });
+  document.getElementById("aiExplainCopy").addEventListener("click", function(){ ep.value = buildExplainPrompt(); cmCopy(ep.value, null); });
+  document.getElementById("aiExplainSave").addEventListener("click", function(){
+    var text = document.getElementById("aiExplainAnswer").value.trim();
+    var msg = document.getElementById("aiExplainMsg");
+    var original = document.getElementById("explainInput").value.trim();
+    if (!original) { msg.textContent = "Paste the difficult text at the top first \u2014 the session keeps it with the explanation."; return; }
+    if (!text) { msg.textContent = "Paste the AI's explanation first."; return; }
+    var concept = document.getElementById("conceptInput").value.trim();
+    var s = { id: "s" + Date.now(), type: "explain", title: concept || (original.length > 60 ? original.slice(0, 60) + "\u2026" : original),
+      content: cleanForSpeech(text), sources: [], steps: explainStyles.length ? explainStyles.slice() : ["Simple explanation"],
+      date: todayStr(), aiSource: document.getElementById("aiExplainSource").value, originalText: original };
+    DB.sessions.unshift(s); saveDB(DB); renderAll(); openSession(s.id);
+  });
 }
 
 /* ---------- Backup ---------- */
@@ -438,6 +540,7 @@ wireMic("explainMic", "explainInput");
 window.CM = { trimToWords: trimToWords, minutesToWords: minutesToWords, getDB: function(){ return DB; } };
 
 applySettings();
+wireAiCards();
 renderAll();
 showView("home");
 </script>
