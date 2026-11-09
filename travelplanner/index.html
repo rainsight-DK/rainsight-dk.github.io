@@ -240,7 +240,12 @@ function renderPlanner(){
     '<div class="row"><div><label class="fl">Start date</label><input id="f_planDate" type="date" value="' + esc(f.planDate || "") + '"></div><div><label class="fl">Number of days</label><input id="f_numDays" type="number" min="1" max="14" value="' + (f.numDays || 1) + '"></div></div>' +
     '<label class="fl">Budget</label><select id="f_budgetType">' + BUDGETS.map(function(t){ return '<option value="' + t[0] + '"' + (f.budgetType === t[0] ? " selected" : "") + '>' + t[1] + '</option>'; }).join("") + '</select>' +
     '<label class="fl">Special conditions</label><textarea id="f_conditions" placeholder="e.g. kid-friendly, must allow dogs…">' + esc(f.conditions || "") + '</textarea></div>' +
-    '<div class="card"><p class="mut" style="margin-top:0">The original app wrote the itinerary with AI, which a free-standing app cannot do. Build the days yourself in the editor — or look for ideas first:</p>' +
+    '<div class="card"><h2 class="sec">🤖 Plan it with AI</h2>' +
+    '<p class="mut" style="margin-top:0">This app builds a ready-made planning prompt from the form above and hands it to the AI you choose. ChatGPT and Claude open with the prompt already filled in — just press send there. Gemini does not accept a pre-filled prompt, so its button copies the prompt first: paste it in Gemini. You can also copy the prompt and paste it to Muse in your chat with your assistant.</p>' +
+    '<label class="fl">Your planning prompt</label><textarea id="aiPrompt" rows="9" readonly></textarea>' +
+    '<div class="row" style="margin-top:9px"><button class="primary" id="aiChatGPT">💬 Open in ChatGPT</button><button id="aiClaude">✳️ Open in Claude</button></div>' +
+    '<div class="row" style="margin-top:8px"><button id="aiGemini">✨ Copy + open Gemini</button><button id="aiCopy">📋 Copy prompt</button></div></div>' +
+    '<div class="card"><p class="mut" style="margin-top:0">Prefer to build the days yourself? Start a blank plan in the editor — or look for ideas first:</p>' +
     '<button class="primary" id="startPlanBtn" style="width:100%">✏️ Start a blank plan from this form</button>' +
     '<div id="ideaLinks" style="margin-top:12px"></div>' +
     '<button id="resetBtn" style="width:100%;margin-top:10px">Reset form</button></div>';
@@ -269,17 +274,52 @@ function renderPlanner(){
   }
   ideaLinks();
   ["f_location","f_destination"].forEach(function(id){ $(id).addEventListener("change", ideaLinks); });
+  function optLabel(list, v){ for(var q = 0; q < list.length; q++) if(String(list[q][0]) === String(v)) return list[q][1]; return v || ""; }
+  function buildPrompt(){
+    readForm();
+    var L = [];
+    L.push("Plan a " + f.numDays + "-day trip itinerary.");
+    if((f.location || "").trim()) L.push("Main area: " + f.location.trim() + ".");
+    if((f.destination || "").trim()) L.push("Final destination / place to stay: " + f.destination.trim() + ".");
+    if((f.origin || "").trim()) L.push("Starting from: " + f.origin.trim() + ".");
+    if(f.planDate) L.push("Start date: " + f.planDate + " (" + f.numDays + " day" + (f.numDays > 1 ? "s" : "") + ").");
+    var group = f.adults + " adult" + (f.adults > 1 ? "s" : "");
+    if(f.kids) group += ", " + f.kids + " kid" + (f.kids > 1 ? "s" : "") + ((f.kidsAges || "").trim() ? " (ages " + f.kidsAges.trim() + ")" : "");
+    if(f.pets) group += ", and " + f.pets + " pet" + (f.pets > 1 ? "s" : "") + " — prefer pet-friendly options";
+    L.push("Group: " + group + ".");
+    if(f.transport) L.push("Transport: " + optLabel(TRANSPORTS, f.transport) + ".");
+    if((f.minDistance || "").trim() || (f.maxDistance || "").trim()) L.push("Distance from origin: " + ((f.minDistance || "").trim() ? "at least " + f.minDistance.trim() : "") + ((f.minDistance || "").trim() && (f.maxDistance || "").trim() ? ", " : "") + ((f.maxDistance || "").trim() ? "no more than " + f.maxDistance.trim() : "") + ".");
+    if((f.activityTypes || []).length) L.push("Activity types: " + f.activityTypes.join(", ") + ".");
+    if(f.style) L.push("Style: " + optLabel(STYLES, f.style) + ".");
+    L.push("Active hours each day: " + (f.startTime || "09:00") + " to " + (f.endTime || "18:00") + ".");
+    if(f.budgetType) L.push("Budget: " + optLabel(BUDGETS, f.budgetType) + ".");
+    if((f.conditions || "").trim()) L.push("Special conditions: " + f.conditions.trim());
+    L.push("");
+    L.push("Format the answer day by day. For each day, list activities in time order with: start and end time, place name, address, a one-line description, why it suits this group, and an estimated cost. Use only real, currently operating places; do not invent opening hours or prices — mark anything uncertain as 'verify'. Keep driving legs realistic for the distance limits above, and note anything that needs booking ahead.");
+    return L.join("\n");
+  }
+  function refreshPrompt(){ var ta = $("aiPrompt"); if(ta) ta.value = buildPrompt(); }
+  function copyText(t, done){
+    function fallback(){ var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch(e){} ta.remove(); if(done) done(); }
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){ if(done) done(); }, fallback); else fallback();
+  }
+  refreshPrompt();
+  ["f_kidsAges","f_origin","f_location","f_minDistance","f_maxDistance","f_destination","f_transport","f_style","f_startTime","f_endTime","f_planDate","f_numDays","f_budgetType","f_conditions"].forEach(function(id){ var el = $(id); if(el) el.addEventListener("change", refreshPrompt); });
+  $("aiChatGPT").addEventListener("click", function(){ refreshPrompt(); window.open("https://chatgpt.com/?q=" + encodeURIComponent($("aiPrompt").value), "_blank"); });
+  $("aiClaude").addEventListener("click", function(){ refreshPrompt(); window.open("https://claude.ai/new?q=" + encodeURIComponent($("aiPrompt").value), "_blank"); });
+  $("aiGemini").addEventListener("click", function(){ refreshPrompt(); copyText($("aiPrompt").value, function(){ toast("Prompt copied — paste it in Gemini"); window.open("https://gemini.google.com/app", "_blank"); }); });
+  $("aiCopy").addEventListener("click", function(){ refreshPrompt(); copyText($("aiPrompt").value, function(){ toast("Prompt copied"); }); });
   var steps = document.querySelectorAll("[data-step]");
   for(var i=0;i<steps.length;i++) steps[i].addEventListener("click", function(){
     var parts = this.getAttribute("data-step").split(":"); var k = parts[0], d = parseInt(parts[1],10);
     var max = k === "adults" ? 8 : (k === "kids" ? 5 : 2), min = k === "adults" ? 1 : 0;
-    f[k] = Math.min(max, Math.max(min, (f[k] || 0) + d)); $("val_" + k).textContent = f[k];
+    f[k] = Math.min(max, Math.max(min, (f[k] || 0) + d)); $("val_" + k).textContent = f[k]; refreshPrompt();
   });
   var pills = document.querySelectorAll("[data-type]");
   for(var j=0;j<pills.length;j++) pills[j].addEventListener("click", function(){
     var t = this.getAttribute("data-type"); var ix = (f.activityTypes || []).indexOf(t);
     if(ix >= 0) f.activityTypes.splice(ix,1); else f.activityTypes.push(t);
-    this.className = "pill" + (ix >= 0 ? "" : " on");
+    this.className = "pill" + (ix >= 0 ? "" : " on"); refreshPrompt();
   });
   $("resetBtn").addEventListener("click", function(){ plannerState = defaultPlanner(); renderPlanner(); });
   $("startPlanBtn").addEventListener("click", function(){
