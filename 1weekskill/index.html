@@ -152,7 +152,7 @@ a.ext{color:var(--accent)}
     </div>
   </section>
 
-  <footer>1WeekSkill — rebuilt as an independent app.<br>All reading content comes from Wikipedia (CC BY-SA). Plans are built from the article's own structure — nothing is AI-written.</footer>
+  <footer>1WeekSkill — rebuilt as an independent app.<br>Reading content comes from Wikipedia (CC BY-SA), or from an AI course you ask for and paste in yourself.</footer>
 </div>
 <div id="printArea"></div>
 
@@ -304,6 +304,54 @@ function renderHome(){
 
 /* ---------- New Skill flow ---------- */
 var draft = null;
+function owCopy(t, done){
+  function fallback(){ var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch(e){} ta.remove(); if (done) done(); }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function(){ if (done) done(); }, fallback); else fallback();
+}
+function buildCoursePrompt(){
+  var topic = document.getElementById("skillInput").value.trim();
+  var level = document.getElementById("aiLevel").value;
+  var mins = parseInt(document.getElementById("aiMins").value, 10) || 20;
+  var L = [];
+  L.push("Design a 7-day mini-course that teaches me: " + (topic || "<the topic above>"));
+  L.push("My level: " + level + ". Time available: about " + mins + " minutes of reading per day \u2014 roughly " + (mins * 140) + " words of lesson per day.");
+  L.push("Build real understanding in 7 days: start with foundations, add one layer per day, and finish with a consolidation day. Each day's lesson must be self-contained teaching text \u2014 actually teach the material in the lesson; do not just list links or an outline.");
+  L.push("");
+  L.push("Answer with the course in EXACTLY this format:");
+  L.push("===COURSE===");
+  L.push("TITLE: <course title>");
+  L.push("DAY 1 | <day title>");
+  L.push("SUMMARY: <1-2 sentences>");
+  L.push("LESSON:");
+  L.push("<the full lesson text for the day \u2014 several paragraphs>");
+  L.push("TAKEAWAYS: <key point 1> ; <key point 2> ; <key point 3>");
+  L.push("PRACTICE: <one short practice task>");
+  L.push("DAY 2 | <day title>");
+  L.push("...the same shape, for all 7 days...");
+  L.push("===END===");
+  return L.join("\n");
+}
+function parseCourse(text){
+  var bm = /===COURSE===([\s\S]*?)===END===/.exec(text);
+  var src = bm ? bm[1] : text;
+  var title = "", days = [], cur = null, mode = null, m;
+  function flush(){ if (cur && cur._lesson) { cur.content = cur._lesson.join("\n").trim(); cur._lesson = null; } }
+  src.split(/\r?\n/).forEach(function(raw){
+    var t = raw.trim();
+    if ((m = /^TITLE:\s*(.+)$/i.exec(t))) { title = m[1].trim(); return; }
+    if ((m = /^DAY\s+(\d+)\s*\|\s*(.+)$/i.exec(t))) { flush(); cur = { day: parseInt(m[1], 10), title: m[2].trim(), summary: "", content: "", keyTakeaways: [], practicePrompt: "", _lesson: [] }; days.push(cur); mode = null; return; }
+    if (!cur) return;
+    if ((m = /^SUMMARY:\s*(.+)$/i.exec(t))) { cur.summary = m[1].trim(); mode = null; return; }
+    if (/^LESSON:\s*$/i.test(t)) { mode = "lesson"; return; }
+    if ((m = /^TAKEAWAYS:\s*(.+)$/i.exec(t))) { flush(); cur.keyTakeaways = m[1].split(/\s*;\s*/).filter(Boolean); mode = null; return; }
+    if ((m = /^PRACTICE:\s*(.+)$/i.exec(t))) { flush(); cur.practicePrompt = m[1].trim(); mode = null; return; }
+    if (mode === "lesson") cur._lesson.push(raw);
+  });
+  flush();
+  days = days.filter(function(d){ return d.content || d.summary; });
+  days.forEach(function(d, i){ d.day = i + 1; if (!d.content) d.content = d.summary; if (!d.summary) d.summary = d.content.slice(0, 170) + (d.content.length > 170 ? "\u2026" : ""); });
+  return { title: title, days: days, structured: !!bm };
+}
 function renderNewInput(msg){
   document.getElementById("newBody").innerHTML =
     '<p class="sub" style="text-align:center">What do you want to learn?</p>' +
@@ -311,12 +359,61 @@ function renderNewInput(msg){
     (msg ? '<p class="note" style="text-align:center">'+esc(msg)+'</p>' : '') +
     '<div id="skillChoices"></div>' +
     '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" id="genBtn">Generate My Plan</button></div>' +
-    '<p class="note" style="text-align:center">The plan is built from the topic\'s real Wikipedia article — its introduction and section structure become your 7 days.</p>';
+    '<p class="note" style="text-align:center">The plan is built from the topic\'s real Wikipedia article — its introduction and section structure become your 7 days.</p>' +
+    '<div class="card" style="margin-top:14px;text-align:left"><h3 style="margin:4px 0">🤖 Or build it with an AI</h3>' +
+    '<p class="note">For a topic Wikipedia can\u2019t carry \u2014 or a course written for your level \u2014 ask an AI to design the 7 days, then paste its answer back. It saves as a plan alongside the Wikipedia ones.</p>' +
+    '<div class="row"><div><label>Your level</label><select id="aiLevel"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>' +
+    '<div><label>Time per day</label><select id="aiMins"><option value="10">About 10 minutes</option><option value="20" selected>About 20 minutes</option><option value="30">About 30 minutes</option></select></div></div>' +
+    '<label>Your course prompt (uses the topic above)</label><textarea id="aiPrompt" rows="9" readonly></textarea>' +
+    '<div class="row" style="margin-top:8px"><button class="btn" id="aiChatGPT">💬 Open in ChatGPT</button><button class="btn ghost" id="aiClaude">✳️ Open in Claude</button></div>' +
+    '<div class="row" style="margin-top:8px"><button class="btn ghost" id="aiGemini">✨ Copy + open Gemini</button><button class="btn ghost" id="aiCopy">📋 Copy prompt</button></div>' +
+    '<label style="margin-top:12px">Paste the AI\u2019s course</label><textarea id="aiAnswer" rows="7" placeholder="Paste the whole answer\u2026"></textarea>' +
+    '<label>Answered by</label><select id="aiSource"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>Muse (in chat)</option><option>Other AI</option></select>' +
+    '<div class="row" style="margin-top:8px"><button class="btn" id="aiImportBtn">Save as a 7-day plan</button></div>' +
+    '<p class="note" id="aiMsg"></p></div>';
   document.getElementById("genBtn").addEventListener("click", function(){
     var q = document.getElementById("skillInput").value.trim(); if (!q) return;
     generateFor(q, null);
   });
   document.getElementById("skillInput").addEventListener("keydown", function(e){ if (e.key === "Enter") document.getElementById("genBtn").click(); });
+
+  document.getElementById("aiPrompt").value = buildCoursePrompt();
+  document.getElementById("aiChatGPT").addEventListener("click", function(){ document.getElementById("aiPrompt").value = buildCoursePrompt(); window.open("https://chatgpt.com/?q=" + encodeURIComponent(document.getElementById("aiPrompt").value), "_blank"); });
+  document.getElementById("aiClaude").addEventListener("click", function(){ document.getElementById("aiPrompt").value = buildCoursePrompt(); window.open("https://claude.ai/new?q=" + encodeURIComponent(document.getElementById("aiPrompt").value), "_blank"); });
+  document.getElementById("aiGemini").addEventListener("click", function(){ document.getElementById("aiPrompt").value = buildCoursePrompt(); owCopy(document.getElementById("aiPrompt").value, function(){ window.open("https://gemini.google.com/app", "_blank"); }); });
+  document.getElementById("aiCopy").addEventListener("click", function(){ document.getElementById("aiPrompt").value = buildCoursePrompt(); owCopy(document.getElementById("aiPrompt").value, null); });
+  document.getElementById("aiImportBtn").addEventListener("click", function(){
+    var text = document.getElementById("aiAnswer").value.trim();
+    var topic = document.getElementById("skillInput").value.trim();
+    var msg = document.getElementById("aiMsg");
+    if (!text) { msg.textContent = "Paste the AI's course first."; return; }
+    if (!topic) { msg.textContent = "Type the topic above first \u2014 the plan is saved under it."; return; }
+    var r = parseCourse(text);
+    var srcName = document.getElementById("aiSource").value;
+    var days = r.days.slice(0, 7);
+    var realCount = days.length, note = "";
+    if (!days.length) {
+      days = [{ day: 1, title: "Imported course (unstructured)", summary: text.slice(0, 170), content: text, keyTakeaways: [], practicePrompt: "" }];
+      note = "Imported without day structure \u2014 the AI's full text is Day 1, with review days after it.";
+    }
+    while (days.length < 7) {
+      var n = days.length + 1, prev = days[days.length - 1];
+      days.push({ day: n, title: "Review & Consolidate", summary: "Re-read the earlier lessons, revisit the key points, and reflect on what you can now explain.", content: "Use today to consolidate. Re-read the previous lesson, skim the week's key points, and notice how the pieces fit together.\n\n" + prev.content, keyTakeaways: days.map(function(d){ return "Day " + d.day + ": " + d.title; }), practicePrompt: "" });
+    }
+    if (!note && realCount < 7) note = "The AI returned " + realCount + " days; review days were added to complete the week.";
+    var daily = days.map(function(d){
+      var words = d.content.split(/\s+/).filter(Boolean).length;
+      return { day: d.day, title: d.title, summary: d.summary, content: d.content,
+        keyTakeaways: d.keyTakeaways.length ? d.keyTakeaways : splitSentences(d.content).slice(0, 3).map(function(x){ return x.length > 150 ? x.slice(0, 147) + "\u2026" : x; }),
+        practicePrompt: d.practicePrompt || PROMPTS[(d.day - 1) % PROMPTS.length],
+        words: words, minutes: Math.max(1, Math.round(words / 140)), sourceUrl: "", aiSource: srcName, short: words < 300 };
+    });
+    DB.savedPlans = DB.savedPlans.filter(function(p){ return p.skill.toLowerCase() !== topic.toLowerCase(); });
+    DB.savedPlans.unshift({ skill: topic, articleTitle: "", aiSource: srcName, aiNote: note, aiText: text, aiCourseTitle: r.title || "",
+      plan: daily.map(function(d){ return { day: d.day, title: d.title }; }), dailyContent: daily,
+      currentDay: 1, startedAt: null, savedAt: todayStr(), isSaved: true });
+    saveDB(DB); renderSaved(); showView("saved");
+  });
 }
 function generateFor(query, chosenTitle){
   var body = document.getElementById("newBody");
@@ -429,7 +526,7 @@ function renderSession(){
   document.getElementById("sessionBody").innerHTML =
     '<div class="row"><button class="btn ghost small" id="sessBack">← Back</button><span class="pill">Day '+d.day+' of 7</span><span class="pill">~'+d.minutes+' min</span></div>' +
     '<h1 style="text-align:left">'+esc(d.title)+'</h1>' +
-    '<p class="note">'+esc(s.skill)+' · Source: <a class="ext" target="_blank" rel="noopener" href="'+esc(d.sourceUrl)+'">Wikipedia</a></p>' +
+    '<p class="note">'+esc(s.skill)+(d.sourceUrl ? ' · Source: <a class="ext" target="_blank" rel="noopener" href="'+esc(d.sourceUrl)+'">Wikipedia</a>' : (d.aiSource ? ' · Written by '+esc(d.aiSource) : ''))+'</p>' +
     (("speechSynthesis" in window) ? '<div class="card"><b>🔊 Listen</b><div class="row" style="margin-top:8px"><button class="btn small" id="readBtn">▶ Read aloud</button><button class="btn ghost small" id="pauseBtn">⏸ Pause</button><button class="btn ghost small" id="stopBtn">⏹ Stop</button></div></div>' : '') +
     '<div class="reading">' + paras.map(function(p){ return '<p>'+esc(p)+'</p>'; }).join("") + '</div>' +
     '<div class="card"><b>Key points (the day\'s opening lines)</b><ul style="margin:8px 0 0;padding-left:18px;line-height:1.6">' + d.keyTakeaways.map(function(k){ return '<li>'+esc(k)+'</li>'; }).join("") + '</ul></div>' +
@@ -459,7 +556,7 @@ function speakText(text){
 function stopReading(){ try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch(e){} }
 function printCourse(course){
   var s = course || DB.activeSession || lastCompleted; if (!s) return;
-  document.getElementById("printArea").innerHTML = '<h1>'+esc(s.skill)+' — full 7-day content</h1><p>Source: Wikipedia ('+esc(s.articleTitle || "")+')</p>' +
+  document.getElementById("printArea").innerHTML = '<h1>'+esc(s.skill)+' — full 7-day content</h1><p>'+(s.aiSource ? 'Written by '+esc(s.aiSource) : 'Source: Wikipedia ('+esc(s.articleTitle || "")+')')+'</p>' +
     s.dailyContent.map(function(d){ return '<h2>Day '+d.day+': '+esc(d.title)+'</h2>' + d.content.split(/\n+/).filter(Boolean).map(function(p){ return '<p>'+esc(p)+'</p>'; }).join("") + '<p><i>Practice: '+esc(d.practicePrompt)+'</i></p>'; }).join("");
   window.print();
 }
@@ -505,7 +602,7 @@ function renderSaved(){
   var html = "";
   if (!DB.savedPlans.length && !DB.roadmaps.length) html += '<div class="card"><p class="sub" style="margin:0">No saved plans yet.</p></div>';
   DB.savedPlans.forEach(function(p, i){
-    html += '<div class="card"><b>🎯 '+esc(p.skill)+'</b> <span class="pill">7-day plan</span><div class="note">Saved '+esc(fmtDate(p.savedAt))+' · from Wikipedia: '+esc(p.articleTitle || "")+'</div>' +
+    html += '<div class="card"><b>🎯 '+esc(p.skill)+'</b> <span class="pill">7-day plan</span><div class="note">Saved '+esc(fmtDate(p.savedAt))+' · '+(p.aiSource ? 'Written by '+esc(p.aiSource) : 'from Wikipedia: '+esc(p.articleTitle || ""))+(p.aiNote ? ' · '+esc(p.aiNote) : '')+'</div>' +
       '<div class="row" style="margin-top:8px"><button class="btn small" data-startplan="'+i+'"'+(DB.activeSession ? " disabled" : "")+'>Start</button><button class="btn ghost small" data-printplan="'+i+'">Print / PDF</button><button class="btn ghost small" data-delplan="'+i+'">Delete</button></div>' +
       (DB.activeSession ? '<p class="note">Finish or quit the active session to start this one.</p>' : '') + '</div>';
   });
