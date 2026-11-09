@@ -45,6 +45,8 @@
   .summary{font-size:.9rem; color:#4c463c; line-height:1.45;}
   .list .thumb{display:none;}
   .updated{color:var(--muted); font-size:.78rem; text-align:center; margin-top:24px;}
+  .refresh-btn{font:inherit;font-weight:700;color:#fff;background:var(--accent);border:none;border-radius:999px;padding:11px 24px;cursor:pointer;}
+  .refresh-btn:disabled{opacity:.55;}
   .err{background:#fff3f0; border:1px solid #f3c6b8; color:#8a3b22; border-radius:12px; padding:12px 14px; font-size:.9rem;}
 </style>
 <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -78,6 +80,11 @@
   <div class="section-sub" id="more-sub">More good things</div>
   <div id="more" class="list"></div>
 
+  <div style="text-align:center;margin-top:22px;">
+    <button id="refreshBtn" class="refresh-btn">&#8635; Update stories</button>
+    <div class="updated" id="refreshNote" style="margin-top:8px;"></div>
+  </div>
+
   <div class="updated" id="updated"></div>
 </div>
 
@@ -106,29 +113,131 @@ function cardHTML(s, featured){
     + '</div></a>';
 }
 
+function render(data){
+  const stories = data.stories || [];
+  const todayStr = now.toDateString();
+  const newToday = stories.filter(s => s.published && new Date(s.published).toDateString() === todayStr).length;
+  document.getElementById('stat-new').textContent = newToday;
+  document.getElementById('stat-total').textContent = stories.length;
+  document.getElementById('more-sub').textContent = stories.length + ' stories and counting';
+  document.getElementById('featured').innerHTML = stories.slice(0,3).map(s => cardHTML(s,true)).join('');
+  document.getElementById('more').innerHTML = stories.slice(3).map(s => cardHTML(s,false)).join('');
+  if (data.generated_at){
+    const g = new Date(data.generated_at);
+    document.getElementById('updated').textContent =
+      'Stories refreshed ' + g.toLocaleDateString(undefined,{month:'short',day:'numeric'})
+      + ' ' + g.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})
+      + ' \u00b7 Sources: Good News Network, Positive News, The Optimist Daily, Reasons to be Cheerful';
+  }
+}
+
 fetch('stories.json?t=' + Date.now(), { cache:'no-store' })
   .then(r => { if(!r.ok) throw new Error('feed'); return r.json(); })
-  .then(data => {
-    const stories = data.stories || [];
-    const todayStr = now.toDateString();
-    const newToday = stories.filter(s => s.published && new Date(s.published).toDateString() === todayStr).length;
-    document.getElementById('stat-new').textContent = newToday;
-    document.getElementById('stat-total').textContent = stories.length;
-    document.getElementById('more-sub').textContent = stories.length + ' stories and counting';
-    document.getElementById('featured').innerHTML = stories.slice(0,3).map(s => cardHTML(s,true)).join('');
-    document.getElementById('more').innerHTML = stories.slice(3).map(s => cardHTML(s,false)).join('');
-    if (data.generated_at){
-      const g = new Date(data.generated_at);
-      document.getElementById('updated').textContent =
-        'Stories refreshed ' + g.toLocaleDateString(undefined,{month:'short',day:'numeric'})
-        + ' ' + g.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})
-        + ' · Sources: Good News Network, Positive News, The Optimist Daily, Reasons to be Cheerful';
-    }
-  })
+  .then(data => render(data))
   .catch(() => {
     document.getElementById('featured').innerHTML =
-      '<div class="err">Could not load the latest stories. Check your connection and reopen the app.</div>';
+      '<div class="err">Could not load the saved stories. Tap "Update stories" to fetch the latest.</div>';
   });
+
+/* ----- On-demand refresh: fetch the four RSS feeds live -----
+   The feeds do not allow direct browser reads (no CORS headers), so each
+   feed is fetched through a public relay; if every relay fails, the app
+   keeps showing the saved stories.json copy. */
+const FEEDS = [
+  ['Good News Network', 'https://www.goodnewsnetwork.org/feed/'],
+  ['Positive News', 'https://www.positive.news/feed/'],
+  ['The Optimist Daily', 'https://www.optimistdaily.com/feed/'],
+  ['Reasons to be Cheerful', 'https://reasonstobecheerful.world/feed/']
+];
+const CAT_RULES = [
+  ['Animals', ['animal','dog','cat ','puppy','kitten','zoo','whale','bird','wildlife','panda','elephant','horse','pet ','pets','turtle','penguin','bear ','deer','fox ','owl','bee ','bees','butterfly','species']],
+  ['Environment', ['climate','ocean','forest','solar','wind farm','electric','tree','plastic','recycl','reef','clean energy','biodiversity','river','lake','pollution','carbon','renewable','garden','plant ','seed','water quality']],
+  ['Science wins', ['research','scientist','study','nasa','space','discover','telescope','vaccine','cancer','disease','health','medical','brain','dna','gene','archaeolog','fossil','robot','ai ','technology','breakthrough','cure','therapy','hospital','doctor']],
+  ['Kindness', ['donat','volunteer','stranger','rescue','saved','helps','helping','gift','free meals','shelter','homeless','teacher','student','school','bakery','neighbour','neighbor','community']]
+];
+function decodeEntities(t){ const ta = document.createElement('textarea'); ta.innerHTML = t || ''; return ta.value; }
+function cleanText(raw, limit){
+  let t = String(raw || '').replace(/<[^>]+>/g, ' ');
+  t = decodeEntities(t).replace(/\s+/g, ' ').trim();
+  const lim = limit || 260;
+  if (t.length > lim){ t = t.slice(0, lim); const sp = t.lastIndexOf(' '); if (sp > 0) t = t.slice(0, sp); t += '\u2026'; }
+  return t;
+}
+function elText(item, tag){ const el = item.getElementsByTagName(tag)[0]; return el ? (el.textContent || '') : ''; }
+function findImage(item){
+  const mc = item.getElementsByTagName('media:content')[0];
+  if (mc && mc.getAttribute('url')) return mc.getAttribute('url');
+  const mt = item.getElementsByTagName('media:thumbnail')[0];
+  if (mt && mt.getAttribute('url')) return mt.getAttribute('url');
+  const enc = item.getElementsByTagName('enclosure')[0];
+  if (enc && enc.getAttribute('url') && (enc.getAttribute('type') || 'image').indexOf('image') >= 0) return enc.getAttribute('url');
+  const htmls = [elText(item, 'content:encoded'), elText(item, 'description')];
+  for (let i = 0; i < htmls.length; i++){ const m = /<img[^>]+src="([^"]+)"/.exec(htmls[i] || ''); if (m) return decodeEntities(m[1]); }
+  return '';
+}
+function categorize(title, summary){
+  const text = (title + ' ' + summary).toLowerCase();
+  for (let i = 0; i < CAT_RULES.length; i++){ const keys = CAT_RULES[i][1];
+    for (let j = 0; j < keys.length; j++) if (text.indexOf(keys[j]) >= 0) return CAT_RULES[i][0]; }
+  return 'Community';
+}
+function parseFeed(xmlText, source){
+  const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('xml');
+  const out = [];
+  const items = doc.getElementsByTagName('item');
+  for (let i = 0; i < items.length; i++){
+    const item = items[i];
+    const title = cleanText(elText(item, 'title'), 300);
+    const link = elText(item, 'link').trim();
+    if (!title || !link) continue;
+    const desc = cleanText(elText(item, 'description'));
+    let pub = null;
+    const pd = elText(item, 'pubDate');
+    if (pd){ const d = new Date(pd); if (!isNaN(d)) pub = d.toISOString(); }
+    const words = (desc || title).split(/\s+/).filter(Boolean).length;
+    out.push({ title: title, summary: desc, link: link, source: source, image: findImage(item),
+      published: pub, read_minutes: Math.max(1, Math.round(words / 180)), category: categorize(title, desc) });
+  }
+  return out;
+}
+function fetchText(url, ms){
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), ms);
+  return fetch(url, { signal: c.signal }).then(r => { clearTimeout(t); if (!r.ok) throw new Error('http ' + r.status); return r.text(); });
+}
+function fetchFeed(source, url){
+  const relays = [
+    u => u,
+    u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+    u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+    u => 'https://proxy.corsfix.com/?' + u
+  ];
+  let p = Promise.reject(new Error('start'));
+  relays.forEach(mk => { p = p.catch(() => fetchText(mk(url), 25000).then(txt => parseFeed(txt, source))); });
+  return p;
+}
+let refreshing = false;
+function refreshNow(){
+  if (refreshing) return; refreshing = true;
+  const btn = document.getElementById('refreshBtn'); const note = document.getElementById('refreshNote');
+  btn.disabled = true; btn.textContent = 'Updating\u2026'; note.textContent = 'Fetching the latest stories\u2026';
+  Promise.all(FEEDS.map(f => fetchFeed(f[0], f[1]).then(list => ({ ok: true, list: list })).catch(() => ({ ok: false, list: [] }))))
+    .then(results => {
+      const okCount = results.filter(r => r.ok).length;
+      if (!okCount){ note.textContent = 'Could not update just now \u2014 showing the last saved stories. Check your connection and try again.'; return; }
+      const seen = new Set(); let stories = [];
+      results.forEach(r => r.list.forEach(s => { const key = s.link.split('?')[0].toLowerCase();
+        if (!seen.has(key)){ seen.add(key); stories.push(s); } }));
+      stories.sort((a, b) => (b.published || '').localeCompare(a.published || ''));
+      stories = stories.slice(0, 40);
+      render({ generated_at: new Date().toISOString(), stories: stories });
+      note.textContent = 'Updated just now \u00b7 ' + okCount + ' of 4 sources reached';
+      window.scrollTo(0, 0);
+    })
+    .catch(() => { note.textContent = 'Could not update just now \u2014 showing the last saved stories.'; })
+    .then(() => { refreshing = false; btn.disabled = false; btn.textContent = '\u21bb Update stories'; });
+}
+document.getElementById('refreshBtn').addEventListener('click', refreshNow);
 </script>
 </body>
 </html>
