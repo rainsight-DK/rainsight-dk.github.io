@@ -58,6 +58,8 @@
   .hint{background:#fff; border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:.9rem;}
   input[type=text],input[type=tel]{width:100%; padding:14px; font-size:1.3rem; text-align:center; border:2px solid var(--line); border-radius:12px; background:#fff;}
   input[type=search]{width:100%; padding:12px 14px; font-size:1rem; border:2px solid var(--line); border-radius:12px; background:#fff;}
+  textarea.desc{width:100%; padding:12px 14px; font:inherit; font-size:1rem; line-height:1.45; border:2px solid var(--line); border-radius:12px; background:#fff; resize:vertical;}
+  .desc-label{display:block; font-weight:700; margin:16px 0 6px;}
   .tiles{display:grid; grid-template-columns:repeat(auto-fill,minmax(86px,1fr)); gap:8px; margin-top:12px;}
   .tile{background:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 6px; text-align:center; font-size:.85rem;}
   .tile b{display:block; color:var(--green);}
@@ -452,6 +454,8 @@ function mw(n){ return (S.customWords && S.customWords[n]) || majorWord(n); }
 
 /* ---------- Numbers page: images, custom words, scene builder ---------- */
 if(!S.customWords) S.customWords = {};
+if(!S.customDescriptions) S.customDescriptions = {};
+if(!S.customScenes) S.customScenes = {};
 /* Daehoon's own hooks (supplied Nov 16, 2026): applied once over any older defaults/custom words */
 if(S.hooksV !== 2){
   const mine = {};
@@ -463,7 +467,7 @@ function viewNumbers(){
   let tiles = "";
   for(let n=0;n<100;n++) tiles += `<div class="tile" data-word="${esc(mw(n).toLowerCase())}" data-num="${String(n).padStart(2,"0")}" onclick="selectPair(${n})" style="cursor:pointer"><b>${String(n).padStart(2,"0")}</b>${esc(mw(n))}</div>`;
   app.innerHTML = `<h1>Number images</h1>
-    <p class="muted">Learn them once, use them again and again. A picture for every pair, 00–99. Tap any pair to <b>see</b> its image — or search a longer number (try <b>1402</b>) and the app builds a scene from the pairs and can generate a picture of it.</p>
+    <p class="muted">Learn them once, use them again and again. A picture for every pair, 00–99. Tap any pair to <b>see</b> its image or add your own picture description — or search a longer number (try <b>1402</b>) and edit the suggested scene before the app generates a picture of it.</p>
     <input type="search" id="numsearch" placeholder="Type a word, a pair (14), or a number (1402)" oninput="numSearch(this.value)">
     <div id="numdetail"></div>
     <div class="tiles" id="tiles">${tiles}</div>`;
@@ -486,11 +490,18 @@ function selectPair(n, keep){
     <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:Georgia,serif;font-size:2rem;color:var(--green)">${String(n).padStart(2,"0")}</span>
     <b style="font-family:Georgia,serif;font-size:1.5rem">${esc(w)}</b>
     ${S.customWords[n] ? '<span class="pill">your word</span>' : ""}</div>
-    ${HOOK_NOTES[n] ? `<p class="muted" style="margin:8px 0 0">Your cue: ${esc(HOOK_NOTES[n])}</p>` : ""}
+    ${HOOK_NOTES[n] ? `<p class="muted" style="margin:8px 0 0">Built-in cue: ${esc(HOOK_NOTES[n])}</p>` : ""}
     <div id="pairimg" style="margin-top:10px"></div>
+    <label class="desc-label" for="pairdesc">My picture description <span class="muted small">(optional)</span></label>
+    <textarea id="pairdesc" class="desc" rows="3" placeholder="Describe exactly what you want to picture — for example, rare steak with lots of red blood" oninput="pairDescInput(${n})">${esc(pairDescription(n))}</textarea>
+    <p id="pairdescstatus" class="muted small" style="margin:6px 0 0">${pairDescription(n) ? "Saved on this device. It will be used for this pair's generated image and for scenes containing this pair." : "Your description saves automatically and will be used instead of the word alone when an image or scene is created."}</p>
     <div class="btnrow">
-      <button class="btn" onclick="showPairImage(${n})">🖼️ Show the ${esc(w)}</button>
+      <button class="btn" onclick="showPairGeneratedImage(${n})">🎨 Create image from my description</button>
+      <button class="btn ghost" onclick="showPairImage(${n})">🖼️ Find a photo of ${esc(w)}</button>
+    </div>
+    <div class="btnrow">
       <button class="btn ghost" onclick="editPairWord(${n})">Change word</button>
+      ${pairDescription(n) ? `<button class="btn ghost" onclick="clearPairDescription(${n})">Clear description</button>` : ""}
     </div></div>`;
 }
 function showPairImage(n){
@@ -509,6 +520,53 @@ function showPairImage(n){
     else { box.innerHTML = `<p class="muted">No clear photo found for “${esc(w)}”. Try the generated example in a scene below, or change the word to one that's easier to picture.</p>`; }
   }).catch(()=>{ box.innerHTML = `<p class="muted">Couldn't reach the photo library — check your connection and try again.</p>`; });
 }
+function pairDescription(n){ return (S.customDescriptions && S.customDescriptions[n]) || ""; }
+let PAIR_DESC_TIMER = null;
+function commitPairDescription(n){
+  const el = document.getElementById("pairdesc"); if(!el) return pairDescription(n);
+  const v = el.value.trim();
+  if(v) S.customDescriptions[n] = v; else delete S.customDescriptions[n];
+  save();
+  const st = document.getElementById("pairdescstatus");
+  if(st) st.textContent = v ? "Saved on this device. It will be used for this pair's generated image and for scenes containing this pair." : "Description cleared.";
+  return v;
+}
+function pairDescInput(n){
+  const st = document.getElementById("pairdescstatus");
+  if(st) st.textContent = "Editing — saves automatically.";
+  clearTimeout(PAIR_DESC_TIMER);
+  PAIR_DESC_TIMER = setTimeout(()=>commitPairDescription(n), 600);
+}
+function clearPairDescription(n){
+  const el = document.getElementById("pairdesc"); if(el) el.value = "";
+  commitPairDescription(n);
+  const box = document.getElementById("pairimg"); if(box) box.innerHTML = "";
+}
+function pairPhrase(n){
+  const d = pairDescription(n); if(d) return d;
+  const w = mw(n);
+  return HOOK_NOTES[n] ? w + " (" + HOOK_NOTES[n] + ")" : w;
+}
+function showPairGeneratedImage(n){
+  const desc = commitPairDescription(n);
+  const box = document.getElementById("pairimg"); if(!box) return;
+  if(!desc){
+    const st = document.getElementById("pairdescstatus");
+    if(st) st.textContent = "Add your picture description first, then create the image from it.";
+    const el = document.getElementById("pairdesc"); if(el) el.focus();
+    return;
+  }
+  box.innerHTML = `<p class="muted small">Creating an image from your description… (a few seconds)</p>`;
+  const prompt = desc + " Vivid, memorable, clear, simple digital illustration, no text, no words.";
+  const src = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt) + "?width=880&height=620&nologo=true&seed=" + Math.floor(Math.random()*100000);
+  const img = new Image();
+  img.alt = desc;
+  img.onload = () => { box.innerHTML = ""; img.style.width = "100%"; img.style.borderRadius = "12px"; box.appendChild(img);
+    const p = document.createElement("p"); p.className = "muted small"; p.style.margin = "6px 0 0";
+    p.textContent = "Generated from your description for " + String(n).padStart(2,"0") + ". If it is not the picture you want, edit the description and create it again."; box.appendChild(p); };
+  img.onerror = () => { box.innerHTML = `<p class="muted">The image generator didn't answer this time — tap “Create image from my description” to try again.</p>`; };
+  img.src = src;
+}
 function editPairWord(n){
   const cur = mw(n);
   const v = prompt("Your image word for " + String(n).padStart(2,"0") + ":", cur);
@@ -525,39 +583,79 @@ function sceneBuilder(digits){
   SCENE = { digits, pairs, leftover: rest, seed: Math.floor(Math.random()*997) };
   const d = document.getElementById("numdetail"); if(!d) return;
   const words = pairs.map(mw);
+  SCENE.generatedText = sceneText();
+  const savedScene = (S.customScenes && S.customScenes[digits]) || "";
+  SCENE.text = savedScene || SCENE.generatedText;
+  SCENE.custom = !!savedScene;
   d.innerHTML = `<div class="card">
     <p class="small muted" style="letter-spacing:.06em;margin:0">YOUR NUMBER, AS A SCENE</p>
     <div class="bignum" style="font-size:2rem">${pairs.map(p=>String(p).padStart(2,"0")).join(" ")}${rest ? ' <span class="muted" style="font-size:1rem">(+ '+rest+' left over — numbers split into pairs)</span>' : ""}</div>
     <div class="hints">${pairs.map((p,i)=>`<span class="hint">${String(p).padStart(2,"0")} · ${esc(words[i])}</span>`).join("")}</div>
     <h2 style="margin:16px 0 4px">Visual description</h2>
-    <p id="scenedesc" style="font-size:1.05rem;margin:0">${esc(sceneText())}</p>
+    <p class="muted small" style="margin:0 0 6px">This starts as the app's suggestion — rewrite it in your own words to picture the scene exactly your way.</p>
+    <textarea id="sceneedit" class="desc" rows="4" oninput="sceneDescInput()">${esc(SCENE.text)}</textarea>
+    <p id="scenestatus" class="muted small" style="margin:6px 0 0">${SCENE.custom ? "Using your saved description for this number. Edits save automatically." : "Edits save automatically for this number."}</p>
     <div id="sceneimg" style="margin-top:10px"></div>
     <div class="btnrow">
-      <button class="btn" onclick="showSceneImage()">🎨 Image example</button>
+      <button class="btn" onclick="showSceneImage()">🎨 Create image from this description</button>
       <button class="btn ghost" onclick="reshuffleScene()">Another idea</button>
     </div>
     <p class="muted small" style="margin:10px 0 0">Read the scene once, close your eyes, and run it like a film. The stranger and more exaggerated it is, the better it sticks.</p></div>`;
 }
 function sceneText(){
   if(!SCENE) return "";
-  const words = SCENE.pairs.map(mw); if(!words.length) return "";
+  const phrases = SCENE.pairs.map(pairPhrase); if(!phrases.length) return "";
   let rnd = SCENE.seed; const pick = arr => { rnd = (rnd*37 + 11) % 9973; return arr[rnd % arr.length]; };
-  let s = "A " + words[0];
-  for(let i=1;i<words.length;i++){ s += " " + pick(SCENE_ACTIONS) + " a " + words[i]; if(i < words.length-1) s += ","; }
+  const withArticle = phrase => { const t = String(phrase || "").trim(); return /^(a|an|the)\b/i.test(t) ? t : "a " + t; };
+  let s = withArticle(phrases[0]);
+  for(let i=1;i<phrases.length;i++){ s += " " + pick(SCENE_ACTIONS) + " " + withArticle(phrases[i]); if(i < phrases.length-1) s += ","; }
   s += " — right in the middle of your kitchen, far too big and making a scene of itself.";
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
-function reshuffleScene(){ if(!SCENE) return; SCENE.seed = Math.floor(Math.random()*9973);
-  document.getElementById("scenedesc").textContent = sceneText(); document.getElementById("sceneimg").innerHTML = ""; }
+let SCENE_SAVE_TIMER = null;
+function commitSceneDescription(){
+  if(!SCENE) return "";
+  const el = document.getElementById("sceneedit"); if(!el) return SCENE.text || "";
+  const v = el.value.trim();
+  SCENE.text = v;
+  if(v && v !== SCENE.generatedText){ S.customScenes[SCENE.digits] = v; SCENE.custom = true; }
+  else { delete S.customScenes[SCENE.digits]; SCENE.custom = false; }
+  save();
+  const st = document.getElementById("scenestatus");
+  if(st) st.textContent = !v ? "Write a scene description before creating the image." :
+    (SCENE.custom ? "Saved on this device for " + SCENE.digits + "." : "Using the app's suggestion. Your edits will save automatically.");
+  return v;
+}
+function sceneDescInput(){
+  const st = document.getElementById("scenestatus");
+  if(st) st.textContent = "Editing — saves automatically.";
+  clearTimeout(SCENE_SAVE_TIMER);
+  SCENE_SAVE_TIMER = setTimeout(commitSceneDescription, 600);
+}
+function reshuffleScene(){
+  if(!SCENE) return;
+  const el = document.getElementById("sceneedit");
+  const current = el ? el.value.trim() : (SCENE.text || "");
+  if(current && current !== SCENE.generatedText && !confirm("Replace your edited scene description with a new app suggestion?")) return;
+  SCENE.seed = Math.floor(Math.random()*9973);
+  SCENE.generatedText = sceneText();
+  SCENE.text = SCENE.generatedText; SCENE.custom = false;
+  delete S.customScenes[SCENE.digits]; save();
+  if(el) el.value = SCENE.text;
+  const st = document.getElementById("scenestatus"); if(st) st.textContent = "New app suggestion. Edit it freely — your edits save automatically.";
+  const box = document.getElementById("sceneimg"); if(box) box.innerHTML = "";
+}
 function showSceneImage(){
-  if(!SCENE) return; const box = document.getElementById("sceneimg");
-  const desc = sceneText();
-  box.innerHTML = `<p class="muted small">Generating your scene… (a few seconds)</p>`;
-  const src = "https://image.pollinations.ai/prompt/" + encodeURIComponent(desc + " Vivid, clear, simple digital illustration, no text, no words.") + "?width=880&height=620&nologo=true&seed=" + (SCENE.seed % 1000);
+  if(!SCENE) return; const box = document.getElementById("sceneimg"); if(!box) return;
+  const desc = commitSceneDescription();
+  if(!desc){ const el = document.getElementById("sceneedit"); if(el) el.focus(); return; }
+  box.innerHTML = `<p class="muted small">Creating an image from your scene description… (a few seconds)</p>`;
+  const src = "https://image.pollinations.ai/prompt/" + encodeURIComponent(desc + " Vivid, clear, simple digital illustration, no text, no words.") + "?width=880&height=620&nologo=true&seed=" + Math.floor(Math.random()*100000);
   const img = new Image();
+  img.alt = desc;
   img.onload = () => { box.innerHTML = ""; img.style.width = "100%"; img.style.borderRadius = "12px"; box.appendChild(img);
-    const p = document.createElement("p"); p.className = "muted small"; p.textContent = "Generated from your scene description. If it doesn't match how you pictured it, tap “Another idea” and generate again."; box.appendChild(p); };
-  img.onerror = () => { box.innerHTML = `<p class="muted">The image generator didn't answer this time — tap Image example to try again.</p>`; };
+    const p = document.createElement("p"); p.className = "muted small"; p.textContent = "Generated from the scene description above. If it doesn't match how you pictured it, edit the description and create the image again — you don't have to accept the app's suggestion."; box.appendChild(p); };
+  img.onerror = () => { box.innerHTML = `<p class="muted">The image generator didn't answer this time — tap “Create image from this description” to try again.</p>`; };
   img.src = src;
 }
 
@@ -565,7 +663,7 @@ function showSceneImage(){
 /* ---------- Backup: export / import ---------- */
 function mgBackupCard(){
   return `<h2>Backup</h2><div class="card">
-    <p class="small muted" style="margin-top:0">Your progress, streaks, levels and your own number words are saved only in this browser, on this device. Export a backup file and keep it somewhere safe (for example Google Drive or your PC) — import it on another device or browser to move everything there.</p>
+    <p class="small muted" style="margin-top:0">Your progress, streaks, levels, your own number words, picture descriptions and saved scene descriptions are saved only in this browser, on this device. Export a backup file and keep it somewhere safe (for example Google Drive or your PC) — import it on another device or browser to move everything there.</p>
     <div class="btnrow">
       <button class="btn ghost" onclick="mgExport()">Export backup</button>
       <button class="btn ghost" onclick="document.getElementById('mgimp').click()">Import backup</button>
@@ -585,7 +683,7 @@ function mgImport(input){
     try { const data = JSON.parse(t); const d = data.data || data;
       if(!d || !Array.isArray(d.history) || !d.levels) throw new Error("shape");
       if(!confirm("Replace this device's Memory Gym progress with the backup?")) return;
-      S = d; if(!S.customWords) S.customWords = {}; save(); alert("Backup imported."); go("progress");
+      S = d; if(!S.customWords) S.customWords = {}; if(!S.customDescriptions) S.customDescriptions = {}; if(!S.customScenes) S.customScenes = {}; save(); alert("Backup imported."); go("progress");
     } catch(e){ alert("That file doesn't look like a Memory Gym backup."); }
   });
 }
