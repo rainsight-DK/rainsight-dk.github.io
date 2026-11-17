@@ -213,6 +213,80 @@ function bindSearch(){
   });
 }
 
+/* ---------- Calendar & share-to-Muse ---------- */
+function evTimes(e){
+  if(!e.day) return null;
+  var p = e.day.split("-"); if(p.length !== 3) return null;
+  var y = +p[0], mo = +p[1], d = +p[2]; if(!y || !mo || !d) return null;
+  var txt = e.dateText || "";
+  var times = [];
+  var re = /(\d{1,2})(?::(\d{2}))?\s*([AaPp])[Mm]/g, m;
+  while((m = re.exec(txt)) !== null){
+    var hh = +m[1] % 12; if(m[3].toUpperCase() === "P") hh += 12;
+    times.push([hh, +(m[2] || 0)]);
+  }
+  if(!times.length){
+    var m24 = txt.match(/(\d{1,2}):(\d{2})/);
+    if(m24) times.push([+m24[1], +m24[2]]);
+  }
+  if(!times.length) return { allDay: true, start: new Date(y, mo-1, d), end: new Date(y, mo-1, d+1) };
+  var s = new Date(y, mo-1, d, times[0][0], times[0][1]);
+  var en = times.length > 1 ? new Date(y, mo-1, d, times[1][0], times[1][1]) : new Date(s.getTime() + 2*60*60*1000);
+  if(en <= s) en = new Date(s.getTime() + 2*60*60*1000);
+  return { allDay: false, start: s, end: en };
+}
+function pad2(n){ return (n < 10 ? "0" : "") + n; }
+function calDT(d){ return d.getFullYear() + pad2(d.getMonth()+1) + pad2(d.getDate()) + "T" + pad2(d.getHours()) + pad2(d.getMinutes()) + "00"; }
+function calD(d){ return d.getFullYear() + pad2(d.getMonth()+1) + pad2(d.getDate()); }
+function evDetails(e){
+  var parts = [];
+  if(e.summary) parts.push(e.summary);
+  if(e.cost) parts.push("Cost: " + e.cost);
+  if(e.category) parts.push("Category: " + e.category);
+  if((e.interested || []).length) parts.push("Interested: " + e.interested.join(", "));
+  if(e.sourceUrl) parts.push("Source: " + e.sourceUrl);
+  parts.push("Saved with EventScout");
+  return parts.join("\n");
+}
+function gcalUrl(e){
+  var t = evTimes(e); if(!t) return "";
+  var dates = t.allDay ? (calD(t.start) + "/" + calD(t.end)) : (calDT(t.start) + "/" + calDT(t.end));
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + enc(e.title) +
+    "&dates=" + dates + "&details=" + enc(evDetails(e)) + (e.location ? "&location=" + enc(e.location) : "");
+}
+function icsEscape(s){ return String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n"); }
+function icsText(e){
+  var t = evTimes(e); if(!t) return "";
+  var now = new Date();
+  var stamp = now.getUTCFullYear() + pad2(now.getUTCMonth()+1) + pad2(now.getUTCDate()) + "T" + pad2(now.getUTCHours()) + pad2(now.getUTCMinutes()) + pad2(now.getUTCSeconds()) + "Z";
+  var lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//EventScout//EN", "BEGIN:VEVENT",
+    "UID:" + e.id + "@eventscout", "DTSTAMP:" + stamp,
+    t.allDay ? ("DTSTART;VALUE=DATE:" + calD(t.start)) : ("DTSTART:" + calDT(t.start)),
+    t.allDay ? ("DTEND;VALUE=DATE:" + calD(t.end)) : ("DTEND:" + calDT(t.end)),
+    "SUMMARY:" + icsEscape(e.title),
+    e.location ? ("LOCATION:" + icsEscape(e.location)) : "",
+    "DESCRIPTION:" + icsEscape(evDetails(e)),
+    "END:VEVENT", "END:VCALENDAR"];
+  return lines.filter(Boolean).join("\r\n");
+}
+function museText(e){
+  var when = "";
+  if(e.day){ var p = e.day.split("-"); var d = new Date(+p[0], +p[1]-1, +p[2]);
+    when = d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }); }
+  var lines = ["Add this event to my calendar:",
+    "Title: " + e.title,
+    "Date: " + (when || e.dateText || "(no date set)")];
+  if(e.dateText) lines.push("Date & time (as shown): " + e.dateText);
+  if(e.location) lines.push("Location: " + e.location);
+  if(e.cost) lines.push("Cost: " + e.cost);
+  if(e.category) lines.push("Category: " + e.category);
+  if((e.interested || []).length) lines.push("Interested: " + e.interested.join(", "));
+  if(e.summary) lines.push("Details: " + e.summary);
+  if(e.sourceUrl) lines.push("Source: " + e.sourceUrl);
+  return lines.join("\n");
+}
+function findEv(id){ var f = null; DB.events.forEach(function(x){ if(x.id === id) f = x; }); return f; }
+
 /* ---------- Shortlist ---------- */
 function counts(){
   var now = new Date(); var monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay() + 6) % 7)); monday.setHours(0,0,0,0);
@@ -234,7 +308,8 @@ function renderShortlist(){
       '<div class="mut" style="margin-top:3px">' + esc(e.dateText || fmtDay(e.day)) + (e.location ? '<br>📍 ' + esc(e.location) : '') + (e.distance ? ' · ' + esc(e.distance) : '') + (e.cost ? '<br>💵 ' + esc(e.cost) : '') + '</div>' +
       (e.summary ? '<p style="line-height:1.55;margin:8px 0">' + esc(e.summary) + '</p>' : '') +
       ((e.interested || []).length ? '<div class="mut">Interested: ' + esc(e.interested.join(", ")) + '</div>' : '') +
-      '<div class="row" style="margin-top:8px">' + (e.sourceUrl ? '<button data-src="' + e.id + '">Open source ↗</button>' : '<span></span>') + '<button data-edit="' + e.id + '">Edit</button><button class="danger" data-del="' + e.id + '">× Remove</button></div></div>';
+      '<div class="row" style="margin-top:8px">' + (e.sourceUrl ? '<button data-src="' + e.id + '">Open source ↗</button>' : '<span></span>') + '<button data-edit="' + e.id + '">Edit</button><button class="danger" data-del="' + e.id + '">× Remove</button></div>' +
+      '<div class="row" style="margin-top:8px"><button data-gcal="' + e.id + '">📅 Google Calendar</button><button data-ics="' + e.id + '">⬇ .ics file</button><button data-muse="' + e.id + '">🤖 Copy for Muse</button></div></div>';
   });
   if(evs.length) h += '<div class="card"><h2 class="sec">Share the shortlist</h2><div class="row"><button id="shWa">WhatsApp</button><button id="shSms">Text message</button><button id="shMail">Email</button></div>' +
     '<button class="danger" id="removeAll" style="margin-top:10px;width:100%">Remove all</button>' +
@@ -245,6 +320,9 @@ function renderShortlist(){
   document.querySelectorAll("[data-src]").forEach(function(b){ b.addEventListener("click", function(){ var e = null; DB.events.forEach(function(x){ if(x.id === b.getAttribute("data-src")) e = x; }); if(e && e.sourceUrl) window.open(e.sourceUrl, "_blank"); }); });
   document.querySelectorAll("[data-edit]").forEach(function(b){ b.addEventListener("click", function(){ var e = null; DB.events.forEach(function(x){ if(x.id === b.getAttribute("data-edit")) e = x; }); eventForm(e); }); });
   document.querySelectorAll("[data-del]").forEach(function(b){ b.addEventListener("click", function(){ DB.events = DB.events.filter(function(x){ return x.id !== b.getAttribute("data-del"); }); save(); renderShortlist(); }); });
+  document.querySelectorAll("[data-gcal]").forEach(function(b){ b.addEventListener("click", function(){ var e = findEv(b.getAttribute("data-gcal")); if(!e) return; if(!e.day){ alert("Add a DAY to this event first (tap Edit) so it can go on a calendar."); return; } window.open(gcalUrl(e), "_blank"); }); });
+  document.querySelectorAll("[data-ics]").forEach(function(b){ b.addEventListener("click", function(){ var e = findEv(b.getAttribute("data-ics")); if(!e) return; if(!e.day){ alert("Add a DAY to this event first (tap Edit) so it can go on a calendar."); return; } download((e.title || "event").replace(/[^\w]+/g, "-").replace(/^-+|-+$/g, "") + ".ics", icsText(e), "text/calendar"); toast("Calendar file downloaded — open it to add the event"); }); });
+  document.querySelectorAll("[data-muse]").forEach(function(b){ b.addEventListener("click", function(){ var e = findEv(b.getAttribute("data-muse")); if(!e) return; var txt = museText(e); if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function(){ toast("Copied — paste it into your Muse chat and Muse will add it to your calendar"); }); else prompt("Copy this and paste it into your Muse chat:", txt); }); });
   if(evs.length){
     function shareText(){ return "Our EventScout shortlist:\n" + evs.map(function(e){ return "• " + e.title + " — " + (e.dateText || fmtDay(e.day)) + (e.location ? " @ " + e.location : "") + (e.cost ? " (" + e.cost + ")" : "") + (e.sourceUrl ? "\n  " + e.sourceUrl : ""); }).join("\n"); }
     $("shWa").addEventListener("click", function(){ window.open("https://wa.me/?text=" + enc(shareText()), "_blank"); });
@@ -283,8 +361,8 @@ function renderBackup(){
   $("exportBtn").addEventListener("click", function(){ download("eventscout-backup.json", JSON.stringify(DB, null, 2)); });
   $("importBtn").addEventListener("click", function(){ $("importFile").click(); });
 }
-function download(name, text){
-  var blob = new Blob([text], {type: "application/json"}); var url = URL.createObjectURL(blob);
+function download(name, text, type){
+  var blob = new Blob([text], {type: type || "application/json"}); var url = URL.createObjectURL(blob);
   var a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
 }
@@ -298,7 +376,7 @@ $("importFile").addEventListener("change", function(){
 
 function render(){ setNav(); if(view === "search") renderSearch(); else if(view === "shortlist") renderShortlist(); else if(view === "backup") renderBackup(); }
 render();
-window.ES = { getDB: function(){ return DB; }, buildLinks: buildLinks, whenWords: whenWords };
+window.ES = { getDB: function(){ return DB; }, buildLinks: buildLinks, whenWords: whenWords, evTimes: evTimes, gcalUrl: gcalUrl, icsText: icsText, museText: museText };
 </script>
 </body>
 </html>
