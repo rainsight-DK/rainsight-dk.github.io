@@ -89,16 +89,17 @@
 <script>
 "use strict";
 /* ---------- data ---------- */
-const MAJOR = {0:["sauce","suit","sun","sumo","sir","seal","sushi","sock","sofa","soap"],
-1:["dice","deed","tin","tomb","tire","tail","dish","duck","thief","tub"],
-2:["nose","net","nun","gnome","Nero","nail","nudge","neck","knife","knob"],
-3:["mouse","mat","moon","mime","mower","mule","match","mic","movie","map"],
-4:["rose","rat","rain","ram","roar","rail","rash","rock","reef","rope"],
-5:["lace","light","lion","elm","lorry","lily","leech","log","leaf","lip"],
-6:["cheese","jet","chain","jam","cherry","jail","judge","chick","chef","chip"],
-7:["keys","keate","cane","gum","car","coal","cage","cake","cave","cap"],
-8:["vase","feet","van","foam","fire","veil","fish","fog","fife","fib"],
-9:["bus","bat","bun","bomb","bear","ball","badge","book","beef","pope"]};
+const MAJOR = {0:["sauce", "suit", "sun", "sumo", "sour", "soul", "sushi", "sake", "sofa", "soup"],
+1:["toes", "tit", "tuna", "time", "tower", "toll", "tissue", "taco", "tofu", "tape"],
+2:["nose", "note", "nun", "name", "nero", "nail", "nacho", "nuke", "knife", "nap"],
+3:["mousse", "mat", "moon", "mom", "mower", "mule", "mesh", "mic", "mafia", "mop"],
+4:["rice", "rat", "rain", "ram", "rare", "rail", "rash", "rake", "roof", "rope"],
+5:["lice", "Light", "Line", "Lime", "Lure", "Lily", "Leash", "Leak", "Leaf", "Lap"],
+6:["Cheese", "Jet", "Gin", "Gem", "Shore", "Shell", "Shush", "Shark", "Chef", "Jeep"],
+7:["Kiss", "Keate", "Ken", "Cam", "Core", "Kill", "Cash", "Keg", "Cough", "Cup"],
+8:["Face", "Foot", "Fin", "Foam", "Fear", "Fall", "Fish", "Fake", "Fifa", "FIB"],
+9:["Pass", "Pat", "Pin", "Palm", "Pear", "Pole", "Push", "Poke", "Puff", "Pope"]};
+const HOOK_NOTES = {"51":"through the window","52":"on the road","54":"for fishing","55":"my family friend","56":"dogs","57":"on the water pipe","58":"fallen leaves","59":"kids sitting on my lap","61":"in the sky","62":"in the bottle","63":"kids found in the park","64":"seashore with waves","65":"seashell on the beach","66":"finger on the mouth","67":"in the aquarium","71":"Knight Rider TV series","72":"Barbie movie","73":"indoor cam","74":"core muscle during exercise","75":"deadbody mark on the crime scene","77":"beer keg","82":"shark fin","83":"soap","84":"scared face","85":"road with yellow and red trees","86":"gold fish on the fish tank","87":"fake motion by basketball players","88":"fifa sports game console or people who play it","89":"Focused Ion Beam machine","90":"kids passing the ball","91":"patting the shoulders","92":"pins for the wall arts","95":"high jump with the pole","96":"pushing the kids' stroller","97":"poke bowl","98":"exhaling the smoke from the mouth during smoking","99":"Catholic pope"};
 const majorWord = n => MAJOR[Math.floor(n/10)][n%10];
 
 const SKILLS = {
@@ -132,7 +133,7 @@ const TECHNIQUES = {
 const EXTRA_TECHNIQUES = [
  { title:"Story chaining", text:"A list is hard to remember. A story is not. Take the first item, tie it to the second, then the third, until the whole list is one little scene. 'The sock slides across the table and knocks over the shell' is easier to hold than 'sock, shell'. The link is the memory.", life:"Shopping lists, what to pack, remembering items in order, or keeping a to-do list in your head.", skill:"visual" },
  { title:"The method of loci", text:"Put each thing you want to remember in a place you know well — your kitchen, your walk to work — and walk the route in your mind. Later, walking that route in your mind brings the things back, in order. The more familiar the route, the easier the recall. Put each item in a different room, and exaggerate: an elephant squeezing through the door is easier to find than a plain photograph.", life:"A speech or presentation, a list of points in order, or learning facts for an exam.", skill:"visual" },
- { title:"The sounds of the Major System", text:"0 — s, z (a hiss). 1 — t, d (one down-stroke). 2 — n (two down-strokes). 3 — m (three down-strokes). 4 — r (the last sound in 'four'). 5 — l (five fingers, L). 6 — j, ch, sh (the mirror of 6 is a jot). 7 — k, g (a 'K' shape). 8 — f, v (two loops like an f). 9 — p, b (a nine flipped looks like a p). Vowels and h, w, y are silent. So 23 becomes 'n' + 'm' = gnome, and 37 becomes 'm' + 'k' = mic.", life:"The system behind the Numbers skill and the Numbers page — learn it once, use it for every number.", skill:"numbers" },
+ { title:"The sounds of the Major System", text:"0 — s, z (a hiss). 1 — t, d (one down-stroke). 2 — n (two down-strokes). 3 — m (three down-strokes). 4 — r (the last sound in 'four'). 5 — l (five fingers, L). 6 — j, ch, sh (the mirror of 6 is a jot). 7 — k, g (a 'K' shape). 8 — f, v (two loops like an f). 9 — p, b (a nine flipped looks like a p). Vowels and h, w, y are silent. So 23 becomes 'n' + 'm' = name, and 37 becomes 'm' + 'k' = mic.", life:"The system behind the Numbers skill and the Numbers page — learn it once, use it for every number.", skill:"numbers" },
  { title:"Attention — the first two seconds", text:"Memory starts with attention, not with trying hard to remember. The first two seconds decide what gets in: look at the thing once, properly, before you name it or move on. If you are still half-reading the last item when the next one appears, you are not remembering — you are just watching.", life:"Everything. Names, faces, where things are — all of it starts here.", skill:"names" },
 ];
 const VISUAL_ITEMS = [["sock","🧦"],["shell","🐚"],["moon","🌙"],["butterfly","🦋"],["grapes","🍇"],["key","🔑"],["mushroom","🍄"],["kite","🪁"],["balloon","🎈"],["plant","🪴"],["ice cube","🧊"],["candle","🕯️"],["apple","🍎"],["star","⭐"],["bell","🔔"],["book","📖"],["umbrella","☂️"],["fish","🐟"],["flower","🌸"],["car","🚗"],["hat","🎩"],["egg","🥚"],["coin","🪙"],["leaf","🍃"],["anchor","⚓"],["crown","👑"],["gem","💎"],["rocket","🚀"],["turtle","🐢"],["lemon","🍋"]];
@@ -451,6 +452,12 @@ function mw(n){ return (S.customWords && S.customWords[n]) || majorWord(n); }
 
 /* ---------- Numbers page: images, custom words, scene builder ---------- */
 if(!S.customWords) S.customWords = {};
+/* Daehoon's own hooks (supplied Nov 16, 2026): applied once over any older defaults/custom words */
+if(S.hooksV !== 2){
+  const mine = {};
+  for(let n=0;n<100;n++) mine[n] = majorWord(n);
+  S.customWords = mine; S.hooksV = 2; save();
+}
 let NUMSEL = null; // selected pair number (0-99) or null
 function viewNumbers(){
   let tiles = "";
@@ -479,6 +486,7 @@ function selectPair(n, keep){
     <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:Georgia,serif;font-size:2rem;color:var(--green)">${String(n).padStart(2,"0")}</span>
     <b style="font-family:Georgia,serif;font-size:1.5rem">${esc(w)}</b>
     ${S.customWords[n] ? '<span class="pill">your word</span>' : ""}</div>
+    ${HOOK_NOTES[n] ? `<p class="muted" style="margin:8px 0 0">Your cue: ${esc(HOOK_NOTES[n])}</p>` : ""}
     <div id="pairimg" style="margin-top:10px"></div>
     <div class="btnrow">
       <button class="btn" onclick="showPairImage(${n})">🖼️ Show the ${esc(w)}</button>
