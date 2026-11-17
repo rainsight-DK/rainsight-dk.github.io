@@ -502,7 +502,8 @@ function selectPair(n, keep){
     <div class="btnrow">
       <button class="btn ghost" onclick="editPairWord(${n})">Change word</button>
       ${pairDescription(n) ? `<button class="btn ghost" onclick="clearPairDescription(${n})">Clear description</button>` : ""}
-    </div></div>`;
+    </div>
+    <p id="pairimgstatus" class="muted small" style="margin:8px 0 0"></p></div>`;
 }
 function showPairImage(n){
   const w = mw(n); const box = document.getElementById("pairimg");
@@ -556,15 +557,24 @@ function showPairGeneratedImage(n){
     const el = document.getElementById("pairdesc"); if(el) el.focus();
     return;
   }
-  box.innerHTML = `<p class="muted small">Creating an image from your description… (a few seconds)</p>`;
+  const st = document.getElementById("pairimgstatus");
+  box.innerHTML = `<p class="muted small">Creating an image from your description… this can take up to a minute.</p>`;
+  if(st) st.textContent = "Creating your image — please wait, this can take up to a minute…";
+  try { box.scrollIntoView({ behavior:"smooth", block:"center" }); } catch(e){}
   const prompt = desc + " Vivid, memorable, clear, simple digital illustration, no text, no words.";
   const src = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt) + "?width=880&height=620&nologo=true&seed=" + Math.floor(Math.random()*100000);
   const img = new Image();
   img.alt = desc;
-  img.onload = () => { box.innerHTML = ""; img.style.width = "100%"; img.style.borderRadius = "12px"; box.appendChild(img);
+  let settled = false;
+  const timer = setTimeout(()=>{ if(settled) return; settled = true;
+    box.innerHTML = `<p class="muted">The image generator is taking unusually long and hasn't answered. Your description is saved — tap “Create image from my description” to try again.</p>`;
+    if(st) st.textContent = "The generator didn't answer in time. Tap “Create image from my description” to try again."; }, window.MG_IMG_TIMEOUT_MS || 75000);
+  img.onload = () => { if(settled) return; settled = true; clearTimeout(timer); box.innerHTML = ""; img.style.width = "100%"; img.style.borderRadius = "12px"; box.appendChild(img);
     const p = document.createElement("p"); p.className = "muted small"; p.style.margin = "6px 0 0";
-    p.textContent = "Generated from your description for " + String(n).padStart(2,"0") + ". If it is not the picture you want, edit the description and create it again."; box.appendChild(p); };
-  img.onerror = () => { box.innerHTML = `<p class="muted">The image generator didn't answer this time — tap “Create image from my description” to try again.</p>`; };
+    p.textContent = "Generated from your description for " + String(n).padStart(2,"0") + ". If it is not the picture you want, edit the description and create it again."; box.appendChild(p);
+    if(st) st.textContent = "Done — your image is above the description box."; };
+  img.onerror = () => { if(settled) return; settled = true; clearTimeout(timer); box.innerHTML = `<p class="muted">The image generator didn't answer this time — tap “Create image from my description” to try again.</p>`;
+    if(st) st.textContent = "The generator didn't answer. Tap “Create image from my description” to try again."; };
   img.src = src;
 }
 function editPairWord(n){
@@ -649,13 +659,22 @@ function showSceneImage(){
   if(!SCENE) return; const box = document.getElementById("sceneimg"); if(!box) return;
   const desc = commitSceneDescription();
   if(!desc){ const el = document.getElementById("sceneedit"); if(el) el.focus(); return; }
-  box.innerHTML = `<p class="muted small">Creating an image from your scene description… (a few seconds)</p>`;
+  const st = document.getElementById("scenestatus");
+  box.innerHTML = `<p class="muted small">Creating an image from your scene description… this can take up to a minute.</p>`;
+  if(st) st.textContent = "Creating your image — please wait, this can take up to a minute…";
+  try { box.scrollIntoView({ behavior:"smooth", block:"center" }); } catch(e){}
   const src = "https://image.pollinations.ai/prompt/" + encodeURIComponent(desc + " Vivid, clear, simple digital illustration, no text, no words.") + "?width=880&height=620&nologo=true&seed=" + Math.floor(Math.random()*100000);
   const img = new Image();
   img.alt = desc;
-  img.onload = () => { box.innerHTML = ""; img.style.width = "100%"; img.style.borderRadius = "12px"; box.appendChild(img);
-    const p = document.createElement("p"); p.className = "muted small"; p.textContent = "Generated from the scene description above. If it doesn't match how you pictured it, edit the description and create the image again — you don't have to accept the app's suggestion."; box.appendChild(p); };
-  img.onerror = () => { box.innerHTML = `<p class="muted">The image generator didn't answer this time — tap “Create image from this description” to try again.</p>`; };
+  let settled = false;
+  const timer = setTimeout(()=>{ if(settled) return; settled = true;
+    box.innerHTML = `<p class="muted">The image generator is taking unusually long and hasn't answered. Your description is saved — tap “Create image from this description” to try again.</p>`;
+    if(st) st.textContent = "The generator didn't answer in time. Tap “Create image from this description” to try again."; }, window.MG_IMG_TIMEOUT_MS || 75000);
+  img.onload = () => { if(settled) return; settled = true; clearTimeout(timer); box.innerHTML = ""; img.style.width = "100%"; img.style.borderRadius = "12px"; box.appendChild(img);
+    const p = document.createElement("p"); p.className = "muted small"; p.textContent = "Generated from the scene description above. If it doesn't match how you pictured it, edit the description and create the image again — you don't have to accept the app's suggestion."; box.appendChild(p);
+    if(st) st.textContent = "Done — your image is above, generated from your description."; };
+  img.onerror = () => { if(settled) return; settled = true; clearTimeout(timer); box.innerHTML = `<p class="muted">The image generator didn't answer this time — tap “Create image from this description” to try again.</p>`;
+    if(st) st.textContent = "The generator didn't answer. Tap “Create image from this description” to try again."; };
   img.src = src;
 }
 
