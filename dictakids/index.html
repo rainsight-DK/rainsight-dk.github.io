@@ -46,6 +46,7 @@
   .resrow .w { font-weight:700; } .resrow .typed { color:#DC2626; } .resrow .ok { color:#16A34A; font-weight:800; } .resrow .no { color:#DC2626; font-weight:800; }
   details summary { cursor:pointer; font-weight:600; }
   .hist { padding:9px 0; border-bottom:1px solid #EEF0F6; font-size:15px; }
+  #pad { width:100%; height:200px; border:2px solid #D9DCE8; border-radius:12px; display:block; touch-action:none; background:#fff repeating-linear-gradient(to bottom, transparent 0, transparent 48px, #E4E7F5 48px, #E4E7F5 50px); }
 </style>
 </head>
 <body>
@@ -105,6 +106,15 @@
     </div>
 
     <div class="card">
+      <h2>Answer by</h2>
+      <div class="chips" id="modeChips">
+        <button class="chip" data-mode="type">⌨️ Typing</button>
+        <button class="chip" data-mode="write">✍️ Writing (S Pen or finger)</button>
+      </div>
+      <p class="note">Writing uses no keyboard — so no suggested words can give the answer away. After writing, the app shows the word and asks if it was spelled right.</p>
+    </div>
+
+    <div class="card">
       <h2>Where do the words come from?</h2>
       <div class="chips" id="sourceChips">
         <button class="chip" data-source="bank">📚 Word bank</button>
@@ -143,7 +153,7 @@
   <section class="view" id="view-test">
     <div id="scorebar"><span class="sc" id="sbScore">✔ 0/0</span><span class="sc" id="sbPct"></span><span class="mut" id="sbProg"></span><span style="flex:1"></span><span class="pill" id="sbDiff">medium</span></div>
     <div class="card" style="text-align:center">
-      <p class="note" style="margin:0">Listen, then type the word you hear</p>
+      <p class="note" style="margin:0" id="testPrompt">Listen, then type the word you hear</p>
       <div id="blanks">_ _ _</div>
       <p class="note" id="letterCount" style="margin:0 0 10px"></p>
       <div class="row" style="justify-content:center">
@@ -154,11 +164,28 @@
       <div id="retryBox" style="display:none">
         <p class="note" style="margin:12px 0 0">The word was:</p>
         <div id="correctWord"></div>
-        <p class="note" style="margin:0">Now type it correctly to keep going.</p>
+        <p class="note" style="margin:0" id="retryHint">Now type it correctly to keep going.</p>
       </div>
-      <div class="row" style="margin-top:14px;flex-wrap:nowrap">
-        <span style="flex:1"><input type="text" id="answerInput" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Type the word…"></span>
+      <div class="row" style="margin-top:14px;flex-wrap:nowrap" id="typeRow">
+        <span style="flex:1"><input type="text" id="answerInput" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="Type the word…"></span>
         <button class="btn good" id="checkBtn">Check ✓</button>
+      </div>
+      <div id="writeBox" style="display:none;margin-top:14px">
+        <canvas id="pad" width="600" height="200"></canvas>
+        <div class="row" style="margin-top:9px;justify-content:center">
+          <button class="btn ghost small" id="padUndo">↩️ Undo</button>
+          <button class="btn ghost small" id="padClear">🧹 Clear</button>
+          <button class="btn good" id="writeCheckBtn">Check ✓</button>
+        </div>
+        <div id="selfBox" style="display:none;margin-top:10px">
+          <p class="note" style="margin:0">The word was:</p>
+          <div id="selfWord" style="font-size:30px;font-weight:800;text-align:center;color:#33396E;letter-spacing:2px;margin:6px 0"></div>
+          <p class="note" style="margin:0 0 8px">Compare it with your writing. Did you spell it right?</p>
+          <div class="row" style="justify-content:center">
+            <button class="btn good" id="selfYes">✔ Yes, I did</button>
+            <button class="btn warn" id="selfNo">✘ Not quite</button>
+          </div>
+        </div>
       </div>
       <div id="feedback"></div>
     </div>
@@ -202,7 +229,7 @@ function lsGet(k){ try { return window.localStorage.getItem(k); } catch(e){ retu
 function lsSet(k,v){ MEM = v; try { window.localStorage.setItem(k,v); } catch(e){} }
 var DBKEY = "dictaKidsV1";
 function seedDB(){ return { profiles: { nathalie: { label: "Nathalie", grade: 5 }, emilie: { label: "Emilie", grade: 3 }, guest: { label: "Guest", grade: 2 } },
-  last: { profile: "nathalie", topic: "none", customTopic: "", count: 10, diff: "medium", source: "bank" }, history: [] }; }
+  last: { profile: "nathalie", topic: "none", customTopic: "", count: 10, diff: "medium", source: "bank", mode: "type" }, history: [] }; }
 var DB;
 try { var raw = lsGet(DBKEY); DB = raw ? JSON.parse(raw) : seedDB(); if (!DB || !DB.profiles || !DB.last || !Array.isArray(DB.history)) DB = seedDB(); }
 catch(e){ DB = seedDB(); }
@@ -214,6 +241,7 @@ function shuffle(a){ var x = a.slice(); for (var i = x.length - 1; i > 0; i--){ 
 
 /* ---------- setup state ---------- */
 var sel = JSON.parse(JSON.stringify(DB.last));
+if (!sel.mode) sel.mode = "type";
 function gradeLabel(g){ return g === 0 ? "Kindergarten" : "Grade " + g; }
 var TOPIC_LABEL = { none: "No preference", food: "Food", animals: "Animals", verbs: "Action verbs", school: "School", nature: "Nature", home: "Family & home", sports: "Sports" };
 function paintChips(containerId, attr, value){
@@ -226,6 +254,7 @@ function paintSetup(){
   $("customTopic").value = sel.customTopic || "";
   paintChips("countChips", "count", sel.count);
   paintChips("diffChips", "diff", sel.diff);
+  paintChips("modeChips", "mode", sel.mode || "type");
   paintChips("sourceChips", "source", sel.source);
   $("srcBank").style.display = sel.source === "bank" ? "" : "none";
   $("srcPaste").style.display = sel.source === "paste" ? "" : "none";
@@ -240,6 +269,7 @@ wireChips("profileChips", "profile", function(v){ sel.profile = v; });
 wireChips("topicChips", "topic", function(v){ sel.topic = v; });
 wireChips("countChips", "count", function(v){ sel.count = parseInt(v, 10); });
 wireChips("diffChips", "diff", function(v){ sel.diff = v; });
+wireChips("modeChips", "mode", function(v){ sel.mode = v; });
 wireChips("sourceChips", "source", function(v){ sel.source = v; });
 $("gradeSel").addEventListener("change", function(){ DB.profiles[sel.profile].grade = parseInt(this.value, 10); save(); $("aiPrompt").value = buildAiPrompt(); });
 $("customTopic").addEventListener("change", function(){ sel.customTopic = this.value.trim(); persistLast(); $("aiPrompt").value = buildAiPrompt(); });
@@ -296,6 +326,78 @@ function speak(text, rate){
   } catch(e){}
 }
 
+/* ---------- writing pad ---------- */
+var pad = $("pad"), pctx = null;
+try { pctx = pad.getContext("2d"); } catch(e){}
+var strokes = [], curStroke = null, padLocked = false;
+function padPos(e){ var r = pad.getBoundingClientRect(); return [ (e.clientX - r.left) * (pad.width / (r.width || pad.width)), (e.clientY - r.top) * (pad.height / (r.height || pad.height)) ]; }
+function redrawPad(){
+  if (!pctx) return;
+  pctx.clearRect(0, 0, pad.width, pad.height);
+  pctx.lineWidth = 6; pctx.lineCap = "round"; pctx.lineJoin = "round"; pctx.strokeStyle = "#2B3A8F";
+  strokes.forEach(function(s){
+    if (!s.length) return;
+    pctx.beginPath(); pctx.moveTo(s[0][0], s[0][1]);
+    for (var i = 1; i < s.length; i++) pctx.lineTo(s[i][0], s[i][1]);
+    if (s.length === 1) pctx.lineTo(s[0][0] + 0.1, s[0][1] + 0.1);
+    pctx.stroke();
+  });
+}
+function clearPad(){ strokes = []; curStroke = null; redrawPad(); }
+function hasInk(){ return strokes.length > 0; }
+pad.addEventListener("pointerdown", function(e){ if (padLocked || !T || T.mode !== "write") return; e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch(err){} curStroke = [padPos(e)]; strokes.push(curStroke); redrawPad(); });
+pad.addEventListener("pointermove", function(e){ if (!curStroke || padLocked) return; e.preventDefault(); curStroke.push(padPos(e)); redrawPad(); });
+pad.addEventListener("pointerup", function(){ curStroke = null; });
+pad.addEventListener("pointercancel", function(){ curStroke = null; });
+$("padUndo").addEventListener("click", function(){ if (padLocked) return; strokes.pop(); redrawPad(); });
+$("padClear").addEventListener("click", function(){ if (padLocked) return; clearPad(); });
+function paintTestMode(){
+  var write = T && T.mode === "write";
+  $("typeRow").style.display = write ? "none" : "";
+  $("writeBox").style.display = write ? "" : "none";
+  $("testPrompt").textContent = write ? "Listen, then write the word you hear" : "Listen, then type the word you hear";
+}
+function writeCheck(){
+  if (!T || T.mode !== "write") return;
+  if (T.phase === "answer") {
+    if (!hasInk()) { $("feedback").textContent = "Write the word on the pad first."; $("feedback").className = "bad"; return; }
+    T.phase = "selfcheck"; padLocked = true;
+    $("selfWord").textContent = T.current.w;
+    $("selfBox").style.display = "";
+    $("feedback").textContent = "Compare your writing with the word."; $("feedback").className = "";
+  } else if (T.phase === "retry") {
+    if (!hasInk()) { $("feedback").textContent = "Write it once more, looking at the word above."; $("feedback").className = "bad"; return; }
+    $("feedback").textContent = "That's it! 🎉"; $("feedback").className = "good";
+    advanceTimer = setTimeout(nextWord, 800);
+  }
+}
+$("writeCheckBtn").addEventListener("click", writeCheck);
+$("selfYes").addEventListener("click", function(){
+  if (!T || T.phase !== "selfcheck") return;
+  T.answered++; T.correct++;
+  T.records.push({ w: T.current.w, ok: true, typed: "", mode: "write" });
+  $("selfBox").style.display = "none";
+  $("feedback").textContent = ["Great job! 🌟", "Correct! 🎉", "You got it! 👏"][Math.floor(Math.random() * 3)];
+  $("feedback").className = "good";
+  renderScore();
+  advanceTimer = setTimeout(nextWord, 950);
+});
+$("selfNo").addEventListener("click", function(){
+  if (!T || T.phase !== "selfcheck") return;
+  T.answered++;
+  T.records.push({ w: T.current.w, ok: false, typed: "✍️ written", mode: "write" });
+  $("selfBox").style.display = "none";
+  T.phase = "retry"; padLocked = false; clearPad();
+  $("correctWord").textContent = T.current.w;
+  $("retryHint").textContent = "Now write it correctly to keep going.";
+  $("retryBox").style.display = "";
+  $("writeCheckBtn").textContent = "Next →";
+  $("feedback").textContent = "Not quite — listen again and look at the word.";
+  $("feedback").className = "bad";
+  renderScore();
+  speak(T.current.w, 0.65);
+});
+
 /* ---------- test engine ---------- */
 var T = null;
 var advanceTimer = null;
@@ -309,8 +411,9 @@ document.querySelectorAll("[data-nav]").forEach(function(b){ b.addEventListener(
 function startTest(words, meta){
   T = { words: words, queue: words.slice(), idx: 0, current: null, answered: 0, correct: 0, records: [],
         count: meta.count, diff: meta.diff, topicLabel: meta.topicLabel, source: meta.source, grade: meta.grade,
-        profile: sel.profile, phase: "answer", asked: {} };
+        profile: sel.profile, phase: "answer", asked: {}, mode: meta.mode || sel.mode || "type" };
   showView("test");
+  paintTestMode();
   nextWord();
 }
 function drawFromQueue(){
@@ -330,13 +433,17 @@ function nextWord(){
   T.current = w; T.idx++; T.phase = "answer"; T.asked[w.w] = 1;
   $("retryBox").style.display = "none";
   $("checkBtn").textContent = "Check ✓";
+  $("selfBox").style.display = "none";
+  $("writeCheckBtn").textContent = "Check ✓";
+  $("retryHint").textContent = T.mode === "write" ? "Now write it correctly to keep going." : "Now type it correctly to keep going.";
+  padLocked = false; clearPad();
   $("answerInput").value = "";
   $("feedback").textContent = ""; $("feedback").className = "";
   $("blanks").textContent = w.w.split("").map(function(){ return "_"; }).join(" ");
   $("letterCount").textContent = w.w.length + (w.w.length === 1 ? " letter" : " letters");
   $("sentBtn").style.display = w.s ? "" : "none";
   renderScore();
-  setTimeout(function(){ $("answerInput").focus(); }, 60);
+  if (T.mode !== "write") setTimeout(function(){ $("answerInput").focus(); }, 60);
   setTimeout(function(){ speak(w.w, 0.9); }, 300);
 }
 function renderScore(){
@@ -358,13 +465,13 @@ function checkAnswer(){
   T.answered++;
   if (typed === word) {
     T.correct++;
-    T.records.push({ w: word, ok: true, typed: typed });
+    T.records.push({ w: word, ok: true, typed: typed, mode: T.mode });
     $("feedback").textContent = ["Great job! 🌟", "Correct! 🎉", "You got it! 👏"][Math.floor(Math.random() * 3)];
     $("feedback").className = "good";
     renderScore();
     advanceTimer = setTimeout(nextWord, 950);
   } else {
-    T.records.push({ w: word, ok: false, typed: typed });
+    T.records.push({ w: word, ok: false, typed: typed, mode: T.mode });
     T.phase = "retry";
     $("correctWord").textContent = word;
     $("retryBox").style.display = "";
@@ -385,7 +492,8 @@ $("sentBtn").addEventListener("click", function(){ if (T && T.current && T.curre
 $("skipBtn").addEventListener("click", function(){
   if (!T || T.phase === "reveal") return;
   T.answered++;
-  T.records.push({ w: T.current.w, ok: false, typed: "(skipped)" });
+  T.records.push({ w: T.current.w, ok: false, typed: "(skipped)", mode: T.mode });
+  $("selfBox").style.display = "none";
   T.phase = "reveal";
   $("correctWord").textContent = T.current.w;
   $("retryBox").style.display = "";
@@ -431,8 +539,10 @@ function finishTest(){
   $("resScore").textContent = T.correct + "/" + T.answered + " · " + pct + "%";
   $("resMsg").textContent = T.answered === 0 ? "No words answered yet." : pct === 100 ? "Perfect score! 🏆" : pct >= 80 ? "Great spelling! 🌟" : pct >= 50 ? "Good try — practice the missed words below. 💪" : "Keep practicing — try the missed words round. 🌱";
   $("resList").innerHTML = T.records.map(function(r){
-    return '<div class="resrow"><span class="' + (r.ok ? "ok" : "no") + '">' + (r.ok ? "✔" : "✘") + '</span><span class="w">' + esc(r.w) + "</span>" +
-      (r.ok ? "" : '<span class="note">you typed: <span class="typed">' + esc(r.typed) + "</span></span>") + "</div>";
+    var detail = "";
+    if (r.mode === "write") detail = '<span class="note">✍️ written</span>';
+    else if (!r.ok) detail = '<span class="note">you typed: <span class="typed">' + esc(r.typed) + "</span></span>";
+    return '<div class="resrow"><span class="' + (r.ok ? "ok" : "no") + '">' + (r.ok ? "✔" : "✘") + '</span><span class="w">' + esc(r.w) + "</span>" + detail + "</div>";
   }).join("") || '<p class="note">Nothing here yet.</p>';
   var missed = T.records.filter(function(r){ return !r.ok; });
   $("missedBtn").style.display = missed.length ? "" : "none";
@@ -444,7 +554,7 @@ $("missedBtn").addEventListener("click", function(){
   var seen = {}, words = [];
   T.finishedRecords.forEach(function(r){ if (!r.ok && !seen[r.w]) { seen[r.w] = 1; var src = WORDS.filter(function(w){ return w.w === r.w; })[0]; words.push(src || { w: r.w, g: 0, t: [], s: "" }); } });
   if (!words.length) return;
-  startTest(shuffle(words), { count: words.length, diff: T.diff, topicLabel: "Missed words", source: "bank", grade: T.grade });
+  startTest(shuffle(words), { count: words.length, diff: T.diff, topicLabel: "Missed words", source: "bank", grade: T.grade, mode: T.mode });
 });
 $("againBtn").addEventListener("click", function(){ showView("setup"); });
 
@@ -499,7 +609,8 @@ $("importFile").addEventListener("change", function(){
 });
 
 paintSetup();
-window.DK = { getDB: function(){ return DB; }, getT: function(){ return T; }, poolFor: poolFor, parseWordList: parseWordList, WORDS: WORDS };
+window.DK = { getDB: function(){ return DB; }, getT: function(){ return T; }, poolFor: poolFor, parseWordList: parseWordList, WORDS: WORDS,
+  hasInk: hasInk, getStrokes: function(){ return strokes; }, testWrite: function(){ strokes.push([[10, 10], [60, 60], [110, 30]]); redrawPad(); } };
 </script>
 </body>
 </html>
