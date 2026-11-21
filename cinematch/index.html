@@ -107,7 +107,7 @@
 
   <section id="view-discover" class="view">
     <h1>FIND YOUR NEXT GREAT WATCH.</h1>
-    <p class="sub">Search real series data (posters, ratings, cast) from TVmaze. Add a film manually and CineMatch will find its poster automatically from iTunes; series posters come from TVmaze.</p>
+    <p class="sub">Search real series data (posters, ratings, cast) from TVmaze. Add a film manually and CineMatch will find its poster automatically from the web (iTunes, or Wikipedia if iTunes has no match); series posters come from TVmaze.</p>
     <div class="row">
       <input type="text" id="searchInput" placeholder="Search a series title… e.g. Reacher" style="flex:1;min-width:180px">
       <button class="btn" id="searchBtn">Find</button>
@@ -319,7 +319,7 @@ function enrichSeeds(){
 /* ---------- iTunes films ---------- */
 function itunesSearch(title, limit){
   if (!hasFetch) return Promise.reject(new Error("no fetch"));
-  return fetch("https://itunes.apple.com/search?term="+encodeURIComponent(title)+"&media=movie&entity=movie&limit="+(limit || 10))
+  return fetch("https://itunes.apple.com/search?term="+encodeURIComponent(title)+"&media=movie&entity=movie&country=US&limit="+(limit || 10))
     .then(function(r){ if (!r.ok) throw new Error("itunes "+r.status); return r.json(); })
     .then(function(data){ return (data && data.results) || []; });
 }
@@ -353,10 +353,58 @@ function fillMovieDetails(e, m){
   if (!e.synopsis && m.synopsis) { e.synopsis = m.synopsis; changed = true; }
   return changed;
 }
+/* ---------- Wikipedia film posters (fallback when iTunes has no match) ---------- */
+function wikiFetchJson(url){
+  return fetch(url).then(function(r){ if (!r.ok) throw new Error("wiki " + r.status); return r.json(); });
+}
+function wikiBaseTitle(pageTitle){
+  return normalizeMovieTitle(String(pageTitle || "").replace(/\s*\((?:\d{4}\s+)?film\)\s*$/i, ""));
+}
+function wikiYearOf(pageTitle, description){
+  var m = String(pageTitle || "").match(/\((\d{4})/);
+  if (m) return parseInt(m[1], 10);
+  var d = String(description || "").match(/\b(19\d{2}|20\d{2})\b/);
+  return d ? parseInt(d[1], 10) : null;
+}
+function wikiFilmCandidates(title, limit){
+  if (!hasFetch) return Promise.resolve([]);
+  var wanted = normalizeMovieTitle(title);
+  var searchUrl = "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=" + encodeURIComponent(title + " film") + "&gsrnamespace=0&gsrlimit=8&format=json&origin=*";
+  return wikiFetchJson(searchUrl).then(function(data){
+    var pages = (data && data.query && data.query.pages) || {};
+    var hits = Object.keys(pages).map(function(k){ return pages[k]; })
+      .filter(function(pg){ return pg && wikiBaseTitle(pg.title) === wanted; })
+      .sort(function(a, b){ return (a.index || 99) - (b.index || 99); })
+      .slice(0, limit || 3);
+    return Promise.all(hits.map(function(pg){
+      return wikiFetchJson("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(String(pg.title).replace(/ /g, "_")))
+        .then(function(sm){
+          var img = (sm && sm.originalimage && sm.originalimage.source) || (sm && sm.thumbnail && sm.thumbnail.source) || "";
+          if (!img) return null;
+          return { title: (sm && sm.title) || pg.title, year: wikiYearOf(pg.title, sm && sm.description),
+            poster: String(img).split("?")[0], genres: [], synopsis: "", fromWiki: true };
+        }).catch(function(){ return null; });
+    })).then(function(list){ return list.filter(Boolean); });
+  }).catch(function(){ return []; });
+}
+function pickWikiCandidate(cands, year){
+  if (!cands || !cands.length) return null;
+  if (year) {
+    for (var i = 0; i < cands.length; i++) { if (cands[i].year && Math.abs(cands[i].year - year) <= 1) return cands[i]; }
+    return null;
+  }
+  return cands[0];
+}
 function lookupMoviePoster(e){
-  return itunesSearch(e.title, 10).then(function(results){
+  var viaItunes = itunesSearch(e.title, 10).then(function(results){
     return fillMovieDetails(e, matchMovie(results, e.title, e.year));
   }).catch(function(){ return false; });
+  return viaItunes.then(function(done){
+    if (done) return true;
+    return wikiFilmCandidates(e.title, 3).then(function(cands){
+      return fillMovieDetails(e, pickWikiCandidate(cands, e.year));
+    }).catch(function(){ return false; });
+  });
 }
 function enrichFilms(){
   if (!hasFetch) return Promise.resolve(false);
@@ -501,20 +549,22 @@ function openDetail(e){
     var box = document.getElementById("posterPick");
     if (!box) return;
     box.innerHTML = '<p class="sub">Searching for posters…</p>';
-    itunesSearch(e.title, 8).then(function(results){
-      var candidates = (results || []).filter(function(r){ return r && r.artworkUrl100; }).slice(0, 8);
-      if (!candidates.length) { box.innerHTML = '<p class="sub">No posters found for this title.</p>'; return; }
-      box.innerHTML = '<div class="poster-picks">' + candidates.map(function(r, i){
-        var m = mapMovie(r);
-        return '<button class="poster-pick" data-poster-pick="'+i+'"><img src="'+esc(m.poster)+'" alt=""><span>'+esc(m.title)+(m.year ? " ("+m.year+")" : "")+'</span></button>';
+    var itunesP = itunesSearch(e.title, 8).then(function(results){
+      return (results || []).filter(function(r){ return r && r.artworkUrl100; }).slice(0, 8).map(mapMovie);
+    }).catch(function(){ return []; });
+    var wikiP = wikiFilmCandidates(e.title, 4);
+    Promise.all([itunesP, wikiP]).then(function(both){
+      var picks = both[0].concat(both[1]);
+      if (!picks.length) { box.innerHTML = '<p class="sub">No posters found for this title.</p>'; return; }
+      box.innerHTML = '<div class="poster-picks">' + picks.map(function(m, i){
+        return '<button class="poster-pick" data-poster-pick="'+i+'"><img src="'+esc(m.poster)+'" alt=""><span>'+esc(m.title)+(m.year ? " ("+m.year+")" : "")+(m.fromWiki ? " · Wikipedia" : "")+'</span></button>';
       }).join("") + '</div>';
       box.querySelectorAll("[data-poster-pick]").forEach(function(btn){ btn.addEventListener("click", function(){
-        var m = mapMovie(candidates[parseInt(btn.getAttribute("data-poster-pick"), 10)]);
-        fillMovieDetails(e, m);
+        fillMovieDetails(e, picks[parseInt(btn.getAttribute("data-poster-pick"), 10)]);
         if (findWatchedById(e.id) || findWatchlistById(e.id)) saveDB(DB);
         openDetail(e); renderAll(false);
       }); });
-    }).catch(function(){ box.innerHTML = '<p class="sub">Poster search failed — check your connection and try again.</p>'; });
+    });
   });
   if (e.type === "series" && e.tvmazeId && hasFetch) {
     tvFetch("/shows/"+e.tvmazeId+"/cast").then(function(cast){
@@ -707,7 +757,7 @@ renderDiscoverGenres();
 renderAll();
 enrichSeeds();
 enrichFilms();
-window.CM = { getDB: function(){ return DB; }, mapMovie: mapMovie, matchMovie: matchMovie, enrichFilms: enrichFilms };
+window.CM = { getDB: function(){ return DB; }, mapMovie: mapMovie, matchMovie: matchMovie, enrichFilms: enrichFilms, wikiFilmCandidates: wikiFilmCandidates, lookupMoviePoster: lookupMoviePoster };
 </script>
 </body>
 </html>
