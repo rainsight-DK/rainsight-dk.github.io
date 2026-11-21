@@ -61,6 +61,10 @@
   .stat .n { font-size: 26px; font-weight: 900; color: #c4b5fd; }
   .stat .l { font-size: 11px; letter-spacing: 1.5px; color: #9a97ad; font-weight: 800; margin-top: 2px; }
   .detail img.poster { width: 150px; border-radius: 12px; float: right; margin: 0 0 10px 14px; background: #1c1c2e; }
+  .poster-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin: 12px 0; clear: both; }
+  .poster-pick { background: #12121e; border: 1px solid #262640; border-radius: 10px; overflow: hidden; cursor: pointer; padding: 0; text-align: left; color: #fff; }
+  .poster-pick img { width: 100%; height: 150px; object-fit: cover; display: block; background: #1c1c2e; }
+  .poster-pick span { display: block; padding: 7px 8px; font-size: 11px; line-height: 1.35; }
   .detail .noposter { width: 150px; height: 220px; float: right; margin: 0 0 10px 14px; border-radius: 12px; }
   .syn { font-size: 14px; line-height: 1.6; color: #d8d5e6; margin: 10px 0; }
   .note { font-size: 12px; color: #9a97ad; line-height: 1.55; }
@@ -103,7 +107,7 @@
 
   <section id="view-discover" class="view">
     <h1>FIND YOUR NEXT GREAT WATCH.</h1>
-    <p class="sub">Search real series data (posters, ratings, cast) from TVmaze. Films: no free film database exists without an API key, so use the film links under the results — or add a film manually and it joins your library like any title.</p>
+    <p class="sub">Search real series data (posters, ratings, cast) from TVmaze. Add a film manually and CineMatch will find its poster automatically from iTunes; series posters come from TVmaze.</p>
     <div class="row">
       <input type="text" id="searchInput" placeholder="Search a series title… e.g. Reacher" style="flex:1;min-width:180px">
       <button class="btn" id="searchBtn">Find</button>
@@ -312,6 +316,62 @@ function enrichSeeds(){
   Promise.all(jobs).then(function(){ if (changed) { saveDB(DB); renderAll(); } });
 }
 
+/* ---------- iTunes films ---------- */
+function itunesSearch(title, limit){
+  if (!hasFetch) return Promise.reject(new Error("no fetch"));
+  return fetch("https://itunes.apple.com/search?term="+encodeURIComponent(title)+"&media=movie&entity=movie&limit="+(limit || 10))
+    .then(function(r){ if (!r.ok) throw new Error("itunes "+r.status); return r.json(); })
+    .then(function(data){ return (data && data.results) || []; });
+}
+function normalizeMovieTitle(title){ return String(title || "").trim().toLowerCase().replace(/\s+/g, " "); }
+function mapMovie(r){
+  return { title: r.trackName || "",
+    year: r.releaseDate ? (parseInt(String(r.releaseDate).slice(0, 4), 10) || null) : null,
+    poster: String(r.artworkUrl100 || "").replace("100x100bb", "600x600bb"),
+    genres: r.primaryGenreName ? [r.primaryGenreName] : [],
+    synopsis: r.longDescription || r.shortDescription || "" };
+}
+function matchMovie(results, title, year){
+  var wanted = normalizeMovieTitle(title);
+  var exact = (results || []).filter(function(r){ return r && normalizeMovieTitle(r.trackName) === wanted; });
+  if (!exact.length) return null;
+  if (year) {
+    for (var i = 0; i < exact.length; i++) {
+      var m = mapMovie(exact[i]);
+      if (m.year && Math.abs(m.year - year) <= 1) return m;
+    }
+    return null;
+  }
+  return mapMovie(exact[0]);
+}
+function fillMovieDetails(e, m){
+  if (!m) return false;
+  var changed = false;
+  if (m.poster && e.poster !== m.poster) { e.poster = m.poster; changed = true; }
+  if (!e.year && m.year) { e.year = m.year; changed = true; }
+  if ((!e.genres || !e.genres.length) && m.genres && m.genres.length) { e.genres = m.genres; changed = true; }
+  if (!e.synopsis && m.synopsis) { e.synopsis = m.synopsis; changed = true; }
+  return changed;
+}
+function lookupMoviePoster(e){
+  return itunesSearch(e.title, 10).then(function(results){
+    return fillMovieDetails(e, matchMovie(results, e.title, e.year));
+  }).catch(function(){ return false; });
+}
+function enrichFilms(){
+  if (!hasFetch) return Promise.resolve(false);
+  var changed = false, jobs = [];
+  DB.watched.concat(DB.watchlist).forEach(function(e){
+    if (e.type === "film" && !e.poster) {
+      jobs.push(lookupMoviePoster(e).then(function(didChange){ if (didChange) changed = true; }));
+    }
+  });
+  return Promise.all(jobs).then(function(){
+    if (changed) { saveDB(DB); renderAll(); }
+    return changed;
+  });
+}
+
 /* ---------- Rendering ---------- */
 var currentView = "home", lastView = "home", detailEntry = null, discoverGenre = "";
 function showView(v){
@@ -413,7 +473,9 @@ function openDetail(e){
   if (e.synopsis) h += '<p class="syn">'+esc(e.synopsis)+'</p>';
   h += '<div id="castBox"></div>';
   h += '<div class="row" style="margin:12px 0"><a class="btn ghost small" target="_blank" rel="noopener" href="'+justwatchUrl(e)+'">Where to watch (JustWatch)</a>' +
-    (e.platform ? '<span class="note">Your note: '+esc(e.platform)+'</span>' : "") + '</div>';
+    (e.type === "film" ? '<button class="btn ghost small" id="detailFindPoster">🖼️ Find poster</button>' : "") +
+    (e.platform ? '<span class="note">Your note: '+esc(e.platform)+'</span>' : "") + '</div>' +
+    (e.type === "film" ? '<div id="posterPick"></div>' : "");
   if (watched) {
     h += '<h2>Your rating</h2><div id="detailStars">'+starsHtml(watched.myRating, watched.id)+'</div>' +
       '<label>Your memo</label><textarea id="detailMemo" placeholder="How was it? Share your thoughts…">'+esc(watched.memo)+'</textarea>' +
@@ -434,6 +496,26 @@ function openDetail(e){
     var aw = document.getElementById("detailAddWl"); if (aw) aw.addEventListener("click", function(){ addToWatchlist(e); saveDB(DB); openDetail(e); renderAll(false); });
     document.getElementById("detailLog").addEventListener("click", function(){ var w = logAsWatched(e); saveDB(DB); openDetail(w); renderAll(false); });
   }
+  var findPosterBtn = document.getElementById("detailFindPoster");
+  if (findPosterBtn) findPosterBtn.addEventListener("click", function(){
+    var box = document.getElementById("posterPick");
+    if (!box) return;
+    box.innerHTML = '<p class="sub">Searching for posters…</p>';
+    itunesSearch(e.title, 8).then(function(results){
+      var candidates = (results || []).filter(function(r){ return r && r.artworkUrl100; }).slice(0, 8);
+      if (!candidates.length) { box.innerHTML = '<p class="sub">No posters found for this title.</p>'; return; }
+      box.innerHTML = '<div class="poster-picks">' + candidates.map(function(r, i){
+        var m = mapMovie(r);
+        return '<button class="poster-pick" data-poster-pick="'+i+'"><img src="'+esc(m.poster)+'" alt=""><span>'+esc(m.title)+(m.year ? " ("+m.year+")" : "")+'</span></button>';
+      }).join("") + '</div>';
+      box.querySelectorAll("[data-poster-pick]").forEach(function(btn){ btn.addEventListener("click", function(){
+        var m = mapMovie(candidates[parseInt(btn.getAttribute("data-poster-pick"), 10)]);
+        fillMovieDetails(e, m);
+        if (findWatchedById(e.id) || findWatchlistById(e.id)) saveDB(DB);
+        openDetail(e); renderAll(false);
+      }); });
+    }).catch(function(){ box.innerHTML = '<p class="sub">Poster search failed — check your connection and try again.</p>'; });
+  });
   if (e.type === "series" && e.tvmazeId && hasFetch) {
     tvFetch("/shows/"+e.tvmazeId+"/cast").then(function(cast){
       var names = (cast||[]).slice(0,6).map(function(c){ return c.person && c.person.name; }).filter(Boolean);
@@ -509,9 +591,13 @@ function wireManualForm(prefix, target){
       genres: document.getElementById(prefix+"Genres").value.split(",").map(function(s){ return s.trim(); }).filter(Boolean),
       platform: document.getElementById(prefix+"Platform").value.trim(),
       poster: document.getElementById(prefix+"Poster").value.trim(), source:"manual" });
-    if (target === "watched") { e.dateLogged = todayStr(); DB.watched.unshift(e); }
-    else { if (!inWatchlist(title) && !inWatched(title)) DB.watchlist.unshift(e); }
+    var added = false;
+    if (target === "watched") { e.dateLogged = todayStr(); DB.watched.unshift(e); added = true; }
+    else if (!inWatchlist(title) && !inWatched(title)) { DB.watchlist.unshift(e); added = true; }
     saveDB(DB); renderAll(); showView(target);
+    if (added && e.type === "film" && !e.poster) {
+      lookupMoviePoster(e).then(function(changed){ if (changed) { saveDB(DB); renderAll(); } });
+    }
   });
 }
 function watchedTitleSearch(){
@@ -620,6 +706,8 @@ document.getElementById("importFile").addEventListener("change", function(){ if 
 renderDiscoverGenres();
 renderAll();
 enrichSeeds();
+enrichFilms();
+window.CM = { getDB: function(){ return DB; }, mapMovie: mapMovie, matchMovie: matchMovie, enrichFilms: enrichFilms };
 </script>
 </body>
 </html>
