@@ -31,6 +31,7 @@
   .btn.ghost { background: #eef2f5; color: #33424f; border: 1px solid #c4cfd9; }
   .btn.small { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
   .btn.wa { background: #25d366; color: #063; }
+  .btn.danger { background: #c2410c; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
   .chip { background: #eef2f5; border: 1px solid #c4cfd9; color: #33424f; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
@@ -77,6 +78,8 @@
     <div id="latestList"></div>
     <h2>Recent items — you've bought</h2>
     <div id="recentBought"></div>
+    <button class="btn danger" id="clearPurchasedBtnHome" style="width:100%;margin-top:4px">🧹 Remove purchased items (<span class="purchasedCount">0</span>)</button>
+    <p class="note clearMsg"></p>
     <h2>Backup</h2>
     <div class="card">
       <p class="sub">Your list is stored only on this device/browser. Export a backup file and keep it (e.g. in Google Drive); import it on another device to move your list there. Import replaces what's on the receiving device.</p>
@@ -110,6 +113,8 @@
       <input type="text" id="listSearch" placeholder="Search items..." style="flex:1;min-width:150px">
       <button class="btn ghost small" id="togglePurchasedBtn">Hide purchased</button>
     </div>
+    <button class="btn danger" id="clearPurchasedBtn" style="width:100%;margin-top:10px">🧹 Remove purchased items (<span class="purchasedCount">0</span>)</button>
+    <p class="note clearMsg"></p>
     <div id="fullList" style="margin-top:10px"></div>
   </section>
 
@@ -342,6 +347,23 @@ function renderFullList(){
   var box = document.getElementById("fullList");
   box.innerHTML = items.length ? items.map(function(it){ return itemRowHtml(it, { editing: editingId===it.id }); }).join("") : '<p class="sub">No items match.</p>';
   bindItemRows(box);
+  updateClearBtn();
+}
+function purchasedCount(){ return DB.items.filter(function(x){ return x.purchased; }).length; }
+function updateClearBtn(){
+  var n = purchasedCount();
+  document.querySelectorAll(".purchasedCount").forEach(function(el){ el.textContent = n; });
+  ["clearPurchasedBtn","clearPurchasedBtnHome"].forEach(function(id){
+    var b = document.getElementById(id); if (b) b.classList.toggle("hidden", n===0);
+  });
+}
+function clearPurchased(){
+  var n = purchasedCount(); if (!n) return;
+  if (!window.confirm("Remove "+n+" purchased item"+(n===1?"":"s")+" from the list? This cannot be undone.")) return;
+  DB.items = DB.items.filter(function(x){ return !x.purchased; });
+  if (editingId && !findItem(editingId)) editingId = null;
+  saveDB(DB); renderAll();
+  document.querySelectorAll(".clearMsg").forEach(function(el){ el.textContent = "Removed "+n+" purchased item"+(n===1?"":"s")+"."; });
 }
 
 /* ---------- At Store ---------- */
@@ -417,6 +439,8 @@ document.getElementById("homeSearch").addEventListener("input", function(){ docu
 document.getElementById("homeSearch").addEventListener("focus", function(){ showView("purchase"); });
 document.getElementById("listSearch").addEventListener("input", renderFullList);
 document.getElementById("togglePurchasedBtn").addEventListener("click", function(){ hidePurchased = !hidePurchased; this.textContent = hidePurchased ? "Show purchased" : "Hide purchased"; renderFullList(); });
+document.getElementById("clearPurchasedBtn").addEventListener("click", clearPurchased);
+document.getElementById("clearPurchasedBtnHome").addEventListener("click", clearPurchased);
 document.getElementById("addStoreBtn").addEventListener("click", function(){
   var v = document.getElementById("newStoreName").value.trim(); if (!v) return;
   if (DB.stores.indexOf(v)<0) { DB.stores.push(v); saveDB(DB); }
