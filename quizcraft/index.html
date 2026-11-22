@@ -1425,6 +1425,11 @@ el("importFile").addEventListener("change", function(){
   reader.onload = function(){
     try {
       var data = JSON.parse(String(reader.result || ""));
+      if (!data || typeof data !== "object" || Array.isArray(data) ||
+          !(Array.isArray(data.quizzes) || Array.isArray(data.history) || (data.lastSetup && typeof data.lastSetup === "object"))){
+        el("backupMsg").textContent = "That file is not a QuizCraft backup — nothing was changed.";
+        return;
+      }
       DB = normalizeDB(data); saveDB();
       setup = JSON.parse(JSON.stringify(DB.lastSetup));
       chipState = { subject: setup.subject, diff: setup.difficulty, count: setup.count, styles: setup.styles.slice(), matMode: setup.materialMode || "material" };
@@ -1438,7 +1443,7 @@ el("importFile").addEventListener("change", function(){
       el("fExamplesAbout").value = setup.examplesAbout || "";
       el("fAttachEx").checked = !!setup.attachEx;
       renderChips(); renderHome();
-      el("backupMsg").textContent = "Backup imported.";
+      el("backupMsg").textContent = "Backup imported: " + DB.quizzes.length + (DB.quizzes.length === 1 ? " quiz, " : " quizzes, ") + DB.history.length + (DB.history.length === 1 ? " result." : " results.");
     } catch(e){ el("backupMsg").textContent = "That file is not a valid QuizCraft backup."; }
   };
   reader.readAsText(f);
